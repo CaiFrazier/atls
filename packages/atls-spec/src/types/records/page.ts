@@ -1,0 +1,15 @@
+export type {
+  AtlasStructuredDataSourceMeta,
+  AtlasStructuredDataValidationIssue,
+  AtlasSchemaTypeTreeNode,
+  AtlasStructuredDataLimits,
+  AtlasStructuredDataItem,
+  AtlasPageStructuredData,
+  ScreenshotTile,
+  ScreenshotReference,
+  PageResponseHeaders,
+  PageCDNIndicators,
+  PageCompressionDetails,
+  Technology,
+  PageRecord,
+} from '../../types.js';

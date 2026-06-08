@@ -1,0 +1,36 @@
+{
+  "name": "@atls/spec",
+  "version": "1.0.0-rc.1",
+  "description": "Atlas v1.0 specification, JSON Schemas, TypeScript types, and validators",
+  "type": "module",
+  "author": "Cai Frazier",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*"
+  },
+  "scripts": {
+    "build": "tsc -b && node dist/schemas/generator.js",
+    "build:schemas": "node dist/schemas/generator.js",
+    "dev": "tsc -b --watch",
+    "test": "VITEST_POOL=forks VITEST_MIN_WORKERS=1 VITEST_MAX_WORKERS=1 vitest run --pool=forks --minWorkers=1 --maxWorkers=1",
+    "lint": "eslint .",
+  "clean": "rimraf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.6.3",
+    "vitest": "^2.0.0"
+  }
+}

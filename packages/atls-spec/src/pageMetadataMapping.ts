@@ -1,0 +1,215 @@
+/**
+ * Copyright © 2025 Cai Frazier.
+ *
+ * Page Metadata Record Mapping
+ * ============================
+ *
+ * This module is the single source of truth for the mapping between the
+ * on-disk page_metadata dataset format and the flat consumer API surface.
+ *
+ * ## Three shapes and their roles
+ *
+ * 1. **PageMetadataDatasetRecordV1** (producer / on-disk)
+ *    Schema: `PageMetadataDatasetRecordV1Schema` in `cartographer-datasets.schema.ts`
+ *    Shape: Nested — fields grouped under `core`, `indexing`, `social`, `resourceHints`.
+ *    Written by: `ArtifactWriter.buildPageMetadataRecord()` in cartographer.
+ *    Validated by: `SchemaValidator.validatePageMetadata()` on the write path.
+ *    This is what lives in `page_metadata/*.jsonl.zst` inside `.atls` archives.
+ *
+ * 2. **FlatPageMetadata** (consumer / SDK output)
+ *    Defined below in this file.
+ *    Shape: Flat — all fields at the top level, matching what downstream apps expect.
+ *    Produced by: `flattenPageMetadataRecord()` adapter in this module.
+ *    Consumers: app-foundation, Horizon, any SDK user calling `readers.pageMetadata()`.
+ *
+ * 3. **PageRecord** interface (in-memory composite)
+ *    Defined in `types.ts`.
+ *    Shape: Flat, ~200 fields drawn from *multiple* datasets (page_metadata, navigation,
+ *    content, assets, performance, etc.). This is the in-memory working type used by the
+ *    crawl engine during processing. It is NOT what any single dataset contains on disk.
+ *
+ * ## Architectural decision: flatten in the SDK
+ *
+ * The nested storage format is the correct on-disk representation:
+ *   - It groups related metadata semantically (core SEO fields, indexing directives, social tags).
+ *   - It is already in production archives and changing it would be a breaking format change.
+ *   - Extractors emit structured objects naturally; forcing flat output couples extractor
+ *     internals to the consumer API surface.
+ *
+ * The SDK is responsible for flattening on read:
+ *   - Consumers get a predictable flat shape without needing to know the storage layout.
+ *   - The adapter is centralized here — one place to update when fields are added.
+ *   - The tradeoff is that the SDK carries adapter complexity, but this is a thin transform.
+ *
+ * ## Field mapping (nested → flat)
+ *
+ * | Nested path                          | Flat field             | Notes                              |
+ * |--------------------------------------|------------------------|------------------------------------|
+ * | `.page_id`                           | `page_id`              | Pass-through                       |
+ * | `.url`                               | `url`                  | Pass-through                       |
+ * | `.capturedAt`                        | `capturedAt`           | Pass-through                       |
+ * | `.core.title`                        | `title`                |                                    |
+ * | `.core.titleLength`                  | `titleLength`          |                                    |
+ * | `.core.metaDescription`              | `metaDescription`      |                                    |
+ * | `.core.descriptionLength`            | `descriptionLength`    |                                    |
+ * | `.core.h1`                           | `h1`                   |                                    |
+ * | `.core.canonicalTag`                 | `canonicalTag`         |                                    |
+ * | `.core.language`                     | `language`             |                                    |
+ * | `.core.charset`                      | `charset`              |                                    |
+ * | `.core.favicon`                      | `favicon`              |                                    |
+ * | `.core.viewport`                     | `viewport`             |                                    |
+ * | `.core.themeColor`                   | `themeColor`           |                                    |
+ * | `.core.generator`                    | `generator`            |                                    |
+ * | `.indexing.robotsMeta`               | `robotsMeta`           |                                    |
+ * | `.indexing.xRobotsTag`               | `xRobotsTag`           |                                    |
+ * | `.indexing.robotsDirectives`         | `robotsDirectives`     | Entire sub-object preserved        |
+ * | `.social.openGraph`                  | `openGraph`            | Record<string, string | null>      |
+ * | `.social.twitterCard`               | `twitterCard`          | Record<string, string | null>      |
+ * | `.resourceHints`                     | `resourceHints`        | Entire sub-object preserved        |
+ *
+ * Any extra fields added via `.passthrough()` on `core` or `indexing` are spread
+ * into the flat output at the top level.
+ */
+
+import type { PageMetadataDatasetRecordV1 } from "./schemas/cartographer-datasets.schema.js";
+
+/**
+ * Flat representation of a page_metadata record, as returned to SDK consumers.
+ *
+ * This is the consumer-facing shape produced by `flattenPageMetadataRecord()`.
+ * It corresponds 1:1 to the nested `PageMetadataDatasetRecordV1` storage format
+ * via the mapping documented above.
+ */
+export interface FlatPageMetadata {
+  // ── Identity ──
+  page_id: string;
+  url: string;
+  capturedAt: string;
+
+  // ── Core (from .core) ──
+  title?: string;
+  titleLength?: number;
+  metaDescription?: string;
+  descriptionLength?: number;
+  h1?: string;
+  canonicalTag?: string;
+  language?: string;
+  charset?: string;
+  favicon?: string;
+  viewport?: string;
+  themeColor?: string;
+  generator?: string;
+
+  // ── Indexing (from .indexing) ──
+  robotsMeta?: string;
+  xRobotsTag?: string;
+  robotsDirectives?: {
+    noindex?: boolean;
+    nofollow?: boolean;
+    noarchive?: boolean;
+    nosnippet?: boolean;
+    noimageindex?: boolean;
+    unavailable_after?: string;
+  };
+
+  // ── Social (from .social) ──
+  openGraph?: Record<string, string | null>;
+  twitterCard?: Record<string, string | null>;
+
+  // ── Resource hints (from .resourceHints) ──
+  resourceHints?: {
+    preload?: string[];
+    prefetch?: string[];
+    preconnect?: string[];
+    dnsPrefetch?: string[];
+  };
+
+  // ── Passthrough fields from core/indexing ──
+  [key: string]: unknown;
+}
+
+/**
+ * Flatten a nested page_metadata dataset record into the flat consumer shape.
+ *
+ * This is the single adapter between the on-disk storage format and the SDK
+ * consumer API. All SDK read paths for page_metadata should use this function.
+ *
+ * The adapter is defensive: if the record is already flat (no `core`/`indexing`/
+ * `social` nested objects), it is returned as-is. This ensures backward
+ * compatibility with archives produced before the nested format was adopted.
+ *
+ * @param record - A page_metadata record (nested or flat) as stored on disk.
+ * @returns A `FlatPageMetadata` with all fields promoted to the top level.
+ */
+export function flattenPageMetadataRecord(
+  record: PageMetadataDatasetRecordV1 | Record<string, unknown>,
+): FlatPageMetadata {
+  const raw = record as Record<string, unknown>;
+
+  // Detect nested format by checking for the `core` nested object
+  const hasNestedShape = raw.core != null && typeof raw.core === "object" && !Array.isArray(raw.core);
+
+  if (!hasNestedShape) {
+    // Already flat or unknown shape — pass through as-is
+    return raw as FlatPageMetadata;
+  }
+
+  const { core, indexing, social, resourceHints, ...topLevel } =
+    record as PageMetadataDatasetRecordV1;
+
+  // Destructure known core fields; rest captures passthrough extras
+  const {
+    title,
+    titleLength,
+    metaDescription,
+    descriptionLength,
+    h1,
+    canonicalTag,
+    language,
+    charset,
+    favicon,
+    viewport,
+    themeColor,
+    generator,
+    ...coreExtra
+  } = core;
+
+  // Destructure known indexing fields; rest captures passthrough extras
+  const indexingFields = indexing ?? {};
+  const {
+    robotsMeta,
+    xRobotsTag,
+    robotsDirectives,
+    ...indexingExtra
+  } = indexingFields as typeof indexing;
+
+  return {
+    ...topLevel,
+    // Core metadata
+    title,
+    titleLength,
+    metaDescription,
+    descriptionLength,
+    h1,
+    canonicalTag,
+    language,
+    charset,
+    favicon,
+    viewport,
+    themeColor,
+    generator,
+    // Core passthrough extras
+    ...coreExtra,
+    // Indexing metadata
+    robotsMeta,
+    xRobotsTag,
+    robotsDirectives,
+    // Indexing passthrough extras
+    ...indexingExtra,
+    // Social metadata
+    openGraph: social?.openGraph,
+    twitterCard: social?.twitterCard,
+    // Resource hints (preserved as sub-object)
+    resourceHints,
+  };
+}

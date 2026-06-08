@@ -1,0 +1,28 @@
+{
+  "name": "atls",
+  "version": "0.0.0",
+  "description": "Atlas (.atls) archive format — specification, JSON Schemas, TypeScript types, and reader SDK.",
+  "private": true,
+  "type": "module",
+  "author": "Cai Frazier",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@typescript-eslint/eslint-plugin": "^8.7.0",
+    "@typescript-eslint/parser": "^8.7.0",
+    "eslint": "^9.11.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.6.3",
+    "vitest": "^2.0.0"
+  }
+}
