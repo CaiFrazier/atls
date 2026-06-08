@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/atls-spec" },
+    { "path": "./packages/atls-sdk" }
+  ]
+}
