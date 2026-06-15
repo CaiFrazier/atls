@@ -364,11 +364,34 @@ export async function validate(
           }
           if (issues.length >= maxIssues) break;
         }
-      } catch {
-        // Dataset not present or unreadable — not an error for optional datasets
+      } catch (err) {
+        // hasDataset(name) was true above, so the dataset IS present in the
+        // archive. A throw here therefore means it could not be read/decompressed
+        // (e.g. a truncated or corrupt part) — that must be surfaced, not
+        // silently treated as "absent". Otherwise validate() certifies corrupt
+        // archives as valid. (BUG-0026 / audit C-14)
+        addIssue({
+          severity: "error",
+          code: "DATASET_UNREADABLE",
+          message: `${name} dataset is present but could not be read (likely truncated or corrupt): ${err instanceof Error ? err.message : String(err)}`,
+          dataset: name,
+        });
       }
     }
     
+    // Records that could not be parsed were silently skipped during the lenient
+    // reads above (e.g. truncated/corrupt dataset parts) and only tallied in
+    // atlas.stats.corruptedRecordCount. Surface them — otherwise validate()
+    // certifies a corrupt archive as valid. (BUG-0054 / audit S-22, and the
+    // lenient-mode complement to the DATASET_UNREADABLE catch above / C-14)
+    if (atlas.stats.corruptedRecordCount > 0) {
+      addIssue({
+        severity: "error",
+        code: "CORRUPTED_RECORDS",
+        message: `${atlas.stats.corruptedRecordCount} record(s) could not be parsed and were skipped (likely truncated or corrupt dataset parts)`,
+      });
+    }
+
     // Phase 5: Check manifest counts
     if (checkManifest) {
       validateManifestCounts(atlas.manifest, {
