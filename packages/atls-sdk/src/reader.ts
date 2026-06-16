@@ -57,87 +57,6 @@ function openEntryReadStream(zipfile: ZipFile, entry: Entry): Promise<Readable> 
   });
 }
 
-function readEntryBufferByName(atlsPath: string, fileName: string, signal?: AbortSignal): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    open(atlsPath, { lazyEntries: true, autoClose: true }, (err: Error | null, zipfile?: ZipFile) => {
-      if (err || !zipfile) {
-        reject(err || new Error("Failed to open ZIP"));
-        return;
-      }
-
-      let settled = false;
-
-      const cleanup = () => {
-        zipfile.removeListener("entry", onEntry);
-        zipfile.removeListener("end", onEnd);
-        zipfile.removeListener("error", onError as (error: Error) => void);
-      };
-
-      const fail = (error: unknown) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        try {
-          zipfile.close();
-        } catch {
-          // ignore close errors
-        }
-        reject(error instanceof Error ? error : new Error(String(error)));
-      };
-
-      const onError = (error: unknown) => {
-        fail(error);
-      };
-
-      const onEnd = () => {
-        fail(new Error(`${fileName} not found in archive`));
-      };
-
-      const onEntry = (entry: Entry) => {
-        if (entry.fileName !== fileName) {
-          zipfile.readEntry();
-          return;
-        }
-
-        zipfile.openReadStream(entry, async (streamErr: Error | null, readStream?: Readable) => {
-          if (streamErr || !readStream) {
-            fail(streamErr || new Error("Failed to open stream"));
-            return;
-          }
-
-          try {
-            const payload = await readStreamToBuffer(readStream, signal);
-            if (settled) return;
-            settled = true;
-            cleanup();
-            try {
-              zipfile.close();
-            } catch {
-              // ignore close errors
-            }
-            resolve(payload);
-          } catch (error) {
-            fail(error);
-          }
-        });
-      };
-
-      zipfile.on("entry", onEntry);
-      zipfile.on("end", onEnd);
-      zipfile.on("error", onError as (error: Error) => void);
-
-      try {
-        checkAbort(signal);
-      } catch (error) {
-        fail(error);
-        return;
-      }
-
-      zipfile.readEntry();
-    });
-  });
-}
-
 async function readStreamToBuffer(readStream: Readable, signal?: AbortSignal): Promise<Buffer> {
   checkAbort(signal);
   return new Promise<Buffer>((resolve, reject) => {
@@ -240,7 +159,19 @@ export class ZipHandle {
     assertAtlasPath(atlsPath);
     const zipfile = await openZipFile(atlsPath);
     const handle = new ZipHandle(atlsPath, zipfile);
-    await handle.indexEntries();
+    try {
+      await handle.indexEntries();
+    } catch (err) {
+      // BUG-0073: the zipfile is opened with autoClose:false, so a failed index
+      // pass (e.g. corrupt central directory) would otherwise leak its file
+      // descriptor. Close it before propagating the error.
+      try {
+        zipfile.close();
+      } catch {
+        // ignore close errors
+      }
+      throw err;
+    }
     return handle;
   }
 
@@ -311,19 +242,24 @@ export class ZipHandle {
   }
 
   async readEntryBuffer(fileName: string, signal?: AbortSignal): Promise<Buffer> {
-    this.ensureOpen();
-    checkAbort(signal);
-
-    if (!this.entries.has(fileName)) {
-      throw new Error(`${fileName} not found in archive`);
-    }
-
-    return readEntryBufferByName(this.atlsPath, fileName, signal);
+    const readStream = await this.openEntryStream(fileName, signal);
+    return readStreamToBuffer(readStream, signal);
   }
 
   async openEntryStream(fileName: string, signal?: AbortSignal): Promise<Readable> {
-    const payload = await this.readEntryBuffer(fileName, signal);
-    return Readable.from([payload]);
+    this.ensureOpen();
+    checkAbort(signal);
+
+    const entry = this.entries.get(fileName);
+    if (!entry) {
+      throw new Error(`${fileName} not found in archive`);
+    }
+
+    // BUG-0110/BUG-0111: stream directly from the already-open zipfile using the
+    // entry indexed at open time. Previously every read reopened the archive from
+    // disk and linear-scanned its entries (O(K×E)), and openEntryStream buffered
+    // the whole entry before wrapping it in Readable.from([payload]).
+    return openEntryReadStream(this.zipfile, entry);
   }
 
   async readJson(fileName: string, signal?: AbortSignal): Promise<unknown> {
@@ -377,14 +313,17 @@ async function* streamPartFile(
   checkAbort(options.signal);
 
   if (!fileName.toLowerCase().endsWith(".zst")) {
-    const payload = await handle.readEntryBuffer(fileName, options.signal);
-    for (const line of bufferLines(payload)) {
-      checkAbort(options.signal);
-      yield line;
-    }
+    // BUG-0111: stream uncompressed parts line-by-line with bounded memory
+    // instead of buffering the entire part before yielding.
+    const readStream = await handle.openEntryStream(fileName, options.signal);
+    yield* streamUtf8Lines(readStream, options.signal);
     return;
   }
 
+  // .zst parts: @mongodb-js/zstd exposes only a buffer-based decompress, so the
+  // compressed part is read in full and decompressed in memory. Peak memory is
+  // one part's compressed+decompressed size; a streaming zstd codec would be
+  // needed to bound it further (tracked separately — would raise the Node floor).
   const compressed = await handle.readEntryBuffer(fileName, options.signal);
   checkAbort(options.signal);
 

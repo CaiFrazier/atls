@@ -1459,6 +1459,10 @@ export interface EngineConfig {
   robots: {
     respect: boolean;
     overrideUsed: boolean;
+    // When robots.txt is *unreachable* (5xx / network / DNS error), RFC 9309
+    // §2.3.1.4 requires assuming a complete disallow. Default true (fail closed);
+    // set false to fall back to the legacy fail-open behaviour.
+    failClosed?: boolean;
   };
 
   privacy?: {
