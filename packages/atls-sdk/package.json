@@ -3,7 +3,7 @@
   "version": "1.0.0-rc.1",
   "description": "TypeScript SDK for reading Atlas v1.0 archives produced by Cartographer Engine",
   "author": "Cai Frazier",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "keywords": [

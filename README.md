@@ -25,5 +25,16 @@ Requires Node ≥ 20 and pnpm ≥ 9.
 
 ## License
 
-License is being finalized for public release. Until a `LICENSE` file is added,
-all rights are reserved by Cai Frazier.
+Dual-licensed, by design — anyone can read, write, and build tooling around the
+`.atls` format:
+
+- **Code** (`@atls/spec`, `@atls/sdk`, and all source) — **Apache License 2.0**
+  ([`LICENSE`](./LICENSE)).
+- **The Atlas specification & JSON Schemas** — additionally **CC BY 4.0**
+  ([`LICENSE-SPEC.md`](./LICENSE-SPEC.md)).
+
+Trademarks ("Atlas", etc.) are not licensed by either grant — see
+[`NOTICE`](./NOTICE). Contributions are accepted under the
+[Developer Certificate of Origin](./CONTRIBUTING.md).
+
+Copyright © 2026 Cai Frazier.

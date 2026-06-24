@@ -4,7 +4,7 @@
   "description": "Atlas v1.0 specification, JSON Schemas, TypeScript types, and validators",
   "type": "module",
   "author": "Cai Frazier",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0 AND CC-BY-4.0",
   "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
