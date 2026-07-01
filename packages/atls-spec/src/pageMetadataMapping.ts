@@ -45,7 +45,7 @@
  *
  * | Nested path                          | Flat field             | Notes                              |
  * |--------------------------------------|------------------------|------------------------------------|
- * | `.page_id`                           | `page_id`              | Pass-through                       |
+ * | `.pageId`                            | `pageId`               | Pass-through                       |
  * | `.url`                               | `url`                  | Pass-through                       |
  * | `.capturedAt`                        | `capturedAt`           | Pass-through                       |
  * | `.core.title`                        | `title`                |                                    |
@@ -82,7 +82,7 @@ import type { PageMetadataDatasetRecordV1 } from "./schemas/cartographer-dataset
  */
 export interface FlatPageMetadata {
   // ── Identity ──
-  page_id: string;
+  pageId: string;
   url: string;
   capturedAt: string;
 
@@ -109,7 +109,7 @@ export interface FlatPageMetadata {
     noarchive?: boolean;
     nosnippet?: boolean;
     noimageindex?: boolean;
-    unavailable_after?: string;
+    unavailableAfter?: string;
   };
 
   // ── Social (from .social) ──

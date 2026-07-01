@@ -48,9 +48,9 @@ describe("SDK read path (BUG-0110 / BUG-0111 / BUG-0073)", () => {
     try {
       const responses: Array<{ body_blob_ref: string }> = [];
       for await (const r of atlas.readers.responses()) {
-        responses.push(r as { body_blob_ref: string });
+        responses.push(r as { bodyBlobRef: string });
       }
-      const ref = responses[0].body_blob_ref;
+      const ref = responses[0].bodyBlobRef;
 
       // First read while the file is still on disk.
       const first = await atlas.getBlob(ref);

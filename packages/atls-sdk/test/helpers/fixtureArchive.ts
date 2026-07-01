@@ -23,6 +23,8 @@ export type FixtureOptions = {
   edgeSourceUrl?: string;
   omitFormatVersion?: boolean;
   nonCanonicalBlobRef?: boolean;
+  /** Inject a non-canonical blob ref into the asset record's nested resourceHint.bodyBlobRef. */
+  nonCanonicalAssetBlobRef?: boolean;
   pageNullTitle?: boolean;
   formatVersionValue?: string;
   /** Override the specLevel written into the summary (1=raw, 2=prerender, 3=full). */
@@ -89,7 +91,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
   const pagePathname = new URL(pageUrl).pathname;
 
   const pageMetadataRecord = {
-    page_id: pageId,
+    pageId: pageId,
     url: pageUrl,
     normalizedUrl: pageUrl,
     finalUrl: pageUrl,
@@ -117,7 +119,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
   };
 
   const navigationRecord = {
-    page_id: pageId,
+    pageId: pageId,
     sourceUrl: options.edgeSourceUrl ?? pageUrl,
     edges: [
       {
@@ -133,8 +135,8 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
   };
 
   const assetRecord = {
-    page_id: pageId,
-    asset_id: "asset-1",
+    pageId: pageId,
+    assetId: "asset-1",
     pageUrl: pageUrl,
     assetUrl: `${pageUrl}asset.png`,
     type: "image",
@@ -142,15 +144,23 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     visible: true,
     inViewport: true,
     wasLazyLoaded: false,
+    ...(options.nonCanonicalAssetBlobRef
+      ? {
+          resourceHint: {
+            resId: "00000000-0000-4000-8000-000000000001",
+            bodyBlobRef: `blobs/${blobRef}.zst`,
+          },
+        }
+      : {}),
   };
 
   const responseRecord = {
-    page_id: pageId,
+    pageId: pageId,
     url: pageUrl,
-    final_url: pageUrl,
-    status_code: 200,
+    finalUrl: pageUrl,
+    statusCode: 200,
     encoding: "utf-8",
-    body_blob_ref: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
+    bodyBlobRef: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
   };
 
   const pageMetadataPart = await buildJsonlPart([pageMetadataRecord], "page_metadata/page_metadata_part_00.jsonl.zst");
@@ -223,7 +233,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     ...formatVersionEntry,
     generator: "atlas-sdk-test/1.0.0",
     atlas_semver: "1.0.0",
-    created_at: now,
+    createdAt: now,
     created_by: {
       app: "atlas-sdk-test",
       version: "1.0.0",
@@ -238,18 +248,18 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
       name: "Cai Frazier",
     },
     storage: {
-      blob_format: "individual",
+      blobFormat: "individual",
       blob_stats: {
         total_blobs: 1,
         total_bytes_compressed: blobCompressed.length,
         deduplication_rate: 0,
       },
     },
-    privacy_policy: {
-      strip_cookies: true,
-      strip_auth_headers: true,
-      redact_inputs: true,
-      redact_pii: true,
+    privacyPolicy: {
+      stripCookies: true,
+      stripAuthHeaders: true,
+      redactInputs: true,
+      redactPii: true,
     },
     summary: {
       total_pages: 1,

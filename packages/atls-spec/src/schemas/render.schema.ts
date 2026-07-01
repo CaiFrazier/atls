@@ -8,7 +8,7 @@
 import { z } from 'zod';
 
 export const RenderRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   
   // Render configuration
   mode: z.enum(['raw', 'import', 'prerender', 'full']),
@@ -16,25 +16,25 @@ export const RenderRecordV1Schema = z.object({
     width: z.number().int().positive(),
     height: z.number().int().positive()
   }),
-  user_agent: z.string(),
+  userAgent: z.string(),
   
   // Render timing
-  render_started_at: z.string().datetime(),
-  render_completed_at: z.string().datetime(),
-  render_duration_ms: z.number().int().nonnegative(),
+  renderStartedAt: z.string().datetime(),
+  renderCompletedAt: z.string().datetime(),
+  renderDurationMs: z.number().int().nonnegative(),
   
   // Page lifecycle
-  dom_content_loaded: z.boolean(),
-  load_event_fired: z.boolean(),
-  network_idle: z.boolean(),
+  domContentLoaded: z.boolean(),
+  loadEventFired: z.boolean(),
+  networkIdle: z.boolean(),
   
   // Determinism metadata
-  scripts_enabled: z.boolean(),
-  styles_enabled: z.boolean(),
-  images_enabled: z.boolean(),
+  scriptsEnabled: z.boolean(),
+  stylesEnabled: z.boolean(),
+  imagesEnabled: z.boolean(),
   
   // Console messages
-  console_errors: z.array(z.object({
+  consoleErrors: z.array(z.object({
     type: z.enum(['error', 'warning']),
     message: z.string(),
     location: z.object({
@@ -45,13 +45,13 @@ export const RenderRecordV1Schema = z.object({
   })).default([]),
   
   // Network activity
-  request_count: z.number().int().nonnegative(),
-  failed_requests: z.number().int().nonnegative(),
+  requestCount: z.number().int().nonnegative(),
+  failedRequests: z.number().int().nonnegative(),
   
   // Metrics
-  first_paint_ms: z.number().int().nonnegative().optional(),
-  first_contentful_paint_ms: z.number().int().nonnegative().optional(),
-  dom_interactive_ms: z.number().int().nonnegative().optional()
+  firstPaintMs: z.number().int().nonnegative().optional(),
+  firstContentfulPaintMs: z.number().int().nonnegative().optional(),
+  domInteractiveMs: z.number().int().nonnegative().optional()
 });
 
 export type RenderRecordV1 = z.infer<typeof RenderRecordV1Schema>;

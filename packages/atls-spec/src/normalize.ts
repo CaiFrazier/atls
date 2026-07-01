@@ -53,13 +53,17 @@ export interface LegacyComputedTextNodeRecord extends Omit<ComputedTextNodeRecor
 }
 
 export function normalizeAssetRecord(record: LegacyAssetRecord): AssetRecord {
-  const page_id = record.page_id ?? record.pageId;
-  const asset_id = record.asset_id ?? record.assetId;
-  if (!page_id || !asset_id) {
-    throw new Error("normalizeAssetRecord: page_id and asset_id are required");
+  const pageId = record.page_id ?? record.pageId;
+  const assetId = record.asset_id ?? record.assetId;
+  if (!pageId || !assetId) {
+    throw new Error("normalizeAssetRecord: pageId and assetId are required");
   }
-  const { pageId, assetId, ...rest } = record as LegacyAssetRecord;
-  return { ...rest, page_id, asset_id };
+  // RC2 cutover: canonical keys are camelCase. Strip BOTH legacy snake spellings from
+  // the spread so they can't linger as forbidden keys; emit the camelCase ids.
+  const { page_id, asset_id, ...rest } = record as LegacyAssetRecord;
+  void page_id; void asset_id;
+  // TS can't verify completeness from the loose legacy shape, so assert the result.
+  return { ...rest, pageId, assetId } as AssetRecord;
 }
 
 export function normalizePageRecord(record: LegacyPageRecord): PageRecord {

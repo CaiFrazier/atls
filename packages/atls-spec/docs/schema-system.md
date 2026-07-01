@@ -86,7 +86,7 @@ pages) and blob-ref format checks are available as opt-in validation passes. See
 Two helpers in `@cf/atlas-spec` smooth over historical shape drift:
 
 - `src/normalize.ts` — coalesces legacy camelCase field aliases to the canonical snake_case form
-  (`pageId → page_id`, `assetId → asset_id`, etc.) so older records read consistently.
+  (`pageId → pageId`, `assetId → assetId`, etc.) so older records read consistently.
 - `src/pageMetadataMapping.ts` — `flattenPageMetadataRecord()` converts the nested on-disk
   `page_metadata` record (`core.*`, `indexing.*`, `social.*`) into a flat consumer shape. It
   detects whether a record is already flat and passes it through unchanged.

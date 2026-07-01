@@ -10,7 +10,7 @@
  * Core types for Atlas archive specification.
  * Used by both the Cartographer engine and Atlas SDK.
  */
-import type { DOMSnapshotRecordV1, ResponseRecordV1 } from "./schemas/index.js";
+import type { DOMSnapshotRecordV1, ResponseRecordV1, SitemapDatasetRecordV1, PipelineFailureRecordV1, AccessibilityDatasetRecordV1, EventRecordV1, AssetRecordV1 } from "./schemas/index.js";
 import {
   AssetRecordSchema,
   DOMSnapshotRecordSchema,
@@ -754,176 +754,10 @@ export interface EdgeRecord {
 /**
  * AssetRecord - Media asset on a page
  */
-export interface AssetRecord {
-  // === STABLE REFERENCES (Atlas v1.0 Enhancement) ===
-  page_id: string; // UUID of page containing asset
-  asset_id: string; // UUID v5(namespace, assetUrl) - deterministic
-  /** @deprecated Use page_id */
-  pageId?: never;
-  /** @deprecated Use asset_id */
-  assetId?: never;
-  
-  pageUrl: string;
-  assetUrl: string;
-  type: "image" | "video" | "audio" | "document";
-  alt?: string;
-  hasAlt: boolean;
-  naturalWidth?: number;
-  naturalHeight?: number;
-  displayWidth?: number;
-  displayHeight?: number;
-  estimatedBytes?: number;
-  visible: boolean | null;
-  inViewport: boolean | null;
-  loading?: string; // "lazy" attribute
-  wasLazyLoaded: boolean;
-  
-  // === RESPONSIVE IMAGES (Atlas v1.0 Enhancement - Phase 6) ===
-  
-  /**
-   * Srcset attribute value (comma-separated image candidates with descriptors)
-   * Example: "small.jpg 480w, medium.jpg 800w, large.jpg 1200w"
-   */
-  srcset?: string;
-  
-  /**
-   * Parsed srcset candidates for programmatic analysis
-   */
-  srcset_candidates?: Array<{
-    url: string;          // Resolved URL
-    descriptor: string;   // "480w", "1.5x", etc.
-    width?: number;       // Pixel width (from "w" descriptor)
-    density?: number;     // Pixel density (from "x" descriptor)
-  }>;
-  
-  /**
-   * Sizes attribute (media queries for responsive selection)
-   * Example: "(max-width: 600px) 480px, (max-width: 900px) 800px, 1200px"
-   */
-  sizes?: string;
-  
-  /**
-   * Parent picture element info (if image is inside <picture>)
-   */
-  picture_context?: {
-    has_picture_parent: boolean;
-    source_count: number;      // Number of <source> elements
-    sources?: Array<{
-      srcset: string;
-      media?: string;          // Media query
-      type?: string;           // MIME type (e.g., "image/webp")
-    }>;
-  };
-  
-  // === VIDEO/AUDIO METADATA (Atlas v1.0 Enhancement - Phase 6) ===
-  
-  /**
-   * Video/audio duration in seconds (from runtime inspection)
-   */
-  duration?: number;
-  
-  /**
-   * MIME type from type attribute or Content-Type header
-   * Examples: "video/mp4", "video/webm", "audio/mpeg", "audio/wav"
-   */
-  mime_type?: string;
-  
-  /**
-   * Video/audio controls
-   */
-  has_controls?: boolean;
-  
-  /**
-   * Autoplay flag
-   */
-  autoplay?: boolean;
-  
-  /**
-   * Loop flag
-   */
-  loop?: boolean;
-  
-  /**
-   * Muted flag
-   */
-  muted?: boolean;
-  
-  /**
-   * Preload strategy: "none", "metadata", "auto"
-   */
-  preload?: string;
-  
-  /**
-   * Poster image URL (for video)
-   */
-  poster?: string;
-  
-  /**
-   * Track elements (captions, subtitles, etc.)
-   */
-  tracks?: Array<{
-    kind: string;        // "captions", "subtitles", "descriptions", "chapters", "metadata"
-    src: string;
-    srclang?: string;
-    label?: string;
-  }>;
-  
-  /**
-   * Source elements (for video/audio with multiple formats)
-   */
-  sources?: Array<{
-    src: string;
-    type?: string;       // MIME type
-  }>;
-  
-  // === LAZY LOADING DETECTION (Atlas v1.0 Enhancement - Phase 6) ===
-  
-  /**
-   * Lazy loading strategy detected
-   */
-  lazy_strategy?: "native" | "intersection-observer" | "data-src" | "none";
-  
-  /**
-   * Data attributes used for lazy loading
-   */
-  lazy_data_attrs?: {
-    data_src?: string;
-    data_srcset?: string;
-    data_sizes?: string;
-    data_bg?: string;
-    [key: string]: string | undefined;
-  };
-  
-  /**
-   * Class names that indicate lazy loading (e.g., "lazyload", "lazy")
-   */
-  lazy_classes?: string[];
-
-  /**
-   * Number of identical asset observations collapsed into this record.
-   * This preserves multiplicity while reducing exact duplicate rows.
-   */
-  occurrence_count?: number;
-
-  /**
-   * Relational hint linking this DOM-observed asset to its network-captured
-   * resource record, when a match was found during the write phase.
-   * Avoids the need for URL-based joins between the assets and resources datasets.
-   */
-  resource_hint?: {
-    /** Foreign key to resources.res_id */
-    res_id: string;
-    /** Direct blob reference for the captured resource body (avoids join for common queries) */
-    body_blob_ref?: string;
-    /** Size of the network response body in bytes */
-    size_bytes?: number;
-  };
-
-  /**
-   * Optional tiled screenshot representation for oversized captures.
-   */
-  tiles?: ScreenshotTile[];
-}
+// BUG-0124: single source of truth — alias to the Zod-inferred type.
+// RC2 camelCase cutover (2026-06-25): canonical keys are now `pageId`/`assetId`; the
+// guard flips to forbid the OLD snake `page_id`/`asset_id` so a regression is a compile error.
+export type AssetRecord = AssetRecordV1 & { page_id?: never; asset_id?: never };
 
 // ============================================================================
 // Field-Level Provenance Tagging
@@ -956,61 +790,13 @@ export interface RecordMeta {
 
 /**
  * AccessibilityRecord - Native Cartographer accessibility extract
+ *
+ * BUG-0124 + BUG-0127: single source of truth — alias to the Zod-inferred type.
+ * The `axe`/`formControls`/`focusOrder` shapes were ported into
+ * AccessibilityDatasetRecordV1Schema (previously loose `z.record(JsonValue)`), so
+ * this alias preserves full type detail instead of degrading consumers.
  */
-export interface AccessibilityRecord {
-  pageUrl: string;
-  page_id: string; // UUID v7 for stable joins
-  audit_engine?: {
-    name: string;
-    version: string;
-  };
-  wcag_version?: string;
-  audit_profile?: "basic" | "essential" | "full" | "custom";
-  audited_at?: string;
-  missingAltCount: number;
-  missingAltSources?: string[];
-  headingOrder: Array<"H1" | "H2" | "H3" | "H4" | "H5" | "H6">;
-  landmarks: {
-    header: boolean;
-    nav: boolean;
-    main: boolean;
-    aside: boolean;
-    footer: boolean;
-  };
-  roles: Record<string, number>;
-  contrastViolations?: Array<{
-    selector: string;
-    fg?: string;
-    bg?: string;
-    ratio: number;
-    level: "AA" | "AAA";
-  }>;
-  ariaIssues?: string[];
-  lang?: string | null;
-  formControls?: {
-    totalInputs: number;
-    missingLabel: number;
-    inputsMissingLabel: string[];
-    missingAutocomplete?: number;
-    inputsMissingAutocomplete?: string[];
-    requiredInputs?: number;
-    requiredWithoutConstraint?: number;
-    inputsWithPattern?: number;
-    elements?: Array<{
-      selector: string;
-      tag: "input" | "textarea" | "select";
-      type?: string;
-      required: boolean;
-      hasLabel: boolean;
-      autocomplete?: string;
-      hasConstraint: boolean;
-    }>;
-  } | null;
-  focusOrder?: Array<{ selector: string; tabindex: number }> | null;
-  wcagData?: object | null;
-  axe?: AxeAccessibilityRecord;
-  _meta?: RecordMeta;
-}
+export type AccessibilityRecord = AccessibilityDatasetRecordV1;
 
 export type AxeImpact = "minor" | "moderate" | "serious" | "critical";
 
@@ -1062,12 +848,12 @@ export interface AxeAuditSummary {
 
 export interface AxeAccessibilityRecord {
   pageUrl: string;
-  page_id: string;
+  pageId: string;
   normalizedUrl?: string;
-  audit_engine: AccessibilityEngineMode;
-  axe_version: string;
-  render_mode: RenderMode;
-  audited_at: string;
+  auditEngine: AccessibilityEngineMode;
+  axeVersion: string;
+  renderMode: RenderMode;
+  auditedAt: string;
   summary: AxeAuditSummary;
   testEngine: { name: string; version: string };
   testRunner?: { name: string; version: string };
@@ -1082,17 +868,11 @@ export interface AxeAccessibilityRecord {
 /**
  * ErrorRecord - Crawl error
  */
-export interface ErrorRecord {
-  url: string;
-  origin: string; // For DNS/SSL triage
-  hostname: string; // For host-level error grouping
-  occurredAt: string; // ISO timestamp
-  phase: "fetch" | "render" | "extract" | "write";
-  code?: string;
-  message: string;
-  stack?: string;
-  details?: Record<string, any>;
-}
+// BUG-0124: single source of truth — pipeline_failures + pipeline_alerts share this
+// shape (PipelineAlertRecordV1Schema === PipelineFailureRecordV1Schema). Alias to the
+// Zod-inferred type so it can never drift from the schema. `details` is
+// Record<string,JsonValue> (no undefined) — build it via jsonSafe() at call sites.
+export type ErrorRecord = PipelineFailureRecordV1;
 
 // ============================================================================
 // Frontier Ledger Dataset
@@ -1119,21 +899,9 @@ export interface FrontierLedgerRecord {
 /**
  * SitemapRecord - Per-sitemap fetch/parse outcome for forensic sitemap discovery auditing.
  */
-export interface SitemapRecord {
-  sitemap_id: string; // UUIDv7
-  crawl_id: string;
-  url: string;
-  fetched_at: string; // ISO timestamp
-  http_status: number;
-  content_type: string;
-  is_index: boolean;
-  entries_found: number;
-  entries_enqueued: number;
-  parse_warning: boolean;
-  parse_error: string | null;
-  depth: number;
-  referenced_by: string | null;
-}
+// BUG-0124: single source of truth — alias to the Zod-inferred type so the schema
+// and this type can never drift, and Zod renames propagate to all consumers.
+export type SitemapRecord = SitemapDatasetRecordV1;
 
 // ============================================================================
 // Event Log Dataset (Atlas v1.0 Phase 7)
@@ -1147,59 +915,9 @@ export interface SitemapRecord {
  * 
  * @since Atlas v1.0 Phase 7
  */
-export interface EventRecord {
-  // Core identification
-  event_id: string;                  // UUID v7 for event tracking
-  crawl_id: string;                  // Crawl identifier
-  occurred_at: string;               // ISO 8601 timestamp
-  
-  // Event classification
-  event_type: EventType;             // Event category (see EventType enum)
-  severity: EventSeverity;           // info | warn | error | critical
-  
-  // Context
-  url?: string;                      // Associated URL (if applicable)
-  hostname?: string;                 // Hostname for grouping
-  page_id?: string;                  // Page UUID v7 (if applicable)
-  
-  // Event details
-  message: string;                   // Human-readable description
-  details?: Record<string, any>;     // Structured event data
-  
-  // Performance metrics (when applicable)
-  metrics?: {
-    duration_ms?: number;            // Operation duration
-    memory_rss_mb?: number;          // RSS memory at event time
-    queue_depth?: number;            // Queue size at event time
-    concurrent_requests?: number;    // Active requests
-  };
-  
-  // Rate limiting context (for throttle events)
-  rate_limit?: {
-    host: string;                    // Affected host
-    status_code?: number;            // HTTP status (429, 503)
-    retry_after?: number;            // Retry-After header (seconds)
-    backoff_ms?: number;             // Applied backoff duration
-    attempts?: number;               // Retry attempt number
-  };
-  
-  // Challenge detection (for bot/captcha challenges)
-  challenge?: {
-    provider?: string | null;        // Cloudflare, Akamai, etc.
-    detection_confidence: "high" | "medium" | "low";
-    resolution_attempted: boolean;   // Whether we tried to resolve
-    resolution_success?: boolean;    // Resolution outcome
-    wait_duration_ms?: number;       // How long we waited
-  };
-  
-  // Resource consumption (for memory/cpu alerts)
-  resource_usage?: {
-    cpu_percent?: number;            // CPU usage percentage
-    memory_heap_mb?: number;         // Heap memory (MB)
-    memory_external_mb?: number;     // External memory (MB)
-    gc_duration_ms?: number;         // Garbage collection time
-  };
-}
+// BUG-0124 + BUG-0127: single source of truth — alias to the Zod-inferred type.
+// rate_limit/challenge/resource_usage shapes were ported into EventRecordV1Schema.
+export type EventRecord = EventRecordV1;
 
 /**
  * Event type categories for operational event classification
@@ -1924,8 +1642,8 @@ export interface AtlasPack {
  * Manifest for .atls file
  */
 export interface AtlasManifest {
-  dataset_id?: string;
-  crawl_id?: string;
+  datasetId?: string;
+  crawlId?: string;
   atlasVersion: string; // "1.0"
   formatVersion: string; // "1.0.0" - Explicit format version for compatibility checks
   specVersion?: string;
@@ -1966,7 +1684,7 @@ export interface AtlasManifest {
     seedUrls?: string[];
   };
 
-  site_root?: string;
+  siteRoot?: string;
   scope?: {
     seeds?: string[];
     allow?: string[];
@@ -1977,7 +1695,7 @@ export interface AtlasManifest {
     max_depth?: number;
   };
 
-  crawler_settings?: {
+  crawlerSettings?: {
     render_mode?: string;
     robots_policy?: string;
     robots_override?: boolean;
@@ -1989,7 +1707,7 @@ export interface AtlasManifest {
     network_conditions?: "none" | "mobile-4g" | "mobile-3g" | "mobile-2g" | "slow-2g";
   };
 
-  url_normalization?: {
+  urlNormalization?: {
     lowercase_host?: boolean;
     remove_default_port?: boolean;
     strip_fragment?: boolean;
@@ -2019,8 +1737,8 @@ export interface AtlasManifest {
   packs?: AtlasPack[];
   
   // Crawl timing (Atlas v1.0 Enhancement - Phase 3)
-  crawl_started_at?: string;    // ISO timestamp when crawl began
-  crawl_completed_at?: string;  // ISO timestamp when crawl finished
+  crawlStartedAt?: string;    // ISO timestamp when crawl began
+  crawlCompletedAt?: string;  // ISO timestamp when crawl finished
   
   // Producer metadata (Atlas v1.0 Enhancement - Phase 2)
   producer?: {
@@ -2068,29 +1786,31 @@ export interface AtlasManifest {
   };
   
   // Privacy policy (Atlas v1.0 Spec - Phase 3B)
-  privacy_policy?: {
-    strip_cookies: boolean;        // Strip cookies from requests (default true)
-    strip_auth_headers: boolean;   // Strip Authorization headers (default true)
-    redact_inputs: boolean;        // Redact input field values (default true)
-    redact_forms: boolean;         // Redact form data (default true)
-    redact_pii: boolean;           // Redact obvious PII fields (default false)
-  };
-  
-  // Robots.txt policy (Atlas v1.0 Spec - Phase 3B)
-  robots_policy?: {
-    respect: boolean;              // Respect robots.txt (default true)
-    overrides_used: boolean;       // If true, robots.txt was overridden
-    override_reason?: string;      // Reason for override (if overrides_used)
+  privacyPolicy?: {
+    stripCookies: boolean;         // Strip cookies from requests (default true)
+    stripAuthHeaders: boolean;     // Strip Authorization headers (default true)
+    redactInputs: boolean;         // Redact input field values (default true)
+    redactForms: boolean;          // Redact form data (default true)
+    redactPii: boolean;            // Redact obvious PII fields (default false)
   };
 
-  compare_compatibility?: {
+  // Robots.txt policy (Atlas v1.0 Spec - Phase 3B)
+  robotsPolicy?: {
+    respect: boolean;              // Respect robots.txt (default true)
+    overridesUsed: boolean;        // If true, robots.txt was overridden
+    overrideReason?: string;       // Reason for override (if overridesUsed)
+  };
+
+  // compareCompatibility is z.record(unknown) (free-form) in the schema — the field name is
+  // camelCase but inner keys (comparable_to/diff_*) are data and stay snake.
+  compareCompatibility?: {
     comparable_to?: string[];
     diff_safe?: boolean;
     diff_warnings?: string[];
   };
-  
+
   // Crawl config hash (Atlas v1.0 Spec - Phase 3B)
-  crawl_config_hash?: string;      // SHA-256 of normalized config for reproducibility
+  crawlConfigHash?: string;      // SHA-256 of normalized config for reproducibility
   
   hashing: {
     algorithm: string; // "sha256"
@@ -2198,11 +1918,11 @@ export interface AtlasManifest {
       level?: number;               // Compression level (1-22 for zstd)
     };
     // Atlas v1.0 Spec additions - Phase 3B
-    blob_format?: "zst" | "tar.zst";  // Individual files or packed
-    replay_tier?: "html" | "html+css" | "full";  // Replay capture mode
-    content_addressing?: "on" | "off";  // Content-addressed blob storage
-    image_policy?: "none" | "dimensions" | "full";  // Image capture policy
-    max_image_bytes?: number;  // Maximum image size in bytes
+    blobFormat?: "zst" | "tar.zst";  // Individual files or packed
+    replayTier?: "html" | "html+css" | "full";  // Replay capture mode
+    contentAddressing?: "on" | "off";  // Content-addressed blob storage
+    imagePolicy?: "none" | "dimensions" | "full";  // Image capture policy
+    maxImageBytes?: number;  // Maximum image size in bytes
     
     media?: {
       location: string;             // "media/" - directory in archive

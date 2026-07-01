@@ -44,8 +44,8 @@ const PictureSourceSchema = z.object({
 });
 
 const PictureContextSchema = z.object({
-  has_picture_parent: z.boolean(),
-  source_count: z.number().int().nonnegative(),
+  hasPictureParent: z.boolean(),
+  sourceCount: z.number().int().nonnegative(),
   sources: z.array(PictureSourceSchema).optional(),
 });
 
@@ -145,8 +145,8 @@ export const EdgeRecordSchema = z
 
 export const AssetRecordSchema = z
   .object({
-    page_id: z.string().uuid(),
-    asset_id: z.string().min(1),
+    pageId: z.string().uuid(),
+    assetId: z.string().min(1),
     pageUrl: z.string().url(),
     assetUrl: z.string().url(),
     type: AssetTypeEnum,
@@ -162,12 +162,12 @@ export const AssetRecordSchema = z
     loading: z.string().optional(),
     wasLazyLoaded: z.boolean(),
     srcset: z.string().optional(),
-    srcset_candidates: z.array(SrcsetCandidateSchema).optional(),
+    srcsetCandidates: z.array(SrcsetCandidateSchema).optional(),
     sizes: z.string().optional(),
-    picture_context: PictureContextSchema.optional(),
+    pictureContext: PictureContextSchema.optional(),
     duration: z.number().optional(),
-    mime_type: z.string().optional(),
-    has_controls: z.boolean().optional(),
+    mimeType: z.string().optional(),
+    hasControls: z.boolean().optional(),
     autoplay: z.boolean().optional(),
     loop: z.boolean().optional(),
     muted: z.boolean().optional(),
@@ -175,18 +175,21 @@ export const AssetRecordSchema = z
     poster: z.string().optional(),
     tracks: z.array(TrackSchema).optional(),
     sources: z.array(SourceSchema).optional(),
-    lazy_strategy: LazyStrategyEnum.optional(),
-    lazy_data_attrs: z.record(z.string()).optional(),
-    lazy_classes: z.array(z.string()).optional(),
-    occurrence_count: z.number().int().min(1).optional(),
-    resource_hint: z.object({
-      res_id: z.string().uuid(),
-      body_blob_ref: z.string().optional(),
-      size_bytes: z.number().int().nonnegative().optional(),
+    lazyStrategy: LazyStrategyEnum.optional(),
+    lazyDataAttrs: z.record(z.string()).optional(),
+    lazyClasses: z.array(z.string()).optional(),
+    occurrenceCount: z.number().int().min(1).optional(),
+    resourceHint: z.object({
+      resId: z.string().uuid(),
+      bodyBlobRef: z.string().optional(),
+      sizeBytes: z.number().int().nonnegative().optional(),
     }).optional(),
     tiles: z.array(ScreenshotTileSchema).optional(),
   })
   .passthrough();
+
+/** Zod-inferred asset record type (BUG-0124 single source of truth). */
+export type AssetRecordV1 = z.infer<typeof AssetRecordSchema>;
 
 export const ErrorRecordSchema = z
   .object({

@@ -13,25 +13,25 @@ import {
 describe('Render Record Schema', () => {
   test('validates a valid render record', () => {
     const validRecord = {
-      page_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      pageId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       mode: 'full' as const,
       viewport: { width: 1920, height: 1080 },
-      user_agent: 'Mozilla/5.0...',
-      render_started_at: '2025-01-01T00:00:00.000Z',
-      render_completed_at: '2025-01-01T00:00:01.500Z',
-      render_duration_ms: 1500,
-      dom_content_loaded: true,
-      load_event_fired: true,
-      network_idle: true,
-      scripts_enabled: true,
-      styles_enabled: true,
-      images_enabled: true,
-      console_errors: [],
-      request_count: 42,
-      failed_requests: 2,
-      first_paint_ms: 300,
-      first_contentful_paint_ms: 350,
-      dom_interactive_ms: 800,
+      userAgent: 'Mozilla/5.0...',
+      renderStartedAt: '2025-01-01T00:00:00.000Z',
+      renderCompletedAt: '2025-01-01T00:00:01.500Z',
+      renderDurationMs: 1500,
+      domContentLoaded: true,
+      loadEventFired: true,
+      networkIdle: true,
+      scriptsEnabled: true,
+      stylesEnabled: true,
+      imagesEnabled: true,
+      consoleErrors: [],
+      requestCount: 42,
+      failedRequests: 2,
+      firstPaintMs: 300,
+      firstContentfulPaintMs: 350,
+      domInteractiveMs: 800,
     };
     
     const result = RenderRecordV1Schema.safeParse(validRecord);
@@ -40,22 +40,22 @@ describe('Render Record Schema', () => {
   
   test('rejects invalid mode', () => {
     const invalidRecord = {
-      page_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      pageId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       mode: 'invalid',
       viewport: { width: 1920, height: 1080 },
-      user_agent: 'Mozilla/5.0...',
-      render_started_at: '2025-01-01T00:00:00.000Z',
-      render_completed_at: '2025-01-01T00:00:01.500Z',
-      render_duration_ms: 1500,
-      dom_content_loaded: true,
-      load_event_fired: true,
-      network_idle: true,
-      scripts_enabled: true,
-      styles_enabled: true,
-      images_enabled: true,
-      console_errors: [],
-      request_count: 42,
-      failed_requests: 2,
+      userAgent: 'Mozilla/5.0...',
+      renderStartedAt: '2025-01-01T00:00:00.000Z',
+      renderCompletedAt: '2025-01-01T00:00:01.500Z',
+      renderDurationMs: 1500,
+      domContentLoaded: true,
+      loadEventFired: true,
+      networkIdle: true,
+      scriptsEnabled: true,
+      stylesEnabled: true,
+      imagesEnabled: true,
+      consoleErrors: [],
+      requestCount: 42,
+      failedRequests: 2,
     };
     
     const result = RenderRecordV1Schema.safeParse(invalidRecord);
@@ -66,7 +66,7 @@ describe('Render Record Schema', () => {
 describe('Navigation Dataset Record Schema', () => {
   test('validates a nested navigation record', () => {
     const validRecord = {
-      page_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      pageId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       sourceUrl: 'https://example.com/page1',
       edges: [
         {
@@ -76,7 +76,7 @@ describe('Navigation Dataset Record Schema', () => {
           nofollow: false,
           isExternal: false,
           location: 'main',
-          link_type: 'content',
+          linkType: 'content',
         },
       ],
       redirectChain: [],
@@ -91,7 +91,7 @@ describe('Navigation Dataset Record Schema', () => {
   
   test('validates record with external edge', () => {
     const record = {
-      page_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      pageId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       sourceUrl: 'https://example.com/page1',
       edges: [
         {
@@ -100,7 +100,7 @@ describe('Navigation Dataset Record Schema', () => {
           nofollow: false,
           isExternal: true,
           location: 'other',
-          link_type: 'external',
+          linkType: 'external',
         },
       ],
       capturedAt: '2025-01-01T00:00:00.000Z',
@@ -114,22 +114,22 @@ describe('Navigation Dataset Record Schema', () => {
 describe('Audit Result Record Schema', () => {
   test('validates WCAG violation', () => {
     const validRecord = {
-      audit_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-      page_id: 'f47ac10b-58cc-4372-a567-0e02b2c3d480',
-      audited_at: '2025-01-01T00:00:00.000Z',
-      auditor_version: 'horizon-1.0.0',
-      wcag_level: 'AA' as const,
-      rule_id: '1.4.3',
-      rule_name: 'Contrast (Minimum)',
+      auditId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      pageId: 'f47ac10b-58cc-4372-a567-0e02b2c3d480',
+      auditedAt: '2025-01-01T00:00:00.000Z',
+      auditorVersion: 'horizon-1.0.0',
+      wcagLevel: 'AA' as const,
+      ruleId: '1.4.3',
+      ruleName: 'Contrast (Minimum)',
       severity: 'serious' as const,
       selector: 'div.content > p',
       xpath: '/html/body/div[1]/p',
-      html_snippet: '<p style="color: #777; background: #fff">Text</p>',
+      htmlSnippet: '<p style="color: #777; background: #fff">Text</p>',
       description: 'Text has insufficient contrast ratio',
       impact: 'Users with low vision may struggle to read this text',
       remediation: 'Increase contrast ratio to at least 4.5:1',
-      node_count: 5,
-      related_rule_ids: ['1.4.6', '1.4.11'],
+      nodeCount: 5,
+      relatedRuleIds: ['1.4.6', '1.4.11'],
     };
     
     const result = AuditResultRecordV1Schema.safeParse(validRecord);

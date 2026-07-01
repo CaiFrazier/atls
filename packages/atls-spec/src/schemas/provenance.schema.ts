@@ -20,15 +20,15 @@ export const ProducerSchema = z.object({
  */
 export const InputReferenceSchema = z.object({
   dataset: z.string().describe('Name of input dataset (e.g., "page_metadata.v1")'),
-  hash_sha256: z.string().regex(/^[a-f0-9]{64}$/).describe('SHA-256 hash of input dataset'),
+  hashSha256: z.string().regex(/^[a-f0-9]{64}$/).describe('SHA-256 hash of input dataset'),
 });
 
 /**
  * Output metadata
  */
 export const OutputMetadataSchema = z.object({
-  record_count: z.number().int().nonnegative().describe('Number of records produced'),
-  hash_sha256: z.string().regex(/^[a-f0-9]{64}$/).describe('SHA-256 hash of output dataset'),
+  recordCount: z.number().int().nonnegative().describe('Number of records produced'),
+  hashSha256: z.string().regex(/^[a-f0-9]{64}$/).describe('SHA-256 hash of output dataset'),
 });
 
 /**
@@ -38,9 +38,9 @@ export const OutputMetadataSchema = z.object({
  * with what parameters, and when. Essential for reproducibility and auditing.
  */
 export const ProvenanceRecordV1Schema = z.object({
-  dataset_name: z.string().describe('Name of the dataset produced (e.g., "page_metadata.v1")'),
+  datasetName: z.string().describe('Name of the dataset produced (e.g., "page_metadata.v1")'),
   producer: ProducerSchema.describe('Information about the producer application/module'),
-  created_at: z.string().datetime().describe('ISO 8601 timestamp when dataset was created'),
+  createdAt: z.string().datetime().describe('ISO 8601 timestamp when dataset was created'),
   inputs: z.array(InputReferenceSchema).describe('Input datasets used (empty for initial extraction)'),
   parameters: z.record(JsonValueSchema).describe('Parameters used for production (e.g., {"mode": "full"})'),
   output: OutputMetadataSchema.describe('Metadata about the produced output'),

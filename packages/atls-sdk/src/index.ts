@@ -360,8 +360,8 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
       throw new Error("Record is not an object");
     }
     if (
-      typeof record.page_id !== "string" ||
-      typeof record.asset_id !== "string" ||
+      typeof record.pageId !== "string" ||
+      typeof record.assetId !== "string" ||
       typeof record.pageUrl !== "string" ||
       typeof record.assetUrl !== "string" ||
       typeof record.type !== "string" ||
@@ -381,12 +381,12 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
       throw new Error("Record is not an object");
     }
     if (
-      typeof record.page_id !== "string" ||
+      typeof record.pageId !== "string" ||
       typeof record.url !== "string" ||
-      typeof record.final_url !== "string" ||
-      typeof record.status_code !== "number" ||
+      typeof record.finalUrl !== "string" ||
+      typeof record.statusCode !== "number" ||
       typeof record.encoding !== "string" ||
-      typeof record.body_blob_ref !== "string"
+      typeof record.bodyBlobRef !== "string"
     ) {
       throw new Error("Missing required response fields");
     }

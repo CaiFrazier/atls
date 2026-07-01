@@ -74,10 +74,10 @@ def read_dataset(archive_path, dataset_name):
 pages     = read_dataset("crawl.atls", "page_metadata")   # NOT "pages"
 responses = read_dataset("crawl.atls", "responses")
 
-# Join page_metadata to responses on page_id for status codes
-resp_by_pid = {r["page_id"]: r for r in responses}
+# Join page_metadata to responses on pageId for status codes
+resp_by_pid = {r["pageId"]: r for r in responses}
 for p in pages:
-    status = resp_by_pid.get(p["page_id"], {}).get("status_code")
+    status = resp_by_pid.get(p["pageId"], {}).get("statusCode")
     print(status, p["url"], p.get("core", {}).get("title"))
 ```
 
@@ -85,19 +85,19 @@ Key points:
 
 - Use the **long** dataset folder names (`page_metadata`, `navigation`, …). See
   [datasets.md](./datasets.md).
-- Join across datasets on **`page_id`**, not `url`. See [identity-and-keys.md](./identity-and-keys.md).
+- Join across datasets on **`pageId`**, not `url`. See [identity-and-keys.md](./identity-and-keys.md).
 - Read **all** parts in a directory and concatenate.
 
 ### Resolving a blob
 
 ```python
-def read_blob(z, blob_ref):
-    # blob_ref like "sha256/ab/cd/abcd…ef"
-    data = z.read(f"blobs/{blob_ref}.zst")
+def read_blob(z, blobRef):
+    # blobRef like "sha256/ab/cd/abcd…ef"
+    data = z.read(f"blobs/{blobRef}.zst")
     return subprocess.run(["zstd","-d","-","--stdout"], input=data, capture_output=True).stdout
 ```
 
-Validate that `blob_ref` matches `sha256/<2>/<2>/<64hex>` before treating it as an internal path —
+Validate that `blobRef` matches `sha256/<2>/<2>/<64hex>` before treating it as an internal path —
 see [storage-and-encoding.md](./storage-and-encoding.md).
 
 ---

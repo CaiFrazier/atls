@@ -29,7 +29,7 @@ export const RecordMetaSchema = z.object({
 }).strict();
 
 export const PageMetadataDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   core: z.object({
     title: z.string().optional(),
@@ -54,7 +54,7 @@ export const PageMetadataDatasetRecordV1Schema = z.object({
       noarchive: z.boolean().optional(),
       nosnippet: z.boolean().optional(),
       noimageindex: z.boolean().optional(),
-      unavailable_after: z.string().optional(),
+      unavailableAfter: z.string().optional(),
     }).optional(),
   }).passthrough(),
   social: z.object({
@@ -79,18 +79,18 @@ const NavigationEdgeSchema = z.object({
   nofollow: z.boolean().optional(),
   isExternal: z.boolean().optional(),
   location: z.string().optional(),
-  link_type: z.string().optional(),
-  is_primary_nav: z.boolean().optional(),
-  is_breadcrumb: z.boolean().optional(),
-  is_skip_link: z.boolean().optional(),
-  is_pagination: z.boolean().optional(),
-  protocol_class: z.enum(["http", "https", "mailto", "tel", "javascript", "hash"]).optional(),
+  linkType: z.string().optional(),
+  isPrimaryNav: z.boolean().optional(),
+  isBreadcrumb: z.boolean().optional(),
+  isSkipLink: z.boolean().optional(),
+  isPagination: z.boolean().optional(),
+  protocolClass: z.enum(["http", "https", "mailto", "tel", "javascript", "hash"]).optional(),
   anchorTextLength: z.number().int().nonnegative().optional(),
   emptyAnchorReason: z.string().optional(),
 }).passthrough();
 
 export const NavigationDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   sourceUrl: z.string().url(),
   edges: z.array(NavigationEdgeSchema),
   redirectChain: z.array(z.object({
@@ -114,7 +114,7 @@ export const NavigationDatasetRecordV1Schema = z.object({
 });
 
 export const ContentDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   mainText: z.string(),
   contentHash: z.string(),
@@ -147,7 +147,7 @@ const StructuredDataItemSchema = z.object({
 });
 
 export const StructuredDataDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   jsonLd: z.array(StructuredDataItemSchema),
   microdata: z.array(z.object({
@@ -183,7 +183,7 @@ export const StructuredDataDatasetRecordV1Schema = z.object({
 });
 
 export const TechnologyDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   detectedTechnologies: z.array(z.record(z.string(), JsonValueSchema)),
   serverSignatures: z.object({
@@ -196,7 +196,7 @@ export const TechnologyDatasetRecordV1Schema = z.object({
 }).passthrough();
 
 export const RenderStateDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   viewport: z.object({
     width: z.number(),
@@ -210,7 +210,7 @@ export const RenderStateDatasetRecordV1Schema = z.object({
 });
 
 export const SecurityDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   mixedContent: z.object({
     hasIssues: z.boolean(),
@@ -236,7 +236,7 @@ export const SecurityDatasetRecordV1Schema = z.object({
     resourceCount: z.number().int().nonnegative(),
     resourceTypes: z.array(z.string()),
     category: z.enum(["analytics", "advertising", "cdn", "unknown"]),
-    category_matcher: z.array(z.string()).nullable(),
+    categoryMatcher: z.array(z.string()).nullable(),
   })),
   transport: z.object({
     protocol: z.enum(["http", "https"]),
@@ -246,7 +246,7 @@ export const SecurityDatasetRecordV1Schema = z.object({
 });
 
 export const PerformanceDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   url: z.string().url(),
   labMetrics: z.record(z.string(), JsonValueSchema).optional(),
   resources: z.array(z.object({
@@ -287,29 +287,145 @@ export const PipelineFailureRecordV1Schema = z.object({
 export const PipelineAlertRecordV1Schema = PipelineFailureRecordV1Schema;
 
 export const EventRecordV1Schema = z.object({
-  event_id: z.string(),
-  crawl_id: z.string(),
-  occurred_at: z.string().datetime(),
-  event_type: z.enum(EventType.values),
+  eventId: z.string(),
+  crawlId: z.string(),
+  occurredAt: z.string().datetime(),
+  eventType: z.enum(EventType.values),
   severity: z.enum(["info", "warn", "error", "critical"]),
   url: z.string().optional(),
   hostname: z.string().optional(),
-  page_id: z.string().uuid().optional(),
+  pageId: z.string().uuid().optional(),
   message: z.string(),
   details: z.record(z.string(), JsonValueSchema).optional(),
   metrics: z.object({
-    duration_ms: z.number().nonnegative().optional(),
-    memory_rss_mb: z.number().nonnegative().optional(),
-    queue_depth: z.number().int().nonnegative().optional(),
-    concurrent_requests: z.number().int().nonnegative().optional(),
+    durationMs: z.number().nonnegative().optional(),
+    memoryRssMb: z.number().nonnegative().optional(),
+    queueDepth: z.number().int().nonnegative().optional(),
+    concurrentRequests: z.number().int().nonnegative().optional(),
   }).strict().optional(),
-  rate_limit: z.record(z.string(), JsonValueSchema).optional(),
-  challenge: z.record(z.string(), JsonValueSchema).optional(),
-  resource_usage: z.record(z.string(), JsonValueSchema).optional(),
+  // BUG-0127/0124: rich shapes ported from the EventRecord interface (were loose
+  // z.record(JsonValue) — which also caused recursive-reference generator warnings).
+  rateLimit: z.object({
+    host: z.string(),
+    statusCode: z.number().int().optional(),
+    retryAfter: z.number().optional(),
+    backoffMs: z.number().optional(),
+    attempts: z.number().int().optional(),
+  }).optional(),
+  challenge: z.object({
+    provider: z.string().nullable().optional(),
+    detectionConfidence: z.enum(["high", "medium", "low"]),
+    resolutionAttempted: z.boolean(),
+    resolutionSuccess: z.boolean().optional(),
+    waitDurationMs: z.number().optional(),
+  }).optional(),
+  resourceUsage: z.object({
+    cpuPercent: z.number().optional(),
+    memoryHeapMb: z.number().optional(),
+    memoryExternalMb: z.number().optional(),
+    gcDurationMs: z.number().optional(),
+  }).optional(),
 });
 
+// ── Axe accessibility result (BUG-0127: rich types, was z.record(JsonValue)) ──
+// Ported from the AxeAccessibilityRecord interface so the schema is the single
+// source of truth and consumers keep full type detail. Objects are non-strict so
+// axe-core's extra fields don't fail validation (writeAccessibility validates as a
+// gate and writes the original record).
+const AxeImpactSchema = z.enum(["minor", "moderate", "serious", "critical"]);
+
+const AxeRelatedNodeSchema = z.object({
+  target: z.array(z.string()),
+  html: z.string().optional(),
+});
+
+const AxeCheckResultSchema = z.object({
+  id: z.string(),
+  impact: AxeImpactSchema.nullable().optional(),
+  message: z.string(),
+  data: z.record(z.string(), JsonValueSchema).nullable().optional(),
+  relatedNodes: z.array(AxeRelatedNodeSchema).optional(),
+});
+
+const AxeNodeResultSchema = z.object({
+  target: z.array(z.string()),
+  html: z.string().optional(),
+  impact: AxeImpactSchema.nullable().optional(),
+  failureSummary: z.string().optional(),
+  any: z.array(AxeCheckResultSchema).optional(),
+  all: z.array(AxeCheckResultSchema).optional(),
+  none: z.array(AxeCheckResultSchema).optional(),
+});
+
+const AxeRuleResultSchema = z.object({
+  id: z.string(),
+  impact: AxeImpactSchema.nullable().optional(),
+  description: z.string(),
+  help: z.string(),
+  helpUrl: z.string(),
+  tags: z.array(z.string()).optional(),
+  nodes: z.array(AxeNodeResultSchema),
+});
+
+const AxeAuditSummarySchema = z.object({
+  violations: z.number().int().nonnegative(),
+  passes: z.number().int().nonnegative(),
+  incomplete: z.number().int().nonnegative(),
+  inapplicable: z.number().int().nonnegative(),
+  impact: z.object({
+    critical: z.number().int().nonnegative(),
+    serious: z.number().int().nonnegative(),
+    moderate: z.number().int().nonnegative(),
+    minor: z.number().int().nonnegative(),
+  }),
+});
+
+const AxeAccessibilityRecordSchema = z.object({
+  pageUrl: z.string(),
+  pageId: z.string(),
+  normalizedUrl: z.string().optional(),
+  auditEngine: z.enum(["cartographer", "axe", "hybrid"]),
+  axeVersion: z.string(),
+  renderMode: z.enum(["raw", "import", "prerender", "full"]),
+  auditedAt: z.string(),
+  summary: AxeAuditSummarySchema,
+  testEngine: z.object({ name: z.string(), version: z.string() }),
+  testRunner: z.object({ name: z.string(), version: z.string() }).optional(),
+  testEnvironment: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+  toolOptions: z.record(z.string(), JsonValueSchema).optional(),
+  violations: z.array(AxeRuleResultSchema),
+  passes: z.array(AxeRuleResultSchema).optional(),
+  incomplete: z.array(AxeRuleResultSchema).optional(),
+  inapplicable: z.array(AxeRuleResultSchema).optional(),
+});
+
+const AccessibilityFormControlsSchema = z.object({
+  totalInputs: z.number().int().nonnegative(),
+  missingLabel: z.number().int().nonnegative(),
+  inputsMissingLabel: z.array(z.string()),
+  missingAutocomplete: z.number().int().nonnegative().optional(),
+  inputsMissingAutocomplete: z.array(z.string()).optional(),
+  requiredInputs: z.number().int().nonnegative().optional(),
+  requiredWithoutConstraint: z.number().int().nonnegative().optional(),
+  inputsWithPattern: z.number().int().nonnegative().optional(),
+  elements: z.array(z.object({
+    selector: z.string(),
+    tag: z.enum(["input", "textarea", "select"]),
+    type: z.string().optional(),
+    required: z.boolean(),
+    hasLabel: z.boolean(),
+    autocomplete: z.string().optional(),
+    hasConstraint: z.boolean(),
+  })).optional(),
+});
+
+const AccessibilityFocusOrderSchema = z.array(z.object({
+  selector: z.string(),
+  tabindex: z.number().int(),
+}));
+
 export const AccessibilityDatasetRecordV1Schema = z.object({
-  page_id: z.string().uuid(),
+  pageId: z.string().uuid(),
   pageUrl: z.string().url(),
   missingAltCount: z.number().int().nonnegative(),
   headingOrder: z.array(z.enum(["H1", "H2", "H3", "H4", "H5", "H6"])),
@@ -331,34 +447,36 @@ export const AccessibilityDatasetRecordV1Schema = z.object({
   })).optional(),
   ariaIssues: z.array(z.string()).optional(),
   lang: z.string().nullable().optional(),
-  focusOrder: z.array(z.record(z.string(), JsonValueSchema)).nullable().optional(),
-  formControls: z.record(z.string(), JsonValueSchema).nullable().optional(),
+  focusOrder: AccessibilityFocusOrderSchema.nullable().optional(),
+  formControls: AccessibilityFormControlsSchema.nullable().optional(),
+  // wcagData is a large, evolving collection the interface itself types as
+  // `object | null`; kept as a JSON map (its own enrichment is a separate pass).
   wcagData: z.record(z.string(), JsonValueSchema).nullable().optional(),
-  axe: z.record(z.string(), JsonValueSchema).optional(),
-  audit_engine: z.object({
+  axe: AxeAccessibilityRecordSchema.optional(),
+  auditEngine: z.object({
     name: z.string(),
     version: z.string(),
   }).optional(),
-  wcag_version: z.string().optional(),
-  audit_profile: z.enum(["basic", "essential", "full", "custom"]).optional(),
-  audited_at: z.string().datetime().optional(),
+  wcagVersion: z.string().optional(),
+  auditProfile: z.enum(["basic", "essential", "full", "custom"]).optional(),
+  auditedAt: z.string().datetime().optional(),
   _meta: RecordMetaSchema.optional(),
 });
 
 export const SitemapDatasetRecordV1Schema = z.object({
-  sitemap_id: z.string(),
-  crawl_id: z.string(),
+  sitemapId: z.string(),
+  crawlId: z.string(),
   url: z.string().url(),
-  fetched_at: z.string().datetime(),
-  http_status: z.number().int(),
-  content_type: z.string(),
-  is_index: z.boolean(),
-  entries_found: z.number().int().nonnegative(),
-  entries_enqueued: z.number().int().nonnegative(),
-  parse_warning: z.boolean(),
-  parse_error: z.string().nullable(),
+  fetchedAt: z.string().datetime(),
+  httpStatus: z.number().int(),
+  contentType: z.string(),
+  isIndex: z.boolean(),
+  entriesFound: z.number().int().nonnegative(),
+  entriesEnqueued: z.number().int().nonnegative(),
+  parseWarning: z.boolean(),
+  parseError: z.string().nullable(),
   depth: z.number().int().nonnegative(),
-  referenced_by: z.string().url().nullable(),
+  referencedBy: z.string().url().nullable(),
 });
 
 export const FrontierLedgerRecordV1Schema = z.object({

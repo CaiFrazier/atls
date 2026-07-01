@@ -11,7 +11,7 @@ import { z } from 'zod';
 export const LandmarkSchema = z.object({
   role: z.string().describe('ARIA role (e.g., "banner", "navigation", "main")'),
   name: z.string().optional().describe('Accessible name'),
-  node_id: z.string().describe('Internal node ID for reference'),
+  nodeId: z.string().describe('Internal node ID for reference'),
 });
 
 /**
@@ -19,7 +19,7 @@ export const LandmarkSchema = z.object({
  */
 export const TabOrderEntrySchema = z.object({
   index: z.number().int().nonnegative().describe('Tab order index'),
-  node_id: z.string().describe('Internal node ID for reference'),
+  nodeId: z.string().describe('Internal node ID for reference'),
   focusable: z.boolean().describe('Whether the node is focusable'),
 });
 
@@ -31,15 +31,15 @@ export const TabOrderEntrySchema = z.object({
  */
 export const AccTreeRecordV1Schema = z.object({
   // ===== Identity =====
-  page_id: z.string().uuid().describe('Foreign key to page_metadata page_id'),
+  pageId: z.string().uuid().describe('Foreign key to page_metadata page_id'),
   
   // ===== Serialized Tree =====
-  nodes_zstd: z.string().describe('Zstandard-compressed JSON array of accessibility nodes (base64 encoded)'),
-  node_count: z.number().int().nonnegative().describe('Total number of nodes in the accessibility tree before compression'),
+  nodesZstd: z.string().describe('Zstandard-compressed JSON array of accessibility nodes (base64 encoded)'),
+  nodeCount: z.number().int().nonnegative().describe('Total number of nodes in the accessibility tree before compression'),
   
   // ===== Extracted Features =====
   landmarks: z.array(LandmarkSchema).describe('ARIA landmarks for navigation'),
-  tab_order: z.array(TabOrderEntrySchema).describe('Keyboard navigation tab order'),
+  tabOrder: z.array(TabOrderEntrySchema).describe('Keyboard navigation tab order'),
 });
 
 export type AccTreeRecordV1 = z.infer<typeof AccTreeRecordV1Schema>;

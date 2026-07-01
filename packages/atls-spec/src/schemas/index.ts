@@ -82,6 +82,7 @@ export {
   ResponseRecordSchema,
   DOMSnapshotRecordSchema
 } from './runtime-core.schema.js';
+export type { AssetRecordV1 } from './runtime-core.schema.js';
 
 // Cartographer writer-facing dataset schemas
 export {

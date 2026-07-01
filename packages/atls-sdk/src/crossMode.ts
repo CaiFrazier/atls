@@ -25,14 +25,14 @@ import type { AtlasReader } from "./index.js";
 export interface CrossModeEntry {
   /** The URL used as the join key (from page_metadata records) */
   url: string;
-  /** page_id from a raw-mode archive, if present */
-  raw_page_id?: string;
-  /** page_id from a prerender-mode archive, if present */
-  prerender_page_id?: string;
-  /** page_id from a full-mode archive, if present */
-  full_page_id?: string;
+  /** pageId from a raw-mode archive, if present */
+  rawPageId?: string;
+  /** pageId from a prerender-mode archive, if present */
+  prerenderPageId?: string;
+  /** pageId from a full-mode archive, if present */
+  fullPageId?: string;
   /** Number of archives that contain this URL */
-  mode_count: number;
+  modeCount: number;
 }
 
 /**
@@ -105,7 +105,7 @@ function resolveMode(reader: AtlasReader): "raw" | "prerender" | "full" {
  * const index = await buildCrossModeIndex([prerender, full]);
  *
  * for (const entry of index.shared) {
- *   console.log(entry.url, entry.prerender_page_id, entry.full_page_id);
+ *   console.log(entry.url, entry.prerenderPageId, entry.fullPageId);
  * }
  *
  * prerender.close();
@@ -122,7 +122,7 @@ export async function buildCrossModeIndex(readers: AtlasReader[]): Promise<Cross
 
   for (const reader of readers) {
     const mode = resolveMode(reader);
-    const pageIdField = `${mode}_page_id` as keyof CrossModeEntry;
+    const pageIdField = `${mode}PageId` as keyof CrossModeEntry;
 
     sources.push({
       mode,
@@ -132,24 +132,24 @@ export async function buildCrossModeIndex(readers: AtlasReader[]): Promise<Cross
 
     for await (const record of reader.readers.pageMetadata()) {
       const url = record.url;
-      const pageId = record.page_id;
+      const pageId = record.pageId;
       if (!url || !pageId) continue;
 
       let entry = entries.get(url);
       if (!entry) {
-        entry = { url, mode_count: 0 };
+        entry = { url, modeCount: 0 };
         entries.set(url, entry);
       }
 
       // Only set if not already claimed by this mode
       if (!entry[pageIdField]) {
         (entry as any)[pageIdField] = pageId;
-        entry.mode_count++;
+        entry.modeCount++;
       }
     }
   }
 
-  const shared = Array.from(entries.values()).filter(e => e.mode_count > 1);
+  const shared = Array.from(entries.values()).filter(e => e.modeCount > 1);
 
   return { entries, shared, sources };
 }

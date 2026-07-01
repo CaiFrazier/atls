@@ -64,7 +64,7 @@ describe("Atlas reader", () => {
           const reader = await import("../dist/reader.js");
           return reader.readBlob(archive.path, ref);
         };
-    const payload = await getBlob(responses[0].body_blob_ref);
+    const payload = await getBlob(responses[0].bodyBlobRef);
     expect(Buffer.isBuffer(payload)).toBe(true);
     expect(payload.toString("utf-8")).toBe(archive.blobBody.toString("utf-8"));
   });
@@ -94,7 +94,7 @@ describe("Atlas reader", () => {
     expect(results).toHaveLength(1);
     expect(results[0].url).toBe(archive.pageUrl);
     expect(results[0].statusCode).toBe(200);
-    expect(results[0].page_id).toBeUndefined();
+    expect(results[0].pageId).toBeUndefined();
   });
 
   test("select projects one-level nested fields via dot notation", async () => {

@@ -33,9 +33,9 @@ describe("buildCrossModeIndex", () => {
 
     const entry = index.shared[0];
     expect(entry.url).toBe(prerenderArchive.pageUrl);
-    expect(entry.prerender_page_id).toBeDefined();
-    expect(entry.full_page_id).toBeDefined();
-    expect(entry.mode_count).toBe(2);
+    expect(entry.prerenderPageId).toBeDefined();
+    expect(entry.fullPageId).toBeDefined();
+    expect(entry.modeCount).toBe(2);
 
     expect(index.sources).toHaveLength(2);
     expect(index.sources.map(s => s.mode).sort()).toEqual(["full", "prerender"]);

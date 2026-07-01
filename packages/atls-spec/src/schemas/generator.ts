@@ -28,6 +28,7 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'page_metadata.v1', schema: schemas.PageMetadataRecordV1Schema },
   { name: 'navigation.v1', schema: schemas.NavigationDatasetRecordV1Schema },
   { name: 'content.v1', schema: schemas.ContentDatasetRecordV1Schema },
+  { name: 'assets.v1', schema: schemas.AssetRecordSchema },
   { name: 'structured_data.v1', schema: schemas.StructuredDataDatasetRecordV1Schema },
   { name: 'technology.v1', schema: schemas.TechnologyDatasetRecordV1Schema },
   { name: 'render_state.v1', schema: schemas.RenderStateDatasetRecordV1Schema },

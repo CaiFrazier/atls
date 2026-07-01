@@ -76,9 +76,9 @@ blobs/sha256/<aa>/<bb>/<full-hash>.zst
 
 ### Blob references
 
-Records point at blobs with a `*_blob_ref` string — for example `responses.body_blob_ref`,
-`responses.rendered_body_blob_ref`, `reconstruction_index.source_body_blob_ref`,
-`*.favicon_blob_ref`. The canonical form of a reference is the path tail:
+Records point at blobs with a `*_blob_ref` string — for example `responses.bodyBlobRef`,
+`responses.renderedBodyBlobRef`, `reconstruction_index.sourceBodyBlobRef`,
+`*.faviconBlobRef`. The canonical form of a reference is the path tail:
 
 ```
 sha256/<aa>/<bb>/<full-hash>
@@ -105,7 +105,7 @@ To resolve a reference, prepend `blobs/` and append `.zst`, read the ZIP entry, 
 |---|---|---|
 | Blob content address | SHA-256 of original bytes | `blobs/sha256/...` path |
 | Dataset part integrity | SHA-256 of compressed part | `manifest.datasets.<name>.integrity.checksums` |
-| Archive content hash | SHA-256 over sorted file hashes | `manifest.integrity.content_sha256` |
+| Archive content hash | SHA-256 over sorted file hashes | `manifest.integrity.contentSha256` |
 | URL key | SHA-1 | `manifest.hashing.urlKeyAlgo` |
 | Schema hash | SHA-256 of schema JSON | `manifest.datasets.<name>.schemaHash` |
 

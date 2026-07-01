@@ -401,13 +401,13 @@ describe("AuditResultRecordV1Schema — negative tests", () => {
 // ──────────────────────────────────────────────────────────────
 describe("ProvenanceRecordV1Schema — negative tests", () => {
   const validProvenance = {
-    dataset_name: "page_metadata.v1",
+    datasetName: "page_metadata.v1",
     producer: {
       app: "cartographer",
       version: "1.0.0",
       module: "extractor-page-metadata",
     },
-    created_at: now,
+    createdAt: now,
     inputs: [],
     parameters: {
       mode: "full",
@@ -416,8 +416,8 @@ describe("ProvenanceRecordV1Schema — negative tests", () => {
       nested: { key: "value" },
     },
     output: {
-      record_count: 100,
-      hash_sha256: "a".repeat(64),
+      recordCount: 100,
+      hashSha256: "a".repeat(64),
     },
   };
 

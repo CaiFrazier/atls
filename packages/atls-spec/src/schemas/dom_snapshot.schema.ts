@@ -13,22 +13,22 @@ import { z } from 'zod';
  */
 export const DOMSnapshotRecordV1Schema = z.object({
   // ===== Identity =====
-  page_id: z.string().uuid().describe('Foreign key to page_metadata page_id'),
-  
+  pageId: z.string().uuid().describe('Foreign key to page_metadata pageId'),
+
   // ===== Snapshot Metadata =====
-  base_url: z.string().url().describe('Base URL for resolving relative URLs in the DOM'),
-  
+  baseUrl: z.string().url().describe('Base URL for resolving relative URLs in the DOM'),
+
   // ===== Serialized DOM =====
-  dom_json_zstd: z.string().describe('Zstandard-compressed JSON serialization of DOM (base64 encoded)'),
-  
+  domJsonZstd: z.string().describe('Zstandard-compressed JSON serialization of DOM (base64 encoded)'),
+
   // ===== Render Context =====
-  styles_applied: z.boolean().describe('Whether CSS styles were applied'),
-  scripts_executed: z.boolean().describe('Whether JavaScript was executed'),
-  
+  stylesApplied: z.boolean().describe('Whether CSS styles were applied'),
+  scriptsExecuted: z.boolean().describe('Whether JavaScript was executed'),
+
   // ===== Statistics =====
-  node_count: z.number().int().nonnegative().describe('Total number of DOM nodes'),
-  text_nodes: z.number().int().nonnegative().describe('Number of text nodes'),
-  element_nodes: z.number().int().nonnegative().describe('Number of element nodes'),
+  nodeCount: z.number().int().nonnegative().describe('Total number of DOM nodes'),
+  textNodes: z.number().int().nonnegative().describe('Number of text nodes'),
+  elementNodes: z.number().int().nonnegative().describe('Number of element nodes'),
 });
 
 export type DOMSnapshotRecordV1 = z.infer<typeof DOMSnapshotRecordV1Schema>;

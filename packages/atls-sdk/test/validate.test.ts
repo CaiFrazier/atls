@@ -14,6 +14,7 @@ let validArchive: FixtureArchive;
 let invalidArchive: FixtureArchive;
 let missingFormatVersionArchive: FixtureArchive;
 let nonCanonicalBlobRefArchive: FixtureArchive;
+let nonCanonicalAssetBlobRefArchive: FixtureArchive;
 let pageNullTitleArchive: FixtureArchive;
 
 beforeAll(async () => {
@@ -21,6 +22,7 @@ beforeAll(async () => {
   invalidArchive = await createFixtureArchive({ edgeSourceUrl: "https://invalid.example.com/" });
   missingFormatVersionArchive = await createFixtureArchive({ omitFormatVersion: true });
   nonCanonicalBlobRefArchive = await createFixtureArchive({ nonCanonicalBlobRef: true });
+  nonCanonicalAssetBlobRefArchive = await createFixtureArchive({ nonCanonicalAssetBlobRef: true });
   pageNullTitleArchive = await createFixtureArchive({ pageNullTitle: true });
 });
 
@@ -29,6 +31,7 @@ afterAll(async () => {
   await invalidArchive?.cleanup();
   await missingFormatVersionArchive?.cleanup();
   await nonCanonicalBlobRefArchive?.cleanup();
+  await nonCanonicalAssetBlobRefArchive?.cleanup();
   await pageNullTitleArchive?.cleanup();
 });
 
@@ -186,6 +189,21 @@ describe("SDK validate()", () => {
     const blobIssues = result.issues.filter((i) => i.code === "STRICT_BLOB_REF_NON_CANONICAL");
     expect(blobIssues.length).toBeGreaterThan(0);
     expect(result.valid).toBe(false);
+  });
+
+  test("strict mode enforces canonical blob ref on the nested asset resourceHint", async () => {
+    // Regression guard: the asset blob ref lives at resourceHint.bodyBlobRef, not at the
+    // top level. A top-level lookup silently validates nothing (the original bug).
+    const result = await validate(nonCanonicalAssetBlobRefArchive.path, {
+      strict: true,
+      checkIntegrity: false,
+      checkBrokenLinks: false,
+    });
+
+    const assetBlobIssues = result.issues.filter(
+      (i) => i.code === "STRICT_BLOB_REF_NON_CANONICAL" && i.dataset === "assets",
+    );
+    expect(assetBlobIssues.length).toBeGreaterThan(0);
   });
 
   test("strict mode forbids null for non-nullable optional fields", async () => {

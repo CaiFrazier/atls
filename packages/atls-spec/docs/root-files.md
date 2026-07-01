@@ -4,12 +4,15 @@ Field reference for the seven files at the root of an `.atls` archive. For the p
 [archive-structure.md](./archive-structure.md); for dataset records see [datasets.md](./datasets.md).
 
 _Verified against `packages/atls-spec/src/schemas/*.schema.ts` and
-`packages/cartographer/src/io/atlas/` on 2026-06-04._
+`packages/cartographer/src/io/atlas/` on 2026-06-04; re-verified after the camelCase naming
+parity sweep on 2026-06-30._
 
-> **Casing is intentionally mixed and load-bearing.** `manifest.json` uses snake_case for identity
-> and policy blocks (`primary_origin`, `crawl_id`, `crawler_settings`) but camelCase for version
-> and integrity-adjacent fields (`atlasVersion`, `createdAt`, `configIncluded`). `summary.json` is
-> camelCase throughout. Match what's documented here exactly.
+> **Casing is intentionally mixed and load-bearing.** `manifest.json` uses snake_case only for its
+> free-form **identity, scope, and policy blocks** (`identity.primary_origin`, `scope.*`,
+> `crawler_settings.*`, `url_normalization.*`, `coverage.*`, `discovery_summary.*`) but camelCase
+> for all top-level, version, and integrity fields (`datasetId`, `crawlId`, `siteRoot`,
+> `atlasVersion`, `createdAt`, `contentSha256`, `configIncluded`). `summary.json` is camelCase
+> throughout. Match what's documented here exactly.
 
 ---
 
@@ -22,13 +25,13 @@ The authoritative index. Schema: `manifest.schema.ts` (`AtlasManifestV1Schema`).
 
 | Field | Casing | Type | Meaning |
 |---|---|---|---|
-| `dataset_id` | snake | string (16 hex) | Archive identity (crawl id + origin hash). |
-| `crawl_id` | snake | string | Crawl run id. |
+| `datasetId` | camel | string (16 hex) | Archive identity (crawl id + origin hash). |
+| `crawlId` | camel | string | Crawl run id. |
 | `mode` | — | enum `raw\|import\|prerender\|full` | Render mode of the crawl. |
-| `atlasVersion` | camel | string | Public Atlas line — `"1.0"`. **Required.** |
-| `formatVersion` | camel | string | Container format — `"1.0.0"`. **Required.** |
-| `specVersion` | camel | string | Spec contract — `"1.0.0"`. |
-| `schemaVersion` | camel | string | Date-stamped schema tag — `"2025-10-22"`. |
+| `atlasVersion` | camel | string | Public Atlas line — `"1.1"` (RC2 camelCase cutover). **Required.** |
+| `formatVersion` | camel | string | Container format — `"1.1.0"`. **Required.** |
+| `specVersion` | camel | string | Spec contract — `"1.1.0"`. |
+| `schemaVersion` | camel | string | Date-stamped schema tag — `"2026-07-01"`. |
 | `incomplete` | camel | boolean | `true` at start, flipped to `false` at finalization. A `true` here means the crawl did not seal cleanly. |
 | `createdAt` | camel | ISO 8601 | Manifest build time. **Required.** |
 | `generator` | camel | string | `cartographer-engine/<version>`. **Required.** |
@@ -42,30 +45,35 @@ The authoritative index. Schema: `manifest.schema.ts` (`AtlasManifestV1Schema`).
 | `identity.primary_origin` | snake | Primary origin URL. |
 | `identity.domain` / `identity.public_suffix` | snake | Registered domain / public suffix. |
 | `identity.seed_urls` | snake | Seed URL list. |
-| `site_root` | snake | Site root URL. |
+| `siteRoot` | camel | Site root URL. |
 | `scope.seeds` / `scope.allow` / `scope.deny` | snake | Discovery scope. |
 | `scope.block_params` | snake | Stripped query params. |
 | `scope.follow_external` | snake | Whether external links were followed. |
 | `scope.max_pages` / `scope.max_depth` | snake | Crawl limits (0 / -1 meaning unlimited mirror the CLI). |
 
-### Policy blocks (all snake_case)
+### Policy blocks
+
+**Free-form `z.record` blocks — snake_case keys** (unchanged by the camelCase sweep):
 
 - `crawler_settings.*` — `render_mode`, `robots_policy`, `robots_override`, `user_agent`,
   `concurrency`, `rps`, `replay_tier`, `cpu_slowdown_multiplier`, `network_conditions`.
 - `url_normalization.*` — `lowercase_host`, `remove_default_port`, `strip_fragment`,
   `remove_trailing_slash`, `trailing_slash_policy`, `sort_query_params`, `querystring_policy`,
   `blocked_query_params`.
-- `privacy_policy.*` — `strip_cookies`, `strip_auth_headers`, `redact_inputs`, `redact_forms`,
-  `redact_pii`.
-- `robots_policy.*` — `respect`, `overrides_used`, `override_reason`.
+
+**Typed blocks — camelCase keys:**
+
+- `privacyPolicy.*` — `stripCookies`, `stripAuthHeaders`, `redactInputs`, `redactForms`,
+  `redactPii`.
+- `robotsPolicy.*` — `respect`, `overridesUsed`, `overrideReason`.
 
 ### Crawl context & timing
 
 | Field | Casing | Notes |
 |---|---|---|
 | `crawlContext` | camel | Full runtime context (mode, limits, normalization, completion inputs). |
-| `crawl_started_at` / `crawl_completed_at` | snake | ISO 8601. |
-| `crawl_config_hash` | snake | SHA-256 of the normalized config (compare/diff key). |
+| `crawlStartedAt` / `crawlCompletedAt` | camel | ISO 8601. |
+| `crawlConfigHash` | camel | SHA-256 of the normalized config (compare/diff key). |
 | `configSnapshot` | camel | Runtime config snapshot. |
 | `configIncluded` / `redactionApplied` | camel | Booleans. **Required.** |
 
@@ -101,16 +109,15 @@ The authoritative index. Schema: `manifest.schema.ts` (`AtlasManifestV1Schema`).
 - `coverage.*` — `matrix[]` (per-dataset `{part, expected, present, row_count, coverage_pct,
   reason_if_absent}`), plus `total_pages`, `successful_pages`, `failed_status_pages`,
   `pages_with_errors`, `incomplete`, `truncated_parts`.
-- `storage.*` (snake) — `compression.{algorithm,level}`, `blob_format`, `replay_tier`,
-  `content_addressing`, `image_policy`, `max_image_bytes`, and a nested `media.*` block
-  (screenshot/favicon settings).
+- `storage.*` (camelCase) — `compression.{algorithm,level}`, `blobFormat`, `replayTier`,
+  `contentAddressing`.
 - `hashing` (camel) — `algorithm: "sha256"`, `urlKeyAlgo: "sha1"`, plus `rawHtmlHash`/`domHash`
   descriptions. **Required.**
-- `integrity` (camel) — `content_sha256` (SHA-256 over sorted file hashes), `files` (map of every
+- `integrity` (camel) — `contentSha256` (SHA-256 over sorted file hashes), `files` (map of every
   packaged path → SHA-256). **Required.**
 - `discovery_summary` (snake, optional) — `total_discovered`, `visited`, `queued`, `pending`,
   `skipped`, `snapshot_at`, `skipped_by_reason`, `samples`.
-- `compare` / `compare_compatibility` — diff/compare metadata.
+- `compare` / `compareCompatibility` — diff/compare metadata (inner comparison keys are free-form snake).
 - `notes` — free-form notes incl. resume/checkpoint/graceful-shutdown context. **Required.**
 
 ---
@@ -178,8 +185,8 @@ Declared vs. active capabilities and the finalization seal. Schema: `capabilitie
 |---|---|
 | `version` | `"v1"`. |
 | `capabilities` | Capability names present (e.g. `seo.core`, `a11y.core`, `render.dom`, `replay.html`). |
-| `compatibility.min_sdk_version` | Minimum SDK version to read this archive. |
-| `compatibility.breaking_changes` | Declared breaking changes. |
+| `compatibility.minSdkVersion` | Minimum SDK version to read this archive. |
+| `compatibility.breakingChanges` | Declared breaking changes. |
 | `seal.extractors[]` | Each `{ id, capabilities[], datasets[] }` — what each extractor declared. |
 | `seal.reconciliation.declaredCapabilities` | Union of declared capabilities. |
 | `seal.reconciliation.activeCapabilities` | Capabilities that actually ran. |
@@ -200,13 +207,13 @@ Zstandard-compressed JSON Lines — **one record per dataset**. Schema: `provena
 
 | Field | Casing | Meaning |
 |---|---|---|
-| `dataset_name` | snake | Dataset produced (e.g. `"navigation.v1"`). |
+| `datasetName` | camel | Dataset produced (e.g. `"navigation.v1"`). |
 | `producer.app` / `producer.version` / `producer.module` | camel | Producing component. |
-| `created_at` | snake | ISO 8601. |
-| `inputs[]` | snake | `{ dataset, hash_sha256 }` for each input dataset (empty for initial extraction). |
-| `parameters` | snake | Key/value parameters (e.g. `{ "mode": "full" }`). |
-| `output.record_count` | snake | Records produced. |
-| `output.hash_sha256` | snake | SHA-256 of the produced dataset. |
+| `createdAt` | camel | ISO 8601. |
+| `inputs[]` | camel | `{ dataset, hashSha256 }` for each input dataset (empty for initial extraction). |
+| `parameters` | camel field / free-form values | Key/value parameters (e.g. `{ "mode": "full" }`). |
+| `output.recordCount` | camel | Records produced. |
+| `output.hashSha256` | camel | SHA-256 of the produced dataset. |
 
 This is the lineage record: it lets a consumer verify which producer/version generated each
 dataset and from what inputs.
@@ -236,4 +243,4 @@ machine-validatable source.
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against codebase: 2026-06-30 (post camelCase naming parity sweep)._

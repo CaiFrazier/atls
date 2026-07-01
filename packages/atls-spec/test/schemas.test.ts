@@ -17,7 +17,7 @@ describe('Atlas v1.0 Schema Validation', () => {
   describe('PageMetadataRecordV1Schema', () => {
     test('validates a complete page_metadata dataset record (nested shape)', () => {
       const validRecord = {
-        page_id: '550e8400-e29b-41d4-a716-446655440000',
+        pageId: '550e8400-e29b-41d4-a716-446655440000',
         url: 'https://example.com/page',
         core: {
           title: 'Example Page',
@@ -44,9 +44,9 @@ describe('Atlas v1.0 Schema Validation', () => {
       expect(result.success).toBe(true);
     });
 
-    test('rejects invalid page_id format', () => {
+    test('rejects invalid pageId format', () => {
       const invalidRecord = {
-        page_id: '',
+        pageId: '',
         url: 'https://example.com/page',
         core: { title: 'Test' },
         indexing: { robotsMeta: 'index' },
@@ -60,7 +60,7 @@ describe('Atlas v1.0 Schema Validation', () => {
 
     test('rejects missing required nested objects', () => {
       const invalidRecord = {
-        page_id: '550e8400-e29b-41d4-a716-446655440000',
+        pageId: '550e8400-e29b-41d4-a716-446655440000',
         url: 'https://example.com/page',
         // Missing: core, indexing, social, capturedAt
       };
@@ -115,7 +115,7 @@ describe('Atlas v1.0 Schema Validation', () => {
         notes: ['manifest generated'],
         integrity: {
           algorithm: 'sha256',
-          content_sha256: 'a'.repeat(64),
+          contentSha256: 'a'.repeat(64),
           files: { 'page_metadata/part-001.jsonl.zst': 'b'.repeat(64) },
         },
         createdAt: '2025-10-26T14:00:00Z',
@@ -165,8 +165,8 @@ describe('Atlas v1.0 Schema Validation', () => {
         version: 'v1',
         capabilities: ['seo.core', 'a11y.core', 'replay.html'],
         compatibility: {
-          min_sdk_version: '1.0.0',
-          breaking_changes: [],
+          minSdkVersion: '1.0.0',
+          breakingChanges: [],
         },
       };
 
@@ -179,8 +179,8 @@ describe('Atlas v1.0 Schema Validation', () => {
         version: 'v2',
         capabilities: ['seo.core'],
         compatibility: {
-          min_sdk_version: '1.0.0',
-          breaking_changes: [],
+          minSdkVersion: '1.0.0',
+          breakingChanges: [],
         },
       };
 
@@ -192,20 +192,20 @@ describe('Atlas v1.0 Schema Validation', () => {
   describe('ProvenanceRecordV1Schema', () => {
     test('validates provenance record', () => {
       const validProvenance = {
-        dataset_name: 'page_metadata.v1',
+        datasetName: 'page_metadata.v1',
         producer: {
           app: 'cartographer',
           version: '1.0.0',
           module: 'extractor-page-metadata',
         },
-        created_at: '2025-10-26T14:00:00Z',
+        createdAt: '2025-10-26T14:00:00Z',
         inputs: [],
         parameters: {
           mode: 'full',
         },
         output: {
-          record_count: 100,
-          hash_sha256: 'a'.repeat(64),
+          recordCount: 100,
+          hashSha256: 'a'.repeat(64),
         },
       };
 
@@ -215,25 +215,25 @@ describe('Atlas v1.0 Schema Validation', () => {
 
     test('validates provenance with inputs', () => {
       const validProvenance = {
-        dataset_name: 'page_metadata.v1',
+        datasetName: 'page_metadata.v1',
         producer: {
           app: 'cartographer',
           version: '1.0.0',
           module: 'extractor-page-metadata',
         },
-        created_at: '2025-10-26T14:00:00Z',
+        createdAt: '2025-10-26T14:00:00Z',
         inputs: [
           {
             dataset: 'page_metadata.v1',
-            hash_sha256: 'a'.repeat(64),
+            hashSha256: 'a'.repeat(64),
           },
         ],
         parameters: {
           mode: 'full',
         },
         output: {
-          record_count: 100,
-          hash_sha256: 'b'.repeat(64),
+          recordCount: 100,
+          hashSha256: 'b'.repeat(64),
         },
       };
 
@@ -245,7 +245,7 @@ describe('Atlas v1.0 Schema Validation', () => {
 
 describe('flattenPageMetadataRecord', () => {
   const nestedRecord: PageMetadataDatasetRecordV1 = {
-    page_id: '550e8400-e29b-41d4-a716-446655440000',
+    pageId: '550e8400-e29b-41d4-a716-446655440000',
     url: 'https://example.com/page',
     core: {
       title: 'Example Page',
@@ -284,7 +284,7 @@ describe('flattenPageMetadataRecord', () => {
   test('flattens nested record to top-level fields', () => {
     const flat = flattenPageMetadataRecord(nestedRecord);
 
-    expect(flat.page_id).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(flat.pageId).toBe('550e8400-e29b-41d4-a716-446655440000');
     expect(flat.url).toBe('https://example.com/page');
     expect(flat.capturedAt).toBe('2025-10-26T14:00:00Z');
 

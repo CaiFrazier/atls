@@ -65,7 +65,7 @@ Seven files live at the archive root. All are packaged by the allowlist in
 | `schema.json` | JSON | Combined field dictionary across all dataset schemas. |
 | `README.md` | Markdown | Auto-generated human-readable guide to this specific archive. |
 
-> Casing note: `manifest.json` mixes snake_case identity fields (`primary_origin`, `crawl_id`)
+> Casing note: `manifest.json` mixes snake_case identity fields (`primary_origin`, `crawlId`)
 > with camelCase version fields (`atlasVersion`). `summary.json` is camelCase throughout
 > (`primaryOrigin`, `seedUrls`). This inconsistency is intentional and load-bearing — match it
 > exactly. See [root-files.md](./root-files.md).
@@ -125,7 +125,7 @@ blobs/sha256/<first-2-hex>/<next-2-hex>/<full-64-hex>.zst
 ```
 
 For example `blobs/sha256/ab/cd/abcd…ef.zst`. Records reference a blob by its `*_blob_ref` string
-(e.g. `responses.body_blob_ref`), which is the path tail `sha256/ab/cd/abcd…ef`. Identical content
+(e.g. `responses.bodyBlobRef`), which is the path tail `sha256/ab/cd/abcd…ef`. Identical content
 is stored once and referenced by many records. See
 [storage-and-encoding.md](./storage-and-encoding.md) for the addressing and dedup model.
 

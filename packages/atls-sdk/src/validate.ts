@@ -537,11 +537,11 @@ function validateManifestSchema(
       });
     };
 
-    const crawlId = manifestAny.crawl_id ?? manifestAny.crawl?.crawlId;
+    const crawlId = manifestAny.crawlId ?? manifestAny.crawl_id ?? manifestAny.crawl?.crawlId;
     const renderMode = manifestAny.mode ?? manifestAny.crawl?.renderMode;
     requireField(manifestAny.owner?.name, "owner.name", "Manifest missing required owner.name field");
     requireField(manifestAny.hashing?.algorithm, "hashing.algorithm", "Manifest missing required hashing.algorithm field");
-    requireField(crawlId, "crawl_id", "Manifest missing required crawl_id field");
+    requireField(crawlId, "crawlId", "Manifest missing required crawlId field");
     requireField(renderMode, "mode", "Manifest missing required mode field");
     if (typeof manifestAny.incomplete !== "boolean") {
       addIssue({
@@ -655,9 +655,10 @@ function validatePageSchema(
 
   if (strict) {
     validateStrictTopLevelNulls(page as unknown as Record<string, unknown>, datasetName, addIssue);
-    validateCanonicalBlobRef(page as unknown as Record<string, unknown>, datasetName, "body_blob_ref", addIssue);
+    // page_metadata carries no blob ref — the old top-level "body_blob_ref" check was a
+    // permanent no-op (required=false → undefined → pass). Removed.
   }
-  
+
   return valid;
 }
 
@@ -707,9 +708,16 @@ function validateAssetSchema(
 
   if (strict) {
     validateStrictTopLevelNulls(asset as unknown as Record<string, unknown>, "assets", addIssue, new Set(["visible", "inViewport"]));
-    validateCanonicalBlobRef(asset as unknown as Record<string, unknown>, "assets", "body_blob_ref", addIssue);
+    // The asset blob ref lives at resourceHint.bodyBlobRef (nested, optional), not at the
+    // top level — validate it there when present.
+    const resourceHint = (asset as unknown as Record<string, unknown>).resourceHint as
+      | Record<string, unknown>
+      | undefined;
+    if (resourceHint) {
+      validateCanonicalBlobRef(resourceHint, "assets", "bodyBlobRef", addIssue);
+    }
   }
-  
+
   return valid;
 }
 
@@ -722,7 +730,7 @@ function validateResponseSchema(
   let valid = true;
   if (strict) {
     validateStrictTopLevelNulls(response as Record<string, unknown>, "responses", addIssue);
-    if (!validateCanonicalBlobRef(response as Record<string, unknown>, "responses", "body_blob_ref", addIssue, true)) {
+    if (!validateCanonicalBlobRef(response as Record<string, unknown>, "responses", "bodyBlobRef", addIssue, true)) {
       valid = false;
     }
   }

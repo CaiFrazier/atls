@@ -9,8 +9,8 @@ import { z } from 'zod';
  * Compatibility information
  */
 export const CompatibilitySchema = z.object({
-  min_sdk_version: z.string().describe('Minimum SDK version required to read this archive'),
-  breaking_changes: z.array(z.string()).describe('List of breaking changes from previous versions'),
+  minSdkVersion: z.string().describe('Minimum SDK version required to read this archive'),
+  breakingChanges: z.array(z.string()).describe('List of breaking changes from previous versions'),
 });
 
 /**

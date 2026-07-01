@@ -60,7 +60,7 @@ atlas.close();
 - `packs`
 - `stats` — `{ corruptedRecordCount }` (incremented when `strict: false`)
 - `hasDataset(name)` — returns `true` if the dataset is present in this archive
-- `getBlob(ref)` — fetch a content-addressed blob by its `body_blob_ref` string
+- `getBlob(ref)` — fetch a content-addressed blob by its `bodyBlobRef` string
 - `close()`
 - `readers.*` — typed async iterables per dataset (see table below)
 
