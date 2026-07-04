@@ -39,8 +39,8 @@ import {
   ResponseRecordSchema,
   ResourceRecordV1Schema,
   flattenPageMetadataRecord,
-} from "@atls/spec";
-import type { FlatPageMetadata } from "@atls/spec";
+} from "@caifrazier/atls-spec";
+import type { FlatPageMetadata } from "@caifrazier/atls-spec";
 
 // Re-exported for backward compatibility — MalformedRecordError now lives in
 // reader.ts (see that file's doc comment for why).

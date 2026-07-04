@@ -1,4 +1,4 @@
-# @atls/spec
+# @caifrazier/atls-spec
 
 Atlas specification package for Cartographer/Atlas archives.
 
@@ -10,7 +10,7 @@ It provides:
 
 ## Package Role
 
-- Shared contract used by `@cf/cartographer` and `@atls/sdk`
+- Shared contract used by `@cf/cartographer` and `@caifrazier/atls-sdk`
 - Canonical schema/type source for Atlas archive structures
 
 ## Exports
@@ -28,7 +28,7 @@ source of truth, not the emitted `.schema.json` files.
 ## Build
 
 ```bash
-pnpm --filter @atls/spec build
+pnpm --filter @caifrazier/atls-spec build
 ```
 
 This compiles TypeScript and generates JSON schema artifacts via `dist/schemas/generator.js`.
@@ -36,7 +36,7 @@ This compiles TypeScript and generates JSON schema artifacts via `dist/schemas/g
 ## Test
 
 ```bash
-pnpm --filter @atls/spec test
+pnpm --filter @caifrazier/atls-spec test
 ```
 
 ## The Atlas Format Specification

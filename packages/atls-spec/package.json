@@ -1,11 +1,10 @@
 {
-  "name": "@atls/spec",
+  "name": "@caifrazier/atls-spec",
   "version": "1.0.0-rc.1",
   "description": "The Atlas archive format specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators",
   "type": "module",
   "author": "Cai Frazier",
   "license": "Apache-2.0 AND CC-BY-4.0",
-  "private": true,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -36,5 +35,8 @@
     "@types/node": "^20.14.10",
     "typescript": "^5.6.3",
     "vitest": "^2.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -90,7 +90,7 @@ see [storage-and-encoding.md](./storage-and-encoding.md).
 The high-level reader is the standard path for TypeScript/JavaScript users:
 
 ```ts
-import { openAtlas } from "@atls/sdk";
+import { openAtlas } from "@caifrazier/atls-sdk";
 
 const atlas = await openAtlas("./crawl.atls");
 for await (const page of atlas.readers.pageMetadata()) {

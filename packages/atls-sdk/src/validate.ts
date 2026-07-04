@@ -41,7 +41,7 @@ import {
   PipelineAlertRecordV1Schema,
   PageMetadataDatasetRecordV1Schema,
   AssetRecordSchema,
-} from "@atls/spec";
+} from "@caifrazier/atls-spec";
 
 const CANONICAL_BLOB_REF_RE = /^sha256\/[a-f0-9]{2}\/[a-f0-9]{2}\/[a-f0-9]{64}$/;
 
@@ -635,7 +635,7 @@ function validateManifestSchema(
  * handful of fields (url/finalUrl/statusCode/depth — none of which exist on
  * canonical page_metadata records, since those checks predate the nested
  * core/indexing/social format). Replaced with the real
- * `@atls/spec` Zod schema — the single source of truth for record shape,
+ * `@caifrazier/atls-spec` Zod schema — the single source of truth for record shape,
  * already reused this way for every other dataset in this file.
  */
 function validatePageSchema(
@@ -674,7 +674,7 @@ function validatePageSchema(
  * BUG-0055/BUG-0136/BUG-0231: replaced hand-rolled truthy checks (which had
  * drifted stale — e.g. ASSET_INVALID_TYPE only allowed "image"/"video" even
  * though the current AssetTypeEnum also permits "audio"/"document") with the
- * real `@atls/spec` Zod schema, matching every other dataset in this file.
+ * real `@caifrazier/atls-spec` Zod schema, matching every other dataset in this file.
  */
 function validateAssetSchema(
   asset: AssetRecord,

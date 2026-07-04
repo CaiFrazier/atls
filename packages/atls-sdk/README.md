@@ -1,4 +1,4 @@
-# @atls/sdk
+# @caifrazier/atls-sdk
 
 TypeScript SDK for reading and validating Atlas `.atls` archives.
 
@@ -21,7 +21,7 @@ Primary exports:
 ## Quick Example
 
 ```ts
-import { openAtlas } from '@atls/sdk';
+import { openAtlas } from '@caifrazier/atls-sdk';
 
 const atlas = await openAtlas('./crawl.atls');
 
@@ -109,7 +109,7 @@ skipped and counted in `atlas.stats.corruptedRecordCount`, so callers always
 know how many records were lost.
 
 ```ts
-import { openAtlas, MalformedRecordError } from '@atls/sdk';
+import { openAtlas, MalformedRecordError } from '@caifrazier/atls-sdk';
 
 // Strict (default) — throws on first bad record
 try {
@@ -137,7 +137,7 @@ atlas.close();
 ## Validation
 
 ```ts
-import { validate } from '@atls/sdk';
+import { validate } from '@caifrazier/atls-sdk';
 
 const result = await validate('./crawl.atls', {
   checkIntegrity: true,
@@ -156,7 +156,7 @@ Source: `src/validate.ts`
 For one-off filtered reads without opening a full `AtlasReader`:
 
 ```ts
-import { select } from '@atls/sdk';
+import { select } from '@caifrazier/atls-sdk';
 
 for await (const record of select('./crawl.atls', {
   dataset: 'accessibility',
@@ -175,7 +175,7 @@ for await (const record of select('./crawl.atls', {
 ### Diff two archives
 
 ```ts
-import { openAtlas, diffManifests, formatManifestDiff } from '@atls/sdk';
+import { openAtlas, diffManifests, formatManifestDiff } from '@caifrazier/atls-sdk';
 
 const [a, b] = await Promise.all([openAtlas('./before.atls'), openAtlas('./after.atls')]);
 const diff = diffManifests(a.manifest, b.manifest);
@@ -189,7 +189,7 @@ Exports: `diffManifests`, `formatManifestDiff`, types `ManifestDiff`, `DatasetDe
 ### Cross-mode index
 
 ```ts
-import { buildCrossModeIndex } from '@atls/sdk';
+import { buildCrossModeIndex } from '@caifrazier/atls-sdk';
 ```
 
 Builds a `CrossModeIndex` that aligns records across archives produced in different render modes. Exports: `buildCrossModeIndex`, types `CrossModeIndex`, `CrossModeEntry`.
@@ -210,9 +210,9 @@ These bypass `openAtlas` and operate directly on the zip:
 ## Development
 
 ```bash
-pnpm --filter @atls/sdk build
-pnpm --filter @atls/sdk test
-pnpm --filter @atls/sdk lint
+pnpm --filter @caifrazier/atls-sdk build
+pnpm --filter @caifrazier/atls-sdk test
+pnpm --filter @caifrazier/atls-sdk lint
 ```
 
 Archived legacy docs are available at `legacy/v1/`.

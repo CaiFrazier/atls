@@ -63,7 +63,7 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'reconstruction_index.v1', schema: schemas.ReconstructionIndexRecordV1Schema },
   // NOTE: audit_results.v1 is intentionally excluded from Cartographer archives.
   // That schema is owned by Horizon (downstream analysis) and is not emitted by the crawl engine.
-  // The schema remains available in @atls/spec for Horizon's use.
+  // The schema remains available in @caifrazier/atls-spec for Horizon's use.
 ];
 
 /**

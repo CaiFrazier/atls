@@ -8,16 +8,16 @@ An `.atls` file is a zip archive of compressed NDJSON datasets plus content-addr
 
 | Package | Description |
 |---|---|
-| [`@atls/spec`](packages/atls-spec) | The Atlas format specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators. |
-| [`@atls/sdk`](packages/atls-sdk) | TypeScript SDK for reading and validating `.atls` archives. |
+| [`@caifrazier/atls-spec`](packages/atls-spec) | The Atlas format specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators. |
+| [`@caifrazier/atls-sdk`](packages/atls-sdk) | TypeScript SDK for reading and validating `.atls` archives. |
 
-`@atls/sdk` depends on `@atls/spec`. Everything else (crawlers, apps) consumes these as published dependencies.
+`@caifrazier/atls-sdk` depends on `@caifrazier/atls-spec`. Everything else (crawlers, apps) consumes these as published dependencies.
 
 ## Development
 
 ```bash
 pnpm install
-pnpm build      # builds @atls/spec then @atls/sdk (topological order)
+pnpm build      # builds @caifrazier/atls-spec then @caifrazier/atls-sdk (topological order)
 pnpm test       # runs the full test suite
 ```
 
@@ -28,7 +28,7 @@ Requires Node ≥ 20 and pnpm ≥ 9.
 Dual-licensed, by design — anyone can read, write, and build tooling around the
 `.atls` format:
 
-- **Code** (`@atls/spec`, `@atls/sdk`, and all source) — **Apache License 2.0**
+- **Code** (`@caifrazier/atls-spec`, `@caifrazier/atls-sdk`, and all source) — **Apache License 2.0**
   ([`LICENSE`](./LICENSE)).
 - **The Atlas specification & JSON Schemas** — additionally **CC BY 4.0**
   ([`LICENSE-SPEC.md`](./LICENSE-SPEC.md)).

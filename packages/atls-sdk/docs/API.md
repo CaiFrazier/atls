@@ -1,6 +1,6 @@
 # Atlas SDK — API Reference
 
-Complete reference for `@atls/sdk`, the read-side SDK for `.atls` archives.
+Complete reference for `@caifrazier/atls-sdk`, the read-side SDK for `.atls` archives.
 
 _Verified against `packages/atls-sdk/src/` on 2026-07-01._
 
@@ -16,7 +16,7 @@ import {
   buildCrossModeIndex,
   readManifest, readSummary, iterateParts, readBlob, openZipHandle,
   AtlasResourceLimitError,
-} from "@atls/sdk";
+} from "@caifrazier/atls-sdk";
 ```
 
 ---

@@ -32,7 +32,7 @@ importers:
 
   packages/atls-sdk:
     dependencies:
-      '@atls/spec':
+      '@caifrazier/atls-spec':
         specifier: workspace:*
         version: link:../atls-spec
       '@mongodb-js/zstd':

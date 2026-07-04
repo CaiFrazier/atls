@@ -6,7 +6,7 @@ Thanks for your interest in the Atlas format and SDK.
 
 This repository is dual-licensed:
 
-- **Code** (the `@atls/spec` and `@atls/sdk` packages and all other source) —
+- **Code** (the `@caifrazier/atls-spec` and `@caifrazier/atls-sdk` packages and all other source) —
   **Apache License 2.0** ([`LICENSE`](./LICENSE)).
 - **Specification & JSON Schemas** — additionally **CC BY 4.0**
   ([`LICENSE-SPEC.md`](./LICENSE-SPEC.md)).
@@ -32,7 +32,7 @@ match the commit author.
 ## Before you open a PR
 
 - `pnpm install`
-- `pnpm build` — builds `@atls/spec` then `@atls/sdk` (topological order)
+- `pnpm build` — builds `@caifrazier/atls-spec` then `@caifrazier/atls-sdk` (topological order)
 - `pnpm test` — the full suite must pass
 - `pnpm lint`
 

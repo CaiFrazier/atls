@@ -16,7 +16,7 @@ including commercially, provided you give **appropriate attribution** to
 Cai Frazier and the Atlas format.
 
 This CC BY 4.0 grant applies to the *specification and schema documents*. The
-**software** in this repository (the `@atls/spec` and `@atls/sdk` packages and
+**software** in this repository (the `@caifrazier/atls-spec` and `@caifrazier/atls-sdk` packages and
 all other source) is licensed separately under the **Apache License 2.0** — see
 [`LICENSE`](./LICENSE). Where a file is both code and specification (for example
 a JSON Schema emitted by source code), you may rely on **either** license for

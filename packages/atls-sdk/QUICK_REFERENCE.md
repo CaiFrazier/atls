@@ -4,7 +4,7 @@
 ## Import
 
 ```ts
-import { openAtlas, select, validate, MalformedRecordError } from '@atls/sdk';
+import { openAtlas, select, validate, MalformedRecordError } from '@caifrazier/atls-sdk';
 ```
 
 ## Open Archive

@@ -17,7 +17,7 @@
 /**
  * Atlas type definitions for the SDK
  * 
- * Re-exports types from @atls/spec for use in the SDK.
+ * Re-exports types from @caifrazier/atls-spec for use in the SDK.
  */
 
 // Import types for use in union and re-export
@@ -34,7 +34,7 @@ import type {
   EventRecord, // Phase 7: Event log
   AccessibilityRecord,
   ResourceRecordV1,
-} from '@atls/spec';
+} from '@caifrazier/atls-spec';
 
 // Re-export for convenience
 export type {

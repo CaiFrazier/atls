@@ -22,7 +22,7 @@ those as aliases so SDK consumers can import a stable per-dataset symbol.
 ## JSON Schema codegen
 
 `src/schemas/generator.ts` converts the Zod schemas to JSON Schema via `zod-to-json-schema` and
-writes `dist/schemas/*.schema.json`. This is a **build step** (`pnpm --filter @atls/spec build`),
+writes `dist/schemas/*.schema.json`. This is a **build step** (`pnpm --filter @caifrazier/atls-spec build`),
 not automatic — editing a Zod schema without rebuilding leaves the JSON Schema stale.
 
 The authoritative roster of which schemas the package publishes is the `schemaMap` array in

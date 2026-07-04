@@ -9,7 +9,7 @@
 
 ## Threat model
 
-`@atls/sdk` is a read-side library that parses `.atls` archives, which may come
+`@caifrazier/atls-sdk` is a read-side library that parses `.atls` archives, which may come
 from untrusted sources. The primary risks it defends against:
 
 - **Decompression amplification.** All ZIP, Zstandard, and JSON Lines reads are
@@ -21,7 +21,7 @@ from untrusted sources. The primary risks it defends against:
 - **Path traversal.** Archive entry names are treated as opaque dataset keys;
   nothing from an archive is written to disk by the SDK.
 
-`@atls/spec` contains schemas, types, and validators only; it performs no I/O.
+`@caifrazier/atls-spec` contains schemas, types, and validators only; it performs no I/O.
 
 ## Reporting a vulnerability
 

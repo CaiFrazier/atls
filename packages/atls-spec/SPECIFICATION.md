@@ -46,7 +46,7 @@ which datasets exist, how they join, and how the bytes are laid out — the chap
 | Metadata schemas | `manifest.schema.ts`, `summary.schema.ts`, `capabilities.schema.ts`, `provenance.schema.ts`, `runtime-core.schema.ts` |
 | JSON Schema codegen | `src/schemas/generator.ts` (`schemaMap`) → `dist/schemas/*.schema.json` |
 | Writer (produces archives) | `@cf/cartographer` → `src/io/atlas/` |
-| Reader SDK | `@atls/sdk` |
+| Reader SDK | `@caifrazier/atls-sdk` |
 
 Schemas are authored in **Zod**; the JSON Schema files are generated from them as a build step.
 
@@ -55,7 +55,7 @@ Schemas are authored in **Zod**; the JSON Schema files are generated from them a
 ## The three things readers get wrong
 
 1. **Dataset folder names are long.** `page_metadata/`, `navigation/`, `pipeline_failures/`. The
-   short names `pages/`/`edges/`/`failed_pages/` are removed legacy. The `@atls/sdk`
+   short names `pages/`/`edges/`/`failed_pages/` are removed legacy. The `@caifrazier/atls-sdk`
    reader correctly resolves both formats automatically — see
    [Reading Archives](./docs/reading-archives.md).
 2. **Join on `page_id`, not `url`.** See [Identity & Keys](./docs/identity-and-keys.md).

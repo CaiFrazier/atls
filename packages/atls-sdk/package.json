@@ -1,10 +1,9 @@
 {
-  "name": "@atls/sdk",
+  "name": "@caifrazier/atls-sdk",
   "version": "1.0.0-rc.1",
   "description": "TypeScript SDK for reading and validating Atlas (.atls) archives",
   "author": "Cai Frazier",
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "keywords": [
     "atlas",
@@ -48,10 +47,10 @@
     "prepublishOnly": "pnpm build && pnpm test"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "dependencies": {
-    "@atls/spec": "workspace:*",
+    "@caifrazier/atls-spec": "workspace:*",
     "@mongodb-js/zstd": "^2.0.1",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
