@@ -8,7 +8,7 @@ An `.atls` file is a zip archive of compressed NDJSON datasets plus content-addr
 
 | Package | Description |
 |---|---|
-| [`@atls/spec`](packages/atls-spec) | The Atlas v1.0 specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators. |
+| [`@atls/spec`](packages/atls-spec) | The Atlas format specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators. |
 | [`@atls/sdk`](packages/atls-sdk) | TypeScript SDK for reading and validating `.atls` archives. |
 
 `@atls/sdk` depends on `@atls/spec`. Everything else (crawlers, apps) consumes these as published dependencies.

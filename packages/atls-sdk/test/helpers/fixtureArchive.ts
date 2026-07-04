@@ -1,7 +1,17 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import archiver from "archiver";
@@ -35,6 +45,10 @@ export type FixtureOptions = {
   pageUrl?: string;
   /** Inject raw strings as extra lines into a dataset part (e.g. invalid JSON). */
   corruptLines?: { dataset: string; lines: string[] };
+  /** Override the response record's statusCode (default 200) — e.g. 404 to exercise checkBrokenLinks. */
+  responseStatusCode?: number;
+  /** Omit the required `social` field from page_metadata, to exercise schema-violation handling. */
+  pageMissingSocial?: boolean;
 };
 
 type DatasetPart = {
@@ -88,34 +102,31 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
 
   const pageOrigin = new URL(pageUrl).origin;
   const pageDomain = new URL(pageUrl).hostname;
-  const pagePathname = new URL(pageUrl).pathname;
 
+  // Canonical page_metadata shape (PageMetadataDatasetRecordV1Schema): pageId,
+  // url, core/indexing/social (nested), capturedAt. `core.meta` is a
+  // fixture-only passthrough extra (harmless — `core` is a passthrough
+  // schema) kept so the SELECT dot-notation projection tests have a
+  // two-level-nested field to exercise.
   const pageMetadataRecord = {
     pageId: pageId,
     url: pageUrl,
-    normalizedUrl: pageUrl,
-    finalUrl: pageUrl,
-    urlKey: sha256Hex(Buffer.from(pageUrl, "utf-8")),
-    origin: pageOrigin,
-    pathname: pagePathname,
-    section: "/",
-    statusCode: 200,
-    headings: [{ level: 1, text: "Fixture" }],
-    rawHtmlHash: blobHash,
-    textSample: "Fixture",
-    fetchedAt: now,
-    renderMode: renderMode,
-    navEndReason: "fetch",
-    internalLinksCount: 1,
-    externalLinksCount: 0,
-    mediaAssetsCount: 1,
-    mediaAssetsTruncated: false,
-    hreflangLinks: [],
-    depth: 0,
-    discoveredInMode: renderMode,
+    // Non-canonical top-level field, only ever set by pageNullTitle: exercises
+    // validateStrictTopLevelNulls' "field must be omitted instead of null"
+    // check, which only inspects top-level keys. Harmless for schema
+    // validation — the outer schema isn't `.strict()`, so an unrecognized key
+    // is silently stripped from parsed output rather than rejected.
     ...(options.pageNullTitle ? { title: null } : {}),
-    core: { title: options.pageNullTitle ? null : "Fixture Page", meta: { description: "A fixture description" } },
-    core: { title: options.pageNullTitle ? null : "Fixture Page", meta: { description: "A fixture description" } },
+    core: {
+      title: options.pageNullTitle ? null : "Fixture Page",
+      meta: { description: "A fixture description" },
+    },
+    indexing: {},
+    // `social` is a required field on PageMetadataDatasetRecordV1Schema —
+    // omitted when pageMissingSocial is set, to exercise the Zod
+    // DATASET_SCHEMA_VIOLATION path for a missing required field.
+    ...(options.pageMissingSocial ? {} : { social: { openGraph: {}, twitterCard: {} } }),
+    capturedAt: now,
   };
 
   const navigationRecord = {
@@ -158,7 +169,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     pageId: pageId,
     url: pageUrl,
     finalUrl: pageUrl,
-    statusCode: 200,
+    statusCode: options.responseStatusCode ?? 200,
     encoding: "utf-8",
     bodyBlobRef: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
   };

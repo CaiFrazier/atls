@@ -1,11 +1,21 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /**
- * Atlas v1.0 Type Definitions
+ * Atlas type definitions
  * 
  * Core types for Atlas archive specification.
  * Used by both the Cartographer engine and Atlas SDK.
@@ -21,7 +31,7 @@ import {
 } from "./schemas/runtime-core.schema.js";
 
 // ============================================================================
-// Enum Codification (Atlas v1.0 Enhancement #7)
+// Enum Codification
 // ============================================================================
 
 /**
@@ -154,7 +164,7 @@ export function isEdgeLocation(value: unknown): value is EdgeLocation {
 }
 
 /**
- * Link type classification for semantic link analysis (Atlas v1.0 Enhancement - Phase 4)
+ * Link type classification for semantic link analysis
  */
 export const LinkType = {
   values: [
@@ -287,6 +297,7 @@ export interface AtlasEvictedItemRecord {
   schema_types: string[];
   format: "json-ld" | "microdata" | "opengraph" | "twittercard" | "rdfa";
   bytes: number;
+  reason: "evicted_for_relevant" | "budget_exceeded_no_room";
 }
 
 export interface AtlasStructuredDataEviction {
@@ -311,6 +322,7 @@ export interface AtlasStructuredDataItem {
     url: string;
   };
   relevance?: AtlasRelevanceAssessment;
+  rawText?: string;
 }
 
 export interface AtlasPageStructuredData {
@@ -398,7 +410,7 @@ export interface PageCompressionDetails {
  * PageRecord - Complete page crawl data
  */
 export interface PageRecord {
-  // === STABLE IDENTIFIER (Atlas v1.0 Enhancement) ===
+  // === STABLE IDENTIFIER ===
   page_id?: string; // UUID v7 (time-ordered, globally unique) - Optional for backward compat
   pageId?: string; // Camel-case alias for consumer ergonomics
   
@@ -443,7 +455,7 @@ export interface PageRecord {
   noindexSurface?: string; // "meta" | "header" | "both" if noindex detected
   indexabilityIssues?: string[]; // Codes describing why indexing may be blocked (noindex, robots, HTTP status)
   
-  // Hashing and content (Atlas v1.0 Enhancement)
+  // Hashing and content
   rawHtmlHash: string; // SHA-256 of raw HTTP body
   domHash?: string; // SHA-256 of document.documentElement.outerHTML (only if rendered)
   contentHash?: string; // SHA-256 of normalized text content (for change detection)
@@ -460,7 +472,7 @@ export interface PageRecord {
   meta_description_comparison_threshold?: number; // Threshold used for duplicateMetaDescriptionOf (1.0 = exact match)
   textSample: string; // First 1500 bytes of body.innerText, whitespace collapsed
   
-  // Temporal tracking (Atlas v1.0 Enhancement)
+  // Temporal tracking
   previous_page_id?: string; // page_id from previous crawl (for re-crawl diffing)
   previousPageId?: string;
   content_changed?: boolean; // Did content change since last crawl?
@@ -468,7 +480,7 @@ export interface PageRecord {
   dom_changed?: boolean; // Did DOM change since last crawl?
   domChanged?: boolean;
   
-  // Response metadata (Atlas v1.0 Enhancement - Phase 5)
+  // Response metadata
   response_headers?: PageResponseHeaders;
   responseHeaders?: PageResponseHeaders;
   
@@ -491,7 +503,7 @@ export interface PageRecord {
     totalBytes?: number;
   };
   
-  // Detailed timing breakdown (Atlas v1.0 Enhancement - Phase 3)
+  // Detailed timing breakdown
   timing?: {
     fetch_started_at?: string;    // ISO timestamp when fetch began
     fetch_completed_at?: string;  // ISO timestamp when fetch completed
@@ -499,7 +511,7 @@ export interface PageRecord {
     render_completed_at?: string; // ISO timestamp when render completed (if mode != raw)
   };
   
-  // Render timing (Atlas v1.0 Enhancement - Phase 3B)
+  // Render timing
   wait_condition?: "domcontentloaded" | "networkidle0" | "networkidle2" | "load" | "smart_idle";
   timings?: {
     nav_start: number;              // Performance.timeOrigin
@@ -717,7 +729,7 @@ export interface PageRecord {
  * EdgeRecord - Link from source to target
  */
 export interface EdgeRecord {
-  // === STABLE REFERENCES (Atlas v1.0 Enhancement) ===
+  // === STABLE REFERENCES ===
   source_page_id?: string; // UUID of source page - Optional for backward compat
   target_page_id?: string; // UUID of target page (if crawled) - Optional for backward compat
   
@@ -736,7 +748,7 @@ export interface EdgeRecord {
   discoveredInMode: RenderMode;
   httpStatusAtTo?: number; // HTTP status code of target if visited during crawl
   
-  // === LINK CONTEXT (Atlas v1.0 Enhancement - Phase 4) ===
+  // === LINK CONTEXT ===
   link_type?: LinkType; // Semantic classification: navigation, content, action, etc.
   target_attr?: string; // Link target attribute (_blank, _self, _parent, _top)
   title_attr?: string; // Link title attribute (tooltip text)
@@ -771,8 +783,12 @@ export type AssetRecord = AssetRecordV1 & { page_id?: never; asset_id?: never };
  * - `classification` — Deterministic pattern match producing a label.
  * - `audit`          — Third-party engine verdict with rules/scores.
  * - `aggregation`    — Derived counts/summaries from other fields.
+ * - `not_computed`   — Field is schema-required but wasn't computed in this
+ *                       run (e.g. a Cartographer-native accessibility field on
+ *                       an axe-only stub record); the value is a default, not
+ *                       an observation, and must not be tagged `capture`.
  */
-export type FieldOriginTier = "capture" | "measurement" | "classification" | "audit" | "aggregation";
+export type FieldOriginTier = "capture" | "measurement" | "classification" | "audit" | "aggregation" | "not_computed";
 
 /**
  * Per-record metadata envelope for field-level provenance.
@@ -904,7 +920,7 @@ export interface FrontierLedgerRecord {
 export type SitemapRecord = SitemapDatasetRecordV1;
 
 // ============================================================================
-// Event Log Dataset (Atlas v1.0 Phase 7)
+// Event Log Dataset
 // ============================================================================
 
 /**
@@ -913,7 +929,7 @@ export type SitemapRecord = SitemapDatasetRecordV1;
  * Captures render failures, rate limiting, challenge detection, resource
  * consumption peaks, and performance metrics for operational insights.
  * 
- * @since Atlas v1.0 Phase 7
+ * @since Atlas 1.0
  */
 // BUG-0124 + BUG-0127: single source of truth — alias to the Zod-inferred type.
 // rate_limit/challenge/resource_usage shapes were ported into EventRecordV1Schema.
@@ -1063,276 +1079,12 @@ export interface ComputedTextNodeRecord {
  */
 export type AccessibilityEngineMode = "cartographer" | "axe" | "hybrid";
 
-export interface EngineConfig {
-  seeds: string[];
-  outAtls: string;
-  maxPages: number; // 0 = unlimited
-  maxDepth: number; // -1 = unlimited, 0 = seeds only, N = up to depth N
-  storage?: {
-    compression?: "zstd" | "none";
-    compressionConcurrency?: number;
-  };
-
-  /**
-   * Additional config for public API
-   */
-  perHostRps?: number; // Requests per second per host (default 2)
-  /**
-   * @deprecated Use render.mode.
-   * Legacy top-level alias retained for backward compatibility.
-   */
-  renderMode?: RenderMode; // "raw" | "prerender" | "full" (default "prerender")
-
-  render: {
-    mode: RenderMode;
-    concurrency: number;
-    timeoutMs: number;
-    maxRequestsPerPage: number;
-    maxBytesPerPage: number;
-    vectorPerformance?: boolean;
-    homepageIdleMaxMs?: number;
-    standardIdleMaxMs?: number;
-    visualStabilityQuietWindowMs?: number;
-    axeTimeoutMs?: number;
-    contextRecycleThreshold?: number;
-    leaseTtlMs?: number;
-    disableChallengeDetection?: boolean;
-    debugCaptureChallengePages?: boolean;
-    waitUntil?: "domcontentloaded" | "load" | "networkidle";
-    waitForSelector?: string;
-    waitForSelectorTimeoutMs?: number;
-    viewport?: {
-      width: number;
-      height: number;
-    };
-    cpuSlowdownMultiplier?: number;
-    networkConditions?: "none" | "mobile-4g" | "mobile-3g" | "mobile-2g" | "slow-2g";
-    networkProfile?: {
-      name?: string;
-      downloadKbps: number;
-      uploadKbps: number;
-      latencyMs: number;
-      offline?: boolean;
-    };
-    deviceProfile?: DeviceProfile;
-    /** @internal Derived/internal label set after canonical device profile resolution. */
-    emulationProfile?: string;
-    scrollShim?: boolean;
-    scrollSettleMs?: number;
-    traceOnError?: boolean;
-    homepage?: {
-      waitUntil?: 'domcontentloaded' | 'load' | 'networkidle';
-      timeoutMs?: number;
-      settleMs?: number;
-    };
-  };
-  
-  media?: {
-    screenshots?: {
-      enabled: boolean;           // Enable screenshot capture
-      desktop: boolean;           // Desktop viewport (1280×720)
-      mobile: boolean;            // Mobile viewport (375×667)
-      desktopFullPage?: boolean;  // Full-page desktop viewport (entire scroll height)
-      mobileFullPage?: boolean;   // Full-page mobile viewport
-      quality: number;            // Compression quality 1-100 (default: 80)
-      format: 'png' | 'jpeg' | 'avif' | 'webp';     // Image format (default: webp)
-      concurrency?: number;       // Optional compression concurrency override
-    };
-    favicons?: {
-      enabled: boolean;           // Enable favicon collection
-    };
-  };
-  
-  replay?: {
-    tier: 'html' | 'html+css' | 'full';  // Replay capture tier
-  };
-
-  http: {
-    rps: number; // requests per second
-    userAgent: string;
-    warmupOrigins?: boolean; // Prefetch homepages before robots.txt checks (default false)
-    jitterPct?: number; // Optional jitter applied to request spacing (0-1, default 0.3)
-  };
-
-  discovery: {
-    followExternal: boolean;
-    paramPolicy: ParamPolicy;
-    blockList: string[]; // Tracking params to strip (supports wildcards like "utm_*")
-    allowUrls?: string[]; // URL patterns to allow (glob or regex)
-    denyUrls?: string[]; // URL patterns to deny (glob or regex)
-    preferredHost?: string; // Prefer host strategy for sitemap/seed discovery (default "seed")
-    discoveryConcurrencyPerHost?: number; // Discovery scheduler concurrency per host
-    perHostConcurrency?: number; // Legacy alias for discoveryConcurrencyPerHost
-    scoutRatio?: number; // Fraction of queue budget reserved for scout scheduling
-    preserveTrailingSlash?: boolean; // Preserve URL trailing slash distinctions
-    allowParamSampling?: boolean; // Allow sample param policy behavior
-    sitemapDiscoveryLimit?: number; // Cap sitemap-enqueued URLs (default 5000)
-    sitemapDiscoveryDepth?: number; // Sitemap index recursion depth (-1 = unlimited, default 3)
-    sitemapFetchMaxRetries?: number; // Maximum retries per sitemap fetch (default 3)
-    sitemapCircuitBreakerThreshold?: number; // Host failure count before opening circuit (default 3)
-    sitemapFetchTimeoutMs?: number; // Per-sitemap fetch timeout in ms (default 10000)
-    pathBlockList?: string[]; // Paths to exclude entirely (e.g., /cart, /checkout)
-  };
-
-  robots: {
-    respect: boolean;
-    overrideUsed: boolean;
-    // When robots.txt is *unreachable* (5xx / network / DNS error), RFC 9309
-    // §2.3.1.4 requires assuming a complete disallow. Default true (fail closed);
-    // set false to fall back to the legacy fail-open behaviour.
-    failClosed?: boolean;
-  };
-
-  privacy?: {
-    stripCookies: boolean; // Strip cookies from requests (default true for privacy)
-    stripAuthHeaders: boolean; // Strip Authorization headers (default true)
-    redactInputValues: boolean; // Redact input field values in DOM snapshots (default true)
-    redactForms: boolean; // Redact form data (default true)
-  };
-
-  memory?: {
-    maxRssMB: number; // Maximum RSS memory in MB before pausing queue
-    cacheMaxEntries?: number; // Max entries for in-memory LRU caches (default 50_000)
-  };
-
-  accessibility?: {
-    enabled: boolean; // Enable accessibility auditing (default true)
-    engine?: AccessibilityEngineMode; // cartographer (default) | axe | hybrid
-    contrastChecks?: boolean; // Enable contrast detection (default true in full mode)
-    contrastMaxViolations?: number; // Cap on reported contrast violations per page (default 1000); the scan always covers the full page
-  };
-
-  checkpoint?: {
-    interval: number; // Write state.json every N pages (default 500)
-    enabled: boolean; // Enable checkpointing (default true)
-    everySeconds?: number; // Optional: time-based checkpointing
-  };
-
-  network?: {
-    proxy?: {
-      enabled?: boolean;
-      allowPrivateIps?: boolean;
-      port?: number;
-    };
-    blockAnalytics?: boolean; // Block analytics/telemetry domains during rendering
-    blockedDomains?: string[]; // Custom analytics domains to block when enabled
-    retries?: {
-      attempts?: number;
-      backoffMs?: number;
-      backoffMultiplier?: number;
-      maxBackoffMs?: number;
-      jitterPct?: number;
-      pageAttempts?: number;
-      pageBackoffMs?: number;
-      pageBackoffMultiplier?: number;
-      pageBackoffMaxMs?: number;
-      pageJitterPct?: number;
-      retryOn?: Array<number | "timeout">;
-    };
-    rateLimit?: {
-      maxRetries?: number;
-      retryFirstDelayMs?: number;
-      retrySecondDelayMs?: number;
-      firstHostPauseMs?: number;
-      escalatedHostPauseMs?: number;
-      strikeResetMs?: number;
-    };
-    blockContentTypes?: string[]; // Block responses with these MIME types (e.g., application/pdf)
-    headers?: Record<string, string>; // Custom headers to send with requests
-    /**
-     * Route Phase A metadata fetching through the Playwright browser context
-     * instead of Undici. Forces a single unified TLS fingerprint at the cost
-     * of slight overhead. Useful when targeting sites with aggressive bot
-     * mitigation that detect the Undici/Chromium identity split.
-     */
-    unifiedTransport?: boolean;
-    /**
-     * Upstream proxy servers for exit-node rotation.
-     * When configured, the engine cycles through proxy URLs to avoid IP bans.
-     */
-    upstreamProxy?: {
-      /** Proxy server URLs (e.g., "http://proxy1:8080", "socks5://proxy2:1080"). */
-      urls: string[];
-      /**
-       * Rotation policy:
-       * - round-robin: cycle proxies sequentially on each context creation
-       * - on-block: rotate only when a hard block is detected
-       * - random: select a random proxy for each context creation
-       */
-      rotationPolicy?: 'round-robin' | 'on-block' | 'random';
-      /** HTTP status codes that indicate an IP ban and should trigger rotation (default: [403]). */
-      blockStatusCodes?: number[];
-      /** Consecutive block-status failures on a host before rotating (default: 2). */
-      consecutiveBlockThreshold?: number;
-    };
-  };
-
-  extraction?: {
-    maxStructuredDataItems?: number; // Limit structured data payloads per page
-    maxAssetsPerPage?: number; // Limit assets captured per page
-    captureHealthWarnThreshold?: number; // Fallback-rate % to log a warning (0–1, default 0.10)
-    captureHealthMetadataThreshold?: number; // Fallback-rate % to emit metadata (0–1, default 0.20)
-  };
-
-  shutdown?: {
-    gracefulTimeoutMs: number; // Max time to wait for graceful shutdown (default 15000)
-  };
-
-  resume?: {
-    crawlId?: string; // Resume from this crawl ID
-    stagingDir?: string; // Path to staging directory to resume from
-  };
-
-  staging?: {
-    /**
-     * Where to place staging files during the crawl.
-     * - temp (default): use OS temp; cleaned up after archive/validation.
-     * - sidecar: alongside the .atls for inspection.
-     */
-    mode?: "temp" | "sidecar";
-    /**
-     * Keep staging after success. Default: false (auto-clean).
-     */
-    keep?: boolean;
-    /**
-     * Optional base directory for staging when debugging.
-     */
-    baseDir?: string;
-    /**
-     * Cleanup staging after success (and failures) when true.
-     * Defaults to the inverse of keep.
-     */
-    cleanup?: boolean;
-  };
-
-  manifestNotes?: string[]; // Optional notes to add to manifest
-  manifest?: {
-    consumers?: string[];
-    consumers_requirements?: Record<string, unknown>;
-  };
-
-  cli?: {
-    quiet?: boolean; // Suppress periodic metrics output
-    json?: boolean; // Emit JSON summary to stdout
-    maxErrors?: number; // Max errors before aborting (-1 = unlimited, 0 = abort immediately, N = abort after N errors)
-    logFile?: string; // Path to NDJSON log file
-    logLevel?: "info" | "warn" | "error" | "debug"; // Minimum log level
-    persistSession?: boolean; // Persist browser sessions per origin to bypass bot detection
-    stealth?: boolean; // Enable stealth mode to hide automation signals
-    validateArchive?: boolean; // Validate .atls archive after creation (QA check, default true)
-    saveTraceOnError?: boolean; // Capture Playwright trace when a page fails
-    /**
-     * @deprecated Stored for legacy compatibility but never read downstream.
-     * Fail-fast behavior is controlled entirely by cli.maxErrors === 0.
-     */
-    failFast?: boolean; // Abort the crawl on first unrecoverable error
-  };
-}
-
-/**
- * Public API config type (alias for EngineConfig)
- */
-export type CrawlConfig = EngineConfig;
+// BUG-0234: EngineConfig (the crawl engine's internal tuning surface — render,
+// discovery, proxy/retry, CLI knobs) was moved out of this public package into
+// the cartographer engine repo, since it's not part of the Atlas archive
+// format and had no internal usage here. CrawlEvent's "crawl.started" variant
+// below now carries a generic Record<string, unknown> instead of a typed
+// config, for the same reason.
 
 /**
  * Crawl state machine states represent the lifecycle of a crawl job.
@@ -1536,7 +1288,7 @@ export interface CrawlDiscoveredUrl {
  * Typed event stream for Cartographer
  */
 export type CrawlEvent =
-  | { type: "crawl.started"; crawlId: string; config: CrawlConfig; origin?: "cartographer" | "scheduler"; seq: number; timestamp: string }
+  | { type: "crawl.started"; crawlId: string; config: Record<string, unknown>; origin?: "cartographer" | "scheduler"; seq: number; timestamp: string }
   | BackpressureEngagedEvent
   | BackpressureLiftedEvent
   | PageFetchStartedEvent
@@ -1661,7 +1413,7 @@ export interface AtlasManifest {
   consumers: string[]; // ["Continuum SEO", "Horizon Accessibility"]
 
   /**
-   * Provenance source information (Atlas v1.0 Enhancement)
+   * Provenance source information
    * Used for imported archives (e.g. WARC) to track origin.
    */
   source?: {
@@ -1736,11 +1488,11 @@ export interface AtlasManifest {
 
   packs?: AtlasPack[];
   
-  // Crawl timing (Atlas v1.0 Enhancement - Phase 3)
+  // Crawl timing
   crawlStartedAt?: string;    // ISO timestamp when crawl began
   crawlCompletedAt?: string;  // ISO timestamp when crawl finished
   
-  // Producer metadata (Atlas v1.0 Enhancement - Phase 2)
+  // Producer metadata
   producer?: {
     name: string;                 // "cartographer-engine"
     version: string;              // "1.0.0-rc.1"
@@ -1749,7 +1501,7 @@ export interface AtlasManifest {
     command_line?: string;        // Full CLI invocation (PII-redacted)
   };
   
-  // Environment snapshot (Atlas v1.0 Enhancement - Phase 2)
+  // Environment snapshot
   environment?: {
     device: "desktop" | "mobile"; // Emulation mode
     viewport: {
@@ -1785,7 +1537,7 @@ export interface AtlasManifest {
     };
   };
   
-  // Privacy policy (Atlas v1.0 Spec - Phase 3B)
+  // Privacy policy
   privacyPolicy?: {
     stripCookies: boolean;         // Strip cookies from requests (default true)
     stripAuthHeaders: boolean;     // Strip Authorization headers (default true)
@@ -1794,7 +1546,7 @@ export interface AtlasManifest {
     redactPii: boolean;            // Redact obvious PII fields (default false)
   };
 
-  // Robots.txt policy (Atlas v1.0 Spec - Phase 3B)
+  // Robots.txt policy
   robotsPolicy?: {
     respect: boolean;              // Respect robots.txt (default true)
     overridesUsed: boolean;        // If true, robots.txt was overridden
@@ -1809,7 +1561,7 @@ export interface AtlasManifest {
     diff_warnings?: string[];
   };
 
-  // Crawl config hash (Atlas v1.0 Spec - Phase 3B)
+  // Crawl config hash
   crawlConfigHash?: string;      // SHA-256 of normalized config for reproducibility
   
   hashing: {
@@ -1871,7 +1623,7 @@ export interface AtlasManifest {
       parts?: number;
       sidecarUri?: string;
       sidecarSha256?: string | null;
-      // Per-part integrity checksums (Atlas v1.0 Enhancement - Phase 2)
+      // Per-part integrity checksums
       integrity?: {
         algorithm: string;  // "sha256"
         checksums: Record<string, string>; // filename -> sha256
@@ -1890,7 +1642,7 @@ export interface AtlasManifest {
     };
   };
   
-  // Coverage matrix (Atlas v1.0 Enhancement - Phase 2)
+  // Coverage matrix
   coverage?: {
     matrix: Array<{
       part: string;               // Dataset key (e.g. "navigation", "page_metadata", "security")
@@ -1911,13 +1663,13 @@ export interface AtlasManifest {
   configIncluded: boolean;
   redactionApplied: boolean;
   
-  // Storage and compression configuration (Atlas v1.0 Enhancement - Phase 2)
+  // Storage and compression configuration
   storage?: {
     compression: {
       algorithm: string;            // "zstd" for JSONL parts
       level?: number;               // Compression level (1-22 for zstd)
     };
-    // Atlas v1.0 Spec additions - Phase 3B
+    // Manifest additions
     blobFormat?: "zst" | "tar.zst";  // Individual files or packed
     replayTier?: "html" | "html+css" | "full";  // Replay capture mode
     contentAddressing?: "on" | "off";  // Content-addressed blob storage
@@ -1966,8 +1718,8 @@ export interface AtlasSummary {
   // Identity - "what" was crawled
   identity: {
     seedUrls: string[];
-    primaryOrigin: string; // e.g., "https://drancich.com"
-    domain: string; // e.g., "drancich.com"
+    primaryOrigin: string; // e.g., "https://example.com"
+    domain: string; // e.g., "example.com"
     publicSuffix: string; // e.g., "com"
   };
   

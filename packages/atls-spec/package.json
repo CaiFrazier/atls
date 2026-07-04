@@ -1,7 +1,7 @@
 {
   "name": "@atls/spec",
   "version": "1.0.0-rc.1",
-  "description": "Atlas v1.0 specification, JSON Schemas, TypeScript types, and validators",
+  "description": "The Atlas archive format specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators",
   "type": "module",
   "author": "Cai Frazier",
   "license": "Apache-2.0 AND CC-BY-4.0",
@@ -26,7 +26,7 @@
     "dev": "tsc -b --watch",
     "test": "VITEST_POOL=forks VITEST_MIN_WORKERS=1 VITEST_MAX_WORKERS=1 vitest run --pool=forks --minWorkers=1 --maxWorkers=1",
     "lint": "eslint .",
-  "clean": "rimraf dist tsconfig.tsbuildinfo"
+    "clean": "rimraf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "zod": "^3.23.8",

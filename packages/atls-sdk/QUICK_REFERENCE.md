@@ -1,10 +1,5 @@
 # Atlas SDK Quick Reference
 
-> ⚠️ **Readers return 0 records on `schemaVersion 2025-10-22` archives** (what the current
-> Cartographer writer emits) — the SDK assumes a removed legacy folder layout (`pages/`/`edges/`)
-> instead of the canonical `page_metadata/`/`navigation/`. Use Python + `zstd` directly or the
-> low-level `iterateParts()` helper until the fix lands. See the README for details and a schema
-> version check.
 
 ## Import
 

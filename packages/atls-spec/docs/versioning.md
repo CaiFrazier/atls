@@ -72,14 +72,4 @@ authoritative presence map is in [datasets.md](./datasets.md).
 
 ---
 
-## Reader compatibility note (current)
-
-The `@atls/sdk` reader does **not** correctly read archives at `schemaVersion 2025-10-22` (the
-current writer output): its folder-name assumptions are stale and its readers return **0 records**
-silently. Until that is fixed, read current archives with Python + `zstd` directly (or the SDK's
-low-level `iterateParts` with explicit long folder names). See
-[reading-archives.md](./reading-archives.md) for the workaround and the exact root cause.
-
----
-
-_Last verified against codebase: 2026-06-04._
+_Last verified against codebase: 2026-07-01._

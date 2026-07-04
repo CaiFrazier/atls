@@ -1,7 +1,17 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 /**
@@ -120,7 +130,15 @@ export async function buildCrossModeIndex(readers: AtlasReader[]): Promise<Cross
   const entries = new Map<string, CrossModeEntry>();
   const sources: CrossModeIndex["sources"] = [];
 
-  for (const reader of readers) {
+  // Tracks which archive indices have contributed to each URL. modeCount
+  // must reflect distinct-archive contributions, not distinct populated
+  // `${mode}PageId` fields — two archives that resolve to the SAME mode
+  // (e.g. both default-fallback to "prerender") still each contribute
+  // independently and must both be counted toward `shared`.
+  const contributingArchives = new Map<string, Set<number>>();
+
+  for (let archiveIndex = 0; archiveIndex < readers.length; archiveIndex++) {
+    const reader = readers[archiveIndex];
     const mode = resolveMode(reader);
     const pageIdField = `${mode}PageId` as keyof CrossModeEntry;
 
@@ -141,11 +159,19 @@ export async function buildCrossModeIndex(readers: AtlasReader[]): Promise<Cross
         entries.set(url, entry);
       }
 
-      // Only set if not already claimed by this mode
-      if (!entry[pageIdField]) {
-        (entry as any)[pageIdField] = pageId;
+      let contributors = contributingArchives.get(url);
+      if (!contributors) {
+        contributors = new Set();
+        contributingArchives.set(url, contributors);
+      }
+      if (!contributors.has(archiveIndex)) {
+        contributors.add(archiveIndex);
         entry.modeCount++;
       }
+
+      // Last-write-wins per mode: when two archives share the same mode,
+      // the ${mode}PageId field holds whichever archive was read last.
+      (entry as any)[pageIdField] = pageId;
     }
   }
 

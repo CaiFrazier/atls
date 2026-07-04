@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import { describe, test, expect } from "vitest";
 import { diffManifests, formatManifestDiff } from "../src/diff.js";
 import type { AtlasManifest } from "../src/types.js";
@@ -147,7 +163,7 @@ describe("diffManifests", () => {
     expect(diff.totalBytesB).toBe(1000);
   });
 
-  test("covers all 14 default datasets", () => {
+  test("covers all 15 default datasets", () => {
     const diff = diffManifests(stubManifest(), stubManifest());
     const names = diff.datasets.map((d) => d.dataset);
     expect(names).toContain("navigation");
@@ -164,7 +180,24 @@ describe("diffManifests", () => {
     expect(names).toContain("resources");
     expect(names).toContain("events");
     expect(names).toContain("pipeline_failures");
-    expect(names).toHaveLength(14);
+    expect(names).toContain("pipeline_alerts");
+    expect(names).toHaveLength(15);
+  });
+
+  test("BUG-0094(e) (fixed): presentA/presentB distinguish absent from present-with-zero-count", () => {
+    const a = stubManifest({
+      datasets: {
+        navigation: { recordCount: 0, bytes: 0, present: true },
+      },
+    });
+    const b = stubManifest(); // navigation entirely absent
+    const diff = diffManifests(a, b);
+    const nav = diff.datasets.find((d) => d.dataset === "navigation")!;
+    // Both read as countA/countB === 0, but presence differs.
+    expect(nav.countA).toBe(0);
+    expect(nav.countB).toBe(0);
+    expect(nav.presentA).toBe(true);
+    expect(nav.presentB).toBe(false);
   });
 });
 

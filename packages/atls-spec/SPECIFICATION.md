@@ -55,8 +55,8 @@ Schemas are authored in **Zod**; the JSON Schema files are generated from them a
 ## The three things readers get wrong
 
 1. **Dataset folder names are long.** `page_metadata/`, `navigation/`, `pipeline_failures/`. The
-   short names `pages/`/`edges/`/`failed_pages/` are removed legacy. The current `@atls/sdk`
-   reader assumes the short names and silently returns 0 records — see
+   short names `pages/`/`edges/`/`failed_pages/` are removed legacy. The `@atls/sdk`
+   reader correctly resolves both formats automatically — see
    [Reading Archives](./docs/reading-archives.md).
 2. **Join on `page_id`, not `url`.** See [Identity & Keys](./docs/identity-and-keys.md).
 3. **`schemaVersion` ≠ spec package version.** The archive carries a date-stamped

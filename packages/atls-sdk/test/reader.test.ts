@@ -1,7 +1,17 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import { describe, test, expect, beforeAll, afterAll, vi } from "vitest";
@@ -12,6 +22,7 @@ let archive: FixtureArchive;
 let unsupportedVersionArchive: FixtureArchive;
 let prereleaseVersionArchive: FixtureArchive;
 let corruptJsonArchive: FixtureArchive;
+let multiRecordArchive: FixtureArchive;
 
 beforeAll(async () => {
   archive = await createFixtureArchive();
@@ -20,6 +31,15 @@ beforeAll(async () => {
   corruptJsonArchive = await createFixtureArchive({
     corruptLines: { dataset: "navigation", lines: ["NOT_VALID_JSON", "{also broken"] },
   });
+  multiRecordArchive = await createFixtureArchive({
+    corruptLines: {
+      dataset: "navigation",
+      lines: [
+        JSON.stringify({ pageId: "extra-1", sourceUrl: "https://example.com/extra1", edges: [], capturedAt: new Date().toISOString() }),
+        JSON.stringify({ pageId: "extra-2", sourceUrl: "https://example.com/extra2", edges: [], capturedAt: new Date().toISOString() }),
+      ],
+    },
+  });
 });
 
 afterAll(async () => {
@@ -27,6 +47,7 @@ afterAll(async () => {
   await unsupportedVersionArchive?.cleanup();
   await prereleaseVersionArchive?.cleanup();
   await corruptJsonArchive?.cleanup();
+  await multiRecordArchive?.cleanup();
 });
 
 describe("Atlas reader", () => {
@@ -42,7 +63,7 @@ describe("Atlas reader", () => {
     let count = 0;
     for await (const page of atlas.readers.pageMetadata()) {
       expect((page as any).url).toBe(archive.pageUrl);
-      expect((page as any).statusCode).toBe(200);
+      expect((page as any).title).toBe("Fixture Page");
       count++;
     }
 
@@ -73,7 +94,7 @@ describe("Atlas reader", () => {
     let count = 0;
     for await (const page of select(archive.path, {
       dataset: "page_metadata",
-      where: (record: any) => record.statusCode === 200,
+      where: (record: any) => record.core?.title === "Fixture Page",
     })) {
       expect(page.url).toBe(archive.pageUrl);
       count++;
@@ -86,14 +107,14 @@ describe("Atlas reader", () => {
     const results: any[] = [];
     for await (const page of select(archive.path, {
       dataset: "page_metadata",
-      fields: ["url", "statusCode"],
+      fields: ["url", "capturedAt"],
     })) {
       results.push(page);
     }
 
     expect(results).toHaveLength(1);
     expect(results[0].url).toBe(archive.pageUrl);
-    expect(results[0].statusCode).toBe(200);
+    expect(results[0].capturedAt).toBeDefined();
     expect(results[0].pageId).toBeUndefined();
   });
 
@@ -137,6 +158,33 @@ describe("Atlas reader", () => {
     expect(results).toHaveLength(1);
     expect(results[0].url).toBe(archive.pageUrl);
     expect(results[0].nonexistent).toBeUndefined();
+  });
+
+  test("BUG-0056 (fixed): select() on an unknown dataset name throws instead of silently returning nothing", async () => {
+    await expect(async () => {
+      for await (const _ of select(archive.path, { dataset: "page_metdata" as any })) {
+        /* should never yield */
+      }
+    }).rejects.toThrow(/Unknown Atlas dataset/);
+  });
+
+  test("select() on a legitimate-but-absent dataset still returns zero records without throwing", async () => {
+    // "render_state" is a real canonical dataset name; this fixture (raw mode)
+    // simply doesn't have one. That must stay a silent empty iteration, not
+    // an AtlasUnknownDatasetError — only unrecognized names should throw.
+    const results: unknown[] = [];
+    for await (const record of select(archive.path, { dataset: "render_state" })) {
+      results.push(record);
+    }
+    expect(results).toHaveLength(0);
+  });
+
+  test("BUG-0228 (fixed): select() on a corrupt JSON line throws MalformedRecordError", async () => {
+    await expect(async () => {
+      for await (const _ of select(corruptJsonArchive.path, { dataset: "navigation" })) {
+        /* should throw before completing */
+      }
+    }).rejects.toThrow(MalformedRecordError);
   });
 
   test("rejects unsupported archive format versions on open", async () => {
@@ -220,5 +268,23 @@ describe("Malformed record error policy", () => {
     } finally {
       atlas.close();
     }
+  });
+});
+
+describe("BUG-0094(a) (fixed): abort mid-iteration terminates cleanly", () => {
+  test("calling close() mid-iteration ends the generator without throwing", async () => {
+    const atlas = await openAtlas(multiRecordArchive.path);
+    const records: unknown[] = [];
+    for await (const record of atlas.readers.navigation()) {
+      records.push(record);
+      if (records.length === 1) {
+        atlas.close();
+      }
+    }
+    // The fixture has 3 navigation records total; closing after the first
+    // must stop iteration early (proving the abort was actually observed)
+    // without surfacing an "Operation aborted." error to the consumer.
+    expect(records.length).toBeGreaterThanOrEqual(1);
+    expect(records.length).toBeLessThan(3);
   });
 });

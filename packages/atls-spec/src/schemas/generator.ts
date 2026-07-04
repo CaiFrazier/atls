@@ -1,5 +1,20 @@
+/*
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
- * Copyright © 2025 Cai Frazier.
  * JSON Schema Generator
  * 
  * Converts Zod schemas to JSON Schema format for validation and documentation.
@@ -66,7 +81,12 @@ export async function generateJSONSchemas(): Promise<void> {
     try {
       const jsonSchema = zodToJsonSchema(schema, {
         name,
-        $refStrategy: 'none', // Inline all references
+        // BUG-0232: 'none' forces full inlining, which cannot represent the
+        // genuinely recursive JsonValue union (json-value.schema.ts) and
+        // degrades every recursion point to a bare `{}` (accept-anything).
+        // 'root' (the library default) instead emits a self-referential
+        // $ref at each recursion point, staying within the same document.
+        $refStrategy: 'root',
       });
       
       const outputPath = join(outputDir, `${name}.schema.json`);

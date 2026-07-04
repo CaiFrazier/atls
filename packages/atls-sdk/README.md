@@ -2,22 +2,6 @@
 
 TypeScript SDK for reading and validating Atlas `.atls` archives.
 
-> ⚠️ **Known compatibility issue — current archives read as empty.**
-> The reader methods return **0 records** on archives written with `schemaVersion 2025-10-22`
-> (the version the current `@cf/cartographer` writer emits). The SDK's dataset resolution assumes
-> a legacy folder layout: `NEWER_FORMAT_FOLDER_MAP` (`src/index.ts:55`) maps canonical names to
-> the short folders `pages/`/`edges/`/`failed_pages/`, but the writer's canonical output uses the
-> long folders `page_metadata/`/`navigation/`/`pipeline_failures/` (the short names are removed
-> legacy). Iteration silently yields nothing rather than erroring.
->
-> **Workaround:** read these archives with Python + `zstd` directly (decompress each
-> `<dataset>/*.zst` part as NDJSON), or use the low-level `iterateParts()` helper with the
-> explicit long folder name. A fix is tracked in the repo bug tracker. Check the archive's schema
-> version before relying on the readers:
-> ```bash
-> python3 -c "import zipfile,json; print(json.loads(zipfile.ZipFile('crawl.atls').read('manifest.json'))['schemaVersion'])"
-> ```
-
 ## API
 
 > **Full API reference:** [`docs/API.md`](./docs/API.md) — every method, option, and return type.
@@ -32,6 +16,7 @@ Primary exports:
 - `diffManifests` / `formatManifestDiff`, `buildCrossModeIndex`
 - Low-level: `readManifest`, `readSummary`, `iterateParts`, `readBlob`, `openZipHandle`
 - `MalformedRecordError`
+- `AtlasResourceLimitError`
 
 ## Quick Example
 
@@ -48,6 +33,22 @@ for await (const page of atlas.readers.pageMetadata()) {
 }
 
 atlas.close();
+```
+
+## Read Limits
+
+All archive read APIs apply bounded ZIP, zstd, and JSONL limits by default. Oversized entries,
+dataset parts, blobs, root JSON files, and JSONL lines throw `AtlasResourceLimitError`.
+
+Trusted local workflows can raise limits explicitly:
+
+```ts
+const atlas = await openAtlas("./large-local-crawl.atls", {
+  limits: {
+    maxPartDecompressedBytes: 1024 * 1024 * 1024,
+    maxBlobDecompressedBytes: 512 * 1024 * 1024,
+  },
+});
 ```
 
 ## Reader Surface

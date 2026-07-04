@@ -1,10 +1,28 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import { openAtlas } from "./index.js";
+import { AtlasResourceLimitError } from "./reader.js";
+import type { AtlasReadLimits } from "./reader.js";
+import {
+  parseFormatVersion,
+  SUPPORTED_FORMAT_MAJOR,
+  AtlasMissingFormatVersionError,
+  AtlasUnsupportedFormatVersionError,
+} from "./formatVersion.js";
 import type { AtlasManifest, AssetRecord, ResponseRecordV1 } from "./types.js";
 import {
   ContentDatasetRecordV1Schema,
@@ -21,6 +39,8 @@ import {
   AccessibilityDatasetRecordV1Schema,
   PipelineFailureRecordV1Schema,
   PipelineAlertRecordV1Schema,
+  PageMetadataDatasetRecordV1Schema,
+  AssetRecordSchema,
 } from "@atls/spec";
 
 const CANONICAL_BLOB_REF_RE = /^sha256\/[a-f0-9]{2}\/[a-f0-9]{2}\/[a-f0-9]{64}$/;
@@ -111,6 +131,12 @@ export interface ValidateOptions {
    * @default false
    */
   strict?: boolean;
+
+  /**
+   * Resource limits applied while reading untrusted archive entries.
+   * Defaults come from DEFAULT_ATLAS_READ_LIMITS.
+   */
+  limits?: Partial<AtlasReadLimits>;
 }
 
 /**
@@ -149,6 +175,7 @@ export async function validate(
     maxIssues = 1000,
     errorsOnly = false,
     strict = false,
+    limits,
   } = options;
   
   const issues: ValidationIssue[] = [];
@@ -195,8 +222,10 @@ export async function validate(
     return true;
   };
   
+  let atlas: Awaited<ReturnType<typeof openAtlas>> | null = null;
   try {
-    const atlas = await openAtlas(atlsPath, { strict: false });
+    atlas = await openAtlas(atlsPath, { strict: false, limits });
+    const activeAtlas = atlas;
     
     // Phase 1: Check manifest schema
     if (checkManifest) {
@@ -205,31 +234,43 @@ export async function validate(
     
     // Phase 2: Build page index for integrity checks
     const pageUrls = new Set<string>();
-    const pageStatusCodes = new Map<string, number>();
-    
+
     // Use raw dataset reader (not pageMetadata()) to preserve nested `core`
     // structure needed by validatePageSchema's canonical-format detection.
     for await (const page of atlas.readers.dataset<Record<string, any>>("page_metadata" as any)) {
       const pageRecord = page as Record<string, any>;
       stats.pageMetadataChecked++;
-      
+
       // Validate page schema
       if (!validatePageSchema(pageRecord, addIssue, { strict })) {
         continue; // Skip integrity checks if schema invalid
       }
-      
+
       const pageUrl = typeof pageRecord.url === "string" ? pageRecord.url : "";
-      const pageStatusCode = typeof pageRecord.statusCode === "number" ? pageRecord.statusCode : undefined;
       if (pageUrl) {
         pageUrls.add(pageUrl);
-        if (typeof pageStatusCode === "number") {
-          pageStatusCodes.set(pageUrl, pageStatusCode);
-        }
       }
-      
+
       if (issues.length >= maxIssues) break;
     }
-    
+
+    // Phase 2.5: Build a url -> statusCode index from responses, for the
+    // broken-link check in Phase 3. page_metadata records carry no
+    // statusCode field of their own — status only lives in the responses
+    // dataset. (BUG-0055/BUG-0231: checkBrokenLinks previously read
+    // pageRecord.statusCode, a field canonical page_metadata records never
+    // have, so it was permanently a no-op.)
+    const pageStatusCodes = new Map<string, number>();
+    if (checkBrokenLinks) {
+      for await (const response of atlas.readers.responses()) {
+        const responseRecord = response as Record<string, any>;
+        if (typeof responseRecord.url === "string" && typeof responseRecord.statusCode === "number") {
+          pageStatusCodes.set(responseRecord.url, responseRecord.statusCode);
+        }
+        if (issues.length >= maxIssues) break;
+      }
+    }
+
     // Phase 3: Validate navigation records (schema + referential integrity)
     for await (const navigationRecord of atlas.readers.navigation()) {
       stats.navigationEdgesChecked++;
@@ -329,19 +370,19 @@ export async function validate(
       reader: () => AsyncIterable<any>;
       schema: { safeParse: (data: unknown) => { success: boolean; error?: { issues: Array<{ path: (string | number)[]; message: string }> } } };
     }> = [
-      { name: "content", statKey: "contentChecked", reader: atlas.readers.content, schema: ContentDatasetRecordV1Schema },
-      { name: "structured_data", statKey: "structuredDataChecked", reader: atlas.readers.structuredData, schema: StructuredDataDatasetRecordV1Schema },
-      { name: "technology", statKey: "technologyChecked", reader: atlas.readers.technology, schema: TechnologyDatasetRecordV1Schema },
-      { name: "render_state", statKey: "renderStateChecked", reader: atlas.readers.renderState, schema: RenderStateDatasetRecordV1Schema },
-      { name: "performance", statKey: "performanceChecked", reader: atlas.readers.performance, schema: PerformanceDatasetRecordV1Schema },
-      { name: "security", statKey: "securityChecked", reader: atlas.readers.security, schema: SecurityDatasetRecordV1Schema },
-      { name: "responses", statKey: "responsesChecked", reader: atlas.readers.responses, schema: ResponseRecordV1ZodSchema },
-      { name: "resources", statKey: "resourcesChecked", reader: atlas.readers.resources, schema: ResourceRecordV1Schema },
-      { name: "sitemaps", statKey: "sitemapsChecked", reader: () => atlas.readers.dataset("sitemaps"), schema: SitemapDatasetRecordV1Schema },
-      { name: "events", statKey: "eventsChecked", reader: atlas.readers.events, schema: EventRecordV1Schema },
-      { name: "accessibility", statKey: "accessibilityChecked", reader: atlas.readers.accessibility, schema: AccessibilityDatasetRecordV1Schema },
-      { name: "pipeline_failures", statKey: "pipelineFailuresChecked", reader: atlas.readers.pipelineFailures, schema: PipelineFailureRecordV1Schema },
-      { name: "pipeline_alerts", statKey: "pipelineAlertsChecked", reader: atlas.readers.pipelineAlerts, schema: PipelineAlertRecordV1Schema },
+      { name: "content", statKey: "contentChecked", reader: activeAtlas.readers.content, schema: ContentDatasetRecordV1Schema },
+      { name: "structured_data", statKey: "structuredDataChecked", reader: activeAtlas.readers.structuredData, schema: StructuredDataDatasetRecordV1Schema },
+      { name: "technology", statKey: "technologyChecked", reader: activeAtlas.readers.technology, schema: TechnologyDatasetRecordV1Schema },
+      { name: "render_state", statKey: "renderStateChecked", reader: activeAtlas.readers.renderState, schema: RenderStateDatasetRecordV1Schema },
+      { name: "performance", statKey: "performanceChecked", reader: activeAtlas.readers.performance, schema: PerformanceDatasetRecordV1Schema },
+      { name: "security", statKey: "securityChecked", reader: activeAtlas.readers.security, schema: SecurityDatasetRecordV1Schema },
+      { name: "responses", statKey: "responsesChecked", reader: activeAtlas.readers.responses, schema: ResponseRecordV1ZodSchema },
+      { name: "resources", statKey: "resourcesChecked", reader: activeAtlas.readers.resources, schema: ResourceRecordV1Schema },
+      { name: "sitemaps", statKey: "sitemapsChecked", reader: () => activeAtlas.readers.dataset("sitemaps"), schema: SitemapDatasetRecordV1Schema },
+      { name: "events", statKey: "eventsChecked", reader: activeAtlas.readers.events, schema: EventRecordV1Schema },
+      { name: "accessibility", statKey: "accessibilityChecked", reader: activeAtlas.readers.accessibility, schema: AccessibilityDatasetRecordV1Schema },
+      { name: "pipeline_failures", statKey: "pipelineFailuresChecked", reader: activeAtlas.readers.pipelineFailures, schema: PipelineFailureRecordV1Schema },
+      { name: "pipeline_alerts", statKey: "pipelineAlertsChecked", reader: activeAtlas.readers.pipelineAlerts, schema: PipelineAlertRecordV1Schema },
     ];
 
     for (const { name, statKey, reader, schema } of zodDatasets) {
@@ -403,26 +444,26 @@ export async function validate(
     
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("missing required manifest.formatVersion")) {
+    if (error instanceof AtlasMissingFormatVersionError) {
       addIssue({
         severity: "error",
         code: "MANIFEST_MISSING_FORMAT_VERSION",
         message: "Manifest missing required formatVersion field",
         details: { error: message },
       });
-    } else if (message.includes("invalid formatVersion")) {
+    } else if (error instanceof AtlasUnsupportedFormatVersionError) {
       addIssue({
         severity: "error",
-        code: "MANIFEST_INVALID_FORMAT_VERSION",
+        code: error.reason === "invalid" ? "MANIFEST_INVALID_FORMAT_VERSION" : "MANIFEST_UNSUPPORTED_FORMAT_VERSION",
         message,
-        details: { error: message },
+        details: { error: message, formatVersion: error.formatVersion },
       });
-    } else if (message.includes("Unsupported Atlas archive formatVersion")) {
+    } else if (error instanceof AtlasResourceLimitError) {
       addIssue({
         severity: "error",
-        code: "MANIFEST_UNSUPPORTED_FORMAT_VERSION",
+        code: error.code,
         message,
-        details: { error: message },
+        details: { resource: error.resource, limit: error.limit, actual: error.actual },
       });
     } else {
       addIssue({
@@ -432,6 +473,8 @@ export async function validate(
         details: { error: String(error) },
       });
     }
+  } finally {
+    atlas?.close();
   }
   
   return {
@@ -475,13 +518,15 @@ function validateManifestSchema(
       message: "Manifest missing required formatVersion field",
     });
   } else {
-    // Check format version compatibility
-    const [major] = String(formatVersion).split('.').map(Number);
-    if (major > 1) {
+    // Check format version compatibility using the same rule openAtlas()
+    // enforces (via enforceFormatVersionSupport), so both paths agree on
+    // exactly which formatVersion values are supported.
+    const parsed = parseFormatVersion(String(formatVersion));
+    if (!parsed || parsed.major !== SUPPORTED_FORMAT_MAJOR) {
       addIssue({
         severity: "error",
         code: "MANIFEST_UNSUPPORTED_FORMAT_VERSION",
-        message: `Unsupported format version: ${formatVersion} (SDK supports 1.x.x only)`,
+        message: `Unsupported format version: ${formatVersion} (SDK supports ${SUPPORTED_FORMAT_MAJOR}.x.x only)`,
         details: { formatVersion },
       });
     }
@@ -585,6 +630,13 @@ function validateManifestSchema(
 
 /**
  * Validate page record schema
+ *
+ * BUG-0055/BUG-0136/BUG-0231: previously hand-rolled truthy checks on a
+ * handful of fields (url/finalUrl/statusCode/depth — none of which exist on
+ * canonical page_metadata records, since those checks predate the nested
+ * core/indexing/social format). Replaced with the real
+ * `@atls/spec` Zod schema — the single source of truth for record shape,
+ * already reused this way for every other dataset in this file.
  */
 function validatePageSchema(
   page: Record<string, any>,
@@ -592,62 +644,16 @@ function validatePageSchema(
   options: { strict?: boolean } = {}
 ): boolean {
   const { strict = false } = options;
-  let valid = true;
   const datasetName = "page_metadata";
-  const isCanonicalPageMetadata = typeof page.core === "object" && page.core !== null;
-  
-  if (!page.url) {
+
+  const parsed = PageMetadataDatasetRecordV1Schema.safeParse(page);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    const path = firstIssue?.path?.length ? `/${firstIssue.path.join("/")}` : "/";
     addIssue({
       severity: "error",
-      code: "PAGE_MISSING_URL",
-      message: "Page record missing url field",
-      dataset: datasetName,
-      record: page,
-    });
-    valid = false;
-  }
-
-  if (!isCanonicalPageMetadata) {
-    if (!page.finalUrl) {
-      addIssue({
-        severity: "error",
-        code: "PAGE_MISSING_FINAL_URL",
-        message: `Page missing finalUrl: ${page.url}`,
-        dataset: datasetName,
-        record: page,
-      });
-      valid = false;
-    }
-
-    if (typeof page.statusCode !== "number") {
-      addIssue({
-        severity: "error",
-        code: "PAGE_MISSING_STATUS_CODE",
-        message: `Page missing statusCode: ${page.url}`,
-        dataset: datasetName,
-        record: page,
-      });
-      valid = false;
-    }
-
-    if (typeof page.depth !== "number" || page.depth < 0) {
-      addIssue({
-        severity: "error",
-        code: "PAGE_INVALID_DEPTH",
-        message: `Page has invalid depth: ${page.url} (depth: ${page.depth})`,
-        dataset: datasetName,
-        record: page,
-        details: { depth: page.depth },
-      });
-      valid = false;
-    }
-  }
-  
-  if (!page.fetchedAt) {
-    addIssue({
-      severity: "warning",
-      code: "PAGE_MISSING_TIMESTAMP",
-      message: `Page missing fetchedAt timestamp: ${page.url}`,
+      code: "DATASET_SCHEMA_VIOLATION",
+      message: `page_metadata record failed schema validation: ${path} ${firstIssue?.message ?? "unknown"}`,
       dataset: datasetName,
       record: page,
     });
@@ -659,11 +665,16 @@ function validatePageSchema(
     // permanent no-op (required=false → undefined → pass). Removed.
   }
 
-  return valid;
+  return parsed.success;
 }
 
 /**
  * Validate asset record schema
+ *
+ * BUG-0055/BUG-0136/BUG-0231: replaced hand-rolled truthy checks (which had
+ * drifted stale — e.g. ASSET_INVALID_TYPE only allowed "image"/"video" even
+ * though the current AssetTypeEnum also permits "audio"/"document") with the
+ * real `@atls/spec` Zod schema, matching every other dataset in this file.
  */
 function validateAssetSchema(
   asset: AssetRecord,
@@ -671,38 +682,17 @@ function validateAssetSchema(
   options: { strict?: boolean } = {}
 ): boolean {
   const { strict = false } = options;
-  let valid = true;
-  
-  if (!asset.assetUrl) {
+
+  const parsed = AssetRecordSchema.safeParse(asset);
+  if (!parsed.success) {
+    const firstIssue = parsed.error.issues[0];
+    const path = firstIssue?.path?.length ? `/${firstIssue.path.join("/")}` : "/";
     addIssue({
       severity: "error",
-      code: "ASSET_MISSING_URL",
-      message: "Asset record missing assetUrl field",
+      code: "DATASET_SCHEMA_VIOLATION",
+      message: `assets record failed schema validation: ${path} ${firstIssue?.message ?? "unknown"}`,
       dataset: "assets",
       record: asset,
-    });
-    valid = false;
-  }
-  
-  if (!asset.pageUrl) {
-    addIssue({
-      severity: "error",
-      code: "ASSET_MISSING_PAGE_URL",
-      message: `Asset missing pageUrl: ${asset.assetUrl}`,
-      dataset: "assets",
-      record: asset,
-    });
-    valid = false;
-  }
-  
-  if (!asset.type || !["image", "video"].includes(asset.type)) {
-    addIssue({
-      severity: "warning",
-      code: "ASSET_INVALID_TYPE",
-      message: `Asset has invalid type: ${asset.assetUrl} (type: ${asset.type})`,
-      dataset: "assets",
-      record: asset,
-      details: { type: asset.type },
     });
   }
 
@@ -718,7 +708,7 @@ function validateAssetSchema(
     }
   }
 
-  return valid;
+  return parsed.success;
 }
 
 function validateResponseSchema(

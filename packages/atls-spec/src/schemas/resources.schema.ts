@@ -1,6 +1,21 @@
+/*
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
- * Copyright © 2025 Cai Frazier.
- * Atlas v1.0 Resources Dataset Schema
+ * Atlas Resources Dataset Schema
  */
 
 import { z } from 'zod';
@@ -30,7 +45,10 @@ export const ResourceRecordV1Schema = z.object({
   contentType: z.string().describe('Content-Type header value'),
 
   // ===== Content Addressing =====
-  hashBodySha256: z.string().regex(/^[a-f0-9]{64}$/).describe('SHA-256 hash of resource body'),
+  // Optional: the 'dimensions' image-capture policy doesn't fetch/hash the body,
+  // so no hash is available. Required+regex here previously quarantined every
+  // dimensions-only image resource record as schema-invalid (BUG-0185).
+  hashBodySha256: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('SHA-256 hash of resource body, when the body was fetched and hashed'),
   bodyBlobRef: z.string().optional().describe('Reference to resource body in blob storage'),
 
   // ===== Metadata =====

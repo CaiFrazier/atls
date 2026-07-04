@@ -1,34 +1,57 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-import type { AtlasManifest } from "./types.js";
+import type { AtlasManifest, CanonicalDatasetName } from "./types.js";
+import { datasetPresent } from "./datasetPresence.js";
 
 /**
  * Canonical dataset names compared by default when diffing manifests.
+ *
+ * Keyed as a `Record<CanonicalDatasetName, true>` rather than a plain array
+ * literal so TypeScript enforces exhaustiveness: adding a new value to
+ * `CanonicalDatasetName` without adding it here is a compile error, and vice
+ * versa. This is the second hardcoded-dataset-list-drift bug found in this
+ * codebase (see validate.ts's DATASET_ZOD_SCHEMAS) — worth the structural fix.
  */
-const DEFAULT_DIFF_DATASETS: readonly string[] = [
-  "navigation",
-  "page_metadata",
-  "content",
-  "assets",
-  "structured_data",
-  "technology",
-  "security",
-  "performance",
-  "render_state",
-  "accessibility",
-  "responses",
-  "resources",
-  "events",
-  "pipeline_failures",
-] as const;
+const DEFAULT_DIFF_DATASET_MEMBERSHIP: Record<CanonicalDatasetName, true> = {
+  navigation: true,
+  page_metadata: true,
+  content: true,
+  assets: true,
+  structured_data: true,
+  technology: true,
+  security: true,
+  performance: true,
+  render_state: true,
+  accessibility: true,
+  responses: true,
+  resources: true,
+  events: true,
+  pipeline_failures: true,
+  pipeline_alerts: true,
+};
+const DEFAULT_DIFF_DATASETS: readonly string[] = Object.keys(DEFAULT_DIFF_DATASET_MEMBERSHIP);
 
 /** Per-dataset delta in a manifest diff. */
 export interface DatasetDelta {
   dataset: string;
+  /** Whether the dataset is present in manifest A (distinguishes "absent" from "present with count 0"). */
+  presentA: boolean;
+  /** Whether the dataset is present in manifest B (distinguishes "absent" from "present with count 0"). */
+  presentB: boolean;
   countA: number;
   countB: number;
   countDelta: number;
@@ -64,7 +87,7 @@ function getDatasetBytes(manifest: AtlasManifest, dataset: string): number {
 }
 
 export interface DiffManifestsOptions {
-  /** Override the list of dataset names to compare. Defaults to the 14 canonical datasets. */
+  /** Override the list of dataset names to compare. Defaults to all 15 canonical datasets. */
   datasets?: readonly string[];
 }
 
@@ -88,6 +111,8 @@ export function diffManifests(
     const bytesB = getDatasetBytes(b, ds);
     return {
       dataset: ds,
+      presentA: datasetPresent(a, ds),
+      presentB: datasetPresent(b, ds),
       countA,
       countB,
       countDelta: countB - countA,

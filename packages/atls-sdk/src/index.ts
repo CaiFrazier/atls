@@ -1,10 +1,23 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-import { readManifest, readSummary, iterateDataset, iterateParts, readBlob, openZipHandle } from "./reader.js";
+import { readManifest, readSummary, iterateDataset, iterateParts, readBlob, openZipHandle, MalformedRecordError } from "./reader.js";
+import type { AtlasReadOptions, AtlasReadLimits } from "./reader.js";
+import { datasetPresent, collectDatasetNames, isKnownDatasetName, AtlasUnknownDatasetError } from "./datasetPresence.js";
+import { enforceFormatVersionSupport } from "./formatVersion.js";
 import type {
   AtlasManifest,
   AtlasSummary,
@@ -29,19 +42,9 @@ import {
 } from "@atls/spec";
 import type { FlatPageMetadata } from "@atls/spec";
 
-/**
- * Error thrown when a malformed record is encountered in strict mode.
- */
-export class MalformedRecordError extends Error {
-  readonly dataset: string;
-  readonly reason: string;
-  constructor(dataset: string, reason: string) {
-    super(`Malformed ${dataset} record: ${reason}`);
-    this.name = 'MalformedRecordError';
-    this.dataset = dataset;
-    this.reason = reason;
-  }
-}
+// Re-exported for backward compatibility — MalformedRecordError now lives in
+// reader.ts (see that file's doc comment for why).
+export { MalformedRecordError };
 
 const LEGACY_DATASET_ALIASES = {
   pages: "page_metadata",
@@ -60,46 +63,6 @@ const NEWER_FORMAT_FOLDER_MAP: Record<string, string> = {
 
 function toCanonicalDatasetName(datasetName: string): string {
   return LEGACY_DATASET_ALIASES[datasetName as keyof typeof LEGACY_DATASET_ALIASES] ?? datasetName;
-}
-
-const SUPPORTED_FORMAT_MAJOR = 1;
-
-function parseFormatVersion(raw: string): { major: number; isPrerelease: boolean } | null {
-  const value = raw.trim();
-  const match = value.match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
-  if (!match) {
-    return null;
-  }
-  const major = Number(match[1]);
-  if (!Number.isFinite(major)) {
-    return null;
-  }
-  return {
-    major,
-    isPrerelease: /[-+]/.test(value)
-  };
-}
-
-function enforceFormatVersionSupport(manifest: AtlasManifest): void {
-  const record = manifest as Record<string, any>;
-  const formatVersion = record.formatVersion;
-  if (typeof formatVersion !== "string" || formatVersion.trim().length === 0) {
-    throw new Error("Unsupported Atlas archive: missing required manifest.formatVersion");
-  }
-
-  const parsed = parseFormatVersion(formatVersion);
-  if (!parsed) {
-    throw new Error(`Unsupported Atlas archive: invalid formatVersion "${formatVersion}"`);
-  }
-  if (parsed.major !== SUPPORTED_FORMAT_MAJOR) {
-    throw new Error(
-      `Unsupported Atlas archive formatVersion "${formatVersion}". SDK supports ${SUPPORTED_FORMAT_MAJOR}.x.x archives only.`
-    );
-  }
-
-  if (parsed.isPrerelease) {
-    console.warn(`[Atlas SDK] Deprecated pre-release formatVersion "${formatVersion}" detected.`);
-  }
 }
 
 export type {
@@ -126,69 +89,28 @@ export { diffManifests, formatManifestDiff } from "./diff.js";
 export type { ManifestDiff, DatasetDelta, DiffManifestsOptions } from "./diff.js";
 
 // Re-export low-level functions for engine use
-export { readManifest, readSummary, iterateParts, readBlob, openZipHandle, ZipHandle } from "./reader.js";
-
-function datasetPresent(manifest: AtlasManifest, datasetName: string): boolean {
-  const datasets = manifest.datasets ?? {};
-  const meta = datasets[datasetName as keyof typeof datasets] as Record<string, any> | undefined;
-
-  if (meta) {
-    if (typeof meta.recordCount === "number" && meta.recordCount > 0) {
-      return true;
-    }
-    if (typeof meta.present === "boolean") {
-      return meta.present;
-    }
-    if (typeof meta.partCount === "number" && meta.partCount > 0) {
-      return true;
-    }
-    if (typeof meta.parts === "number" && meta.parts > 0) {
-      return true;
-    }
-    if (Array.isArray(meta.files) && meta.files.length > 0) {
-      return true;
-    }
-  }
-
-  const partsByDataset = manifest.parts as Record<string, string[]> | undefined;
-  if (partsByDataset && Array.isArray(partsByDataset[datasetName]) && partsByDataset[datasetName].length > 0) {
-    return true;
-  }
-
-  const coverageEntry = manifest.coverage?.matrix?.find(entry => entry.part === datasetName);
-  if (coverageEntry) {
-    if (coverageEntry.present) {
-      return true;
-    }
-    if (typeof coverageEntry.row_count === "number" && coverageEntry.row_count > 0) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function collectDatasetNames(manifest: AtlasManifest): Set<string> {
-  const names = new Set<string>();
-  const datasets = manifest.datasets ?? {};
-  for (const key of Object.keys(datasets)) {
-    names.add(key);
-  }
-
-  const partsByDataset = manifest.parts as Record<string, string[]> | undefined;
-  if (partsByDataset) {
-    for (const key of Object.keys(partsByDataset)) {
-      names.add(key);
-    }
-  }
-
-  const coverage = manifest.coverage?.matrix ?? [];
-  for (const entry of coverage) {
-    names.add(entry.part);
-  }
-
-  return names;
-}
+export {
+  readManifest,
+  readSummary,
+  iterateParts,
+  readBlob,
+  openZipHandle,
+  decompressZstdBuffer,
+  ZipHandle,
+  DEFAULT_ATLAS_READ_LIMITS,
+  AtlasResourceLimitError,
+  AtlasDuplicateEntryError,
+  AtlasInvalidEntryNameError,
+} from "./reader.js";
+export type { AtlasReadOptions, AtlasReadLimits } from "./reader.js";
+export {
+  SUPPORTED_FORMAT_MAJOR,
+  parseFormatVersion,
+  AtlasMissingFormatVersionError,
+  AtlasUnsupportedFormatVersionError,
+} from "./formatVersion.js";
+export { AtlasUnknownDatasetError } from "./datasetPresence.js";
+export type { ParsedFormatVersion } from "./formatVersion.js";
 
 function buildPackView(manifest: AtlasManifest): PackView {
   const packs = Array.isArray(manifest.packs) ? manifest.packs.map(pack => ({ ...pack })) : [];
@@ -230,7 +152,7 @@ function buildPackView(manifest: AtlasManifest): PackView {
 /**
  * Options for opening an Atlas archive.
  */
-export interface OpenAtlasOptions {
+export interface OpenAtlasOptions extends AtlasReadOptions {
   /**
    * When `true` (default), malformed records throw a `MalformedRecordError`.
    * When `false`, malformed records are silently skipped and counted in `stats.corruptedRecordCount`.
@@ -306,7 +228,7 @@ export interface AtlasReader {
  * ```
  */
 export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): Promise<AtlasReader> {
-  const zipHandle = await openZipHandle(atlsPath);
+  const zipHandle = await openZipHandle(atlsPath, { limits: options?.limits });
   try {
     const strict = options?.strict !== false;
     const readerStats: AtlasReaderStats = { corruptedRecordCount: 0 };
@@ -351,50 +273,8 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
       zipHandle.close();
     };
 
-  const ensureParser = <T>(parser: ((value: unknown) => T) | undefined, fallback: (value: unknown) => T) =>
-    (typeof parser === "function" ? parser : fallback);
-
-  const fallbackParseAssetRecord = (value: unknown): AssetRecord => {
-    const record = value as any;
-    if (!record || typeof record !== "object") {
-      throw new Error("Record is not an object");
-    }
-    if (
-      typeof record.pageId !== "string" ||
-      typeof record.assetId !== "string" ||
-      typeof record.pageUrl !== "string" ||
-      typeof record.assetUrl !== "string" ||
-      typeof record.type !== "string" ||
-      typeof record.hasAlt !== "boolean" ||
-      (record.visible !== null && typeof record.visible !== "boolean") ||
-      (record.inViewport !== null && typeof record.inViewport !== "boolean") ||
-      typeof record.wasLazyLoaded !== "boolean"
-    ) {
-      throw new Error("Missing required asset fields");
-    }
-    return record as AssetRecord;
-  };
-
-  const fallbackParseResponseRecord = (value: unknown): ResponseRecordV1 => {
-    const record = value as any;
-    if (!record || typeof record !== "object") {
-      throw new Error("Record is not an object");
-    }
-    if (
-      typeof record.pageId !== "string" ||
-      typeof record.url !== "string" ||
-      typeof record.finalUrl !== "string" ||
-      typeof record.statusCode !== "number" ||
-      typeof record.encoding !== "string" ||
-      typeof record.bodyBlobRef !== "string"
-    ) {
-      throw new Error("Missing required response fields");
-    }
-    return record as ResponseRecordV1;
-  };
-
-  const assetParser = ensureParser(parseAssetRecord, fallbackParseAssetRecord);
-  const responseParser = ensureParser(parseResponseRecord, fallbackParseResponseRecord);
+  const assetParser = parseAssetRecord;
+  const responseParser = parseResponseRecord;
 
   type DatasetValidator = {
     safeParse: (value: unknown) => { success: boolean; data?: unknown; error?: { message: string } };
@@ -479,8 +359,7 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
           yield (transform ? transform(parsed) : parsed) as T;
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (abortController.signal.aborted && message === "Operation aborted.") {
+        if (abortController.signal.aborted) {
           return;
         }
         throw error;
@@ -554,6 +433,7 @@ export interface SelectOptions<T = any> {
   where?: (record: T) => boolean;
   fields?: string[];
   limit?: number;
+  limits?: Partial<AtlasReadLimits>;
 }
 
 /**
@@ -592,10 +472,27 @@ export async function* select<T = any>(
   const canonicalDataset = toCanonicalDatasetName(dataset);
   let count = 0;
 
-  const zipHandle = await openZipHandle(atlsPath);
+  const zipHandle = await openZipHandle(atlsPath, { limits: options.limits });
   try {
-    for await (const line of iterateDataset(atlsPath, canonicalDataset, { zipHandle })) {
-      const record = JSON.parse(line) as T;
+    const manifest = await readManifest(zipHandle);
+    enforceFormatVersionSupport(manifest);
+    if (!isKnownDatasetName(manifest, canonicalDataset)) {
+      throw new AtlasUnknownDatasetError(String(dataset));
+    }
+
+    // For newer archives the folder may be the shorter alias (e.g. "pages" not "page_metadata").
+    const newerFolder = NEWER_FORMAT_FOLDER_MAP[canonicalDataset];
+    const folderName =
+      newerFolder && zipHandle.listPartFiles(canonicalDataset).length === 0 ? newerFolder : canonicalDataset;
+
+    for await (const line of iterateDataset(atlsPath, folderName, { zipHandle })) {
+      let record: T;
+      try {
+        record = JSON.parse(line) as T;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new MalformedRecordError(canonicalDataset, `invalid JSON: ${reason}`);
+      }
 
       // Apply filter
       if (where && !where(record)) {

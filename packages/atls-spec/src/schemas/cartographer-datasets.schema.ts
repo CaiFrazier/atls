@@ -1,13 +1,41 @@
+/*
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
- * Copyright © 2025 Cai Frazier.
  * Cartographer dataset schemas (writer-facing Atlas JSONL records)
  */
 
 import { z } from "zod";
 import { EventType } from "../types.js";
 import { JsonValueSchema } from "./json-value.schema.js";
+import { ScreenshotTileSchema } from "./runtime-core.schema.js";
 
 const StringMapSchema = z.record(z.string(), z.union([z.string(), z.null()]));
+
+// BUG-0143: mirrors ScreenshotReference (types.ts) — a screenshot blob ref is
+// either a plain blob-path string, or a tiled-capture manifest object.
+const ScreenshotReferenceSchema = z.union([
+  z.string(),
+  z.object({
+    src: z.string().optional(),
+    tiles: z.array(ScreenshotTileSchema).optional(),
+    totalHeight: z.number().optional(),
+    totalWidth: z.number().optional(),
+  }),
+]);
 
 /**
  * Field-level provenance tier.  See {@link FieldOriginTier} in types.ts.
@@ -18,6 +46,7 @@ const FieldOriginTierSchema = z.enum([
   "classification",
   "audit",
   "aggregation",
+  "not_computed",
 ]);
 
 /**
@@ -66,6 +95,19 @@ export const PageMetadataDatasetRecordV1Schema = z.object({
     prefetch: z.array(z.string()).optional(),
     preconnect: z.array(z.string()).optional(),
     dnsPrefetch: z.array(z.string()).optional(),
+  }).optional(),
+  // BUG-0143: screenshot/favicon blob refs were captured at write time
+  // (ArtifactWriter's internal pageRecord.media) but never persisted into the
+  // archived page_metadata record, so reconstruction_index's join to them was
+  // always reading a field that never existed. Additive, non-breaking.
+  media: z.object({
+    screenshots: z.object({
+      desktop: ScreenshotReferenceSchema.optional(),
+      mobile: ScreenshotReferenceSchema.optional(),
+      desktopFullPage: ScreenshotReferenceSchema.optional(),
+      mobileFullPage: ScreenshotReferenceSchema.optional(),
+    }).optional(),
+    favicon: z.string().optional(),
   }).optional(),
   capturedAt: z.string().datetime(),
 });
@@ -144,6 +186,9 @@ const StructuredDataItemSchema = z.object({
   payload: z.record(z.string(), JsonValueSchema),
   source: z.string(),
   validationIssues: z.array(z.string()).optional(),
+  // A capped debug prefix of the raw text for a payload that failed to parse
+  // or was truncated (data is then {}). Absent for normal, valid items.
+  rawText: z.string().optional(),
 });
 
 export const StructuredDataDatasetRecordV1Schema = z.object({

@@ -29,26 +29,9 @@ the exact part files per dataset. Prefer these over globbing directories.
 
 ---
 
-## ⚠️ The SDK reader returns 0 records on current archives
+## Reading archives without the SDK (Python)
 
-The `@atls/sdk` reader methods (`pageMetadata()`, `navigation()`, …) return **0 records** for
-archives at `schemaVersion 2025-10-22` — which is what the current cartographer writer emits.
-
-**Root cause.** `NEWER_FORMAT_FOLDER_MAP` (`packages/atls-sdk/src/index.ts:55`) maps canonical
-dataset names to the **short** folder names `pages`/`edges`/`failed_pages`, i.e. the SDK assumes a
-"newer" archive uses short folder names. But the writer's canonical output uses the **long** names
-`page_metadata/`/`navigation/`/`pipeline_failures/` — the short names are *removed legacy*
-(`io/atlas/datasets.ts`, and the comment at `ArtifactWriter.ts:880`: "legacy pages/edges removed").
-The map is effectively backwards, so dataset detection finds nothing and iteration yields zero
-records **silently** — no error is thrown.
-
-Until this is fixed, do **not** rely on the SDK's high-level readers for current archives.
-
----
-
-## Supported workaround: Python + zstd
-
-`zstd` and Python 3 are the dependency-light way to read any current archive. Decompress each
+Python 3 is a dependency-light way to read any archive. Decompress each
 `<dataset>/part-*.jsonl.zst` and parse JSON Lines:
 
 ```python
@@ -102,9 +85,9 @@ see [storage-and-encoding.md](./storage-and-encoding.md).
 
 ---
 
-## When the SDK is fixed
+## Reading archives with the SDK (TypeScript)
 
-Once the folder-map bug is resolved, the high-level reader is the ergonomic path:
+The high-level reader is the standard path for TypeScript/JavaScript users:
 
 ```ts
 import { openAtlas } from "@atls/sdk";
@@ -116,10 +99,8 @@ for await (const page of atlas.readers.pageMetadata()) {
 atlas.close();
 ```
 
-The SDK's low-level `iterateParts(zipHandle, "page_metadata")` already works today if you pass the
-long folder name explicitly — it bypasses the broken folder resolution. Full API in the
-[Atlas SDK reference](../../atlas-sdk/README.md).
+Full API details can be found in the [Atlas SDK reference](../../atlas-sdk/README.md).
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against codebase: 2026-07-01._

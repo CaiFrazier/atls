@@ -2,14 +2,7 @@
 
 Complete reference for `@atls/sdk`, the read-side SDK for `.atls` archives.
 
-_Verified against `packages/atls-sdk/src/` on 2026-06-04._
-
-> ⚠️ **Compatibility:** the high-level reader methods return **0 records** on archives at
-> `schemaVersion 2025-10-22` (the current cartographer output) due to a stale folder-name map
-> (`NEWER_FORMAT_FOLDER_MAP`, `src/index.ts:55`). Until fixed, use the low-level
-> [`iterateParts`](#low-level-helpers) with explicit long folder names, or read with Python + zstd
-> (see the [Atlas reading guide](../../atlas-spec/docs/reading-archives.md)). Everything below
-> documents the full intended API; the low-level path works today.
+_Verified against `packages/atls-sdk/src/` on 2026-07-01._
 
 ---
 
@@ -22,6 +15,7 @@ import {
   diffManifests, formatManifestDiff,
   buildCrossModeIndex,
   readManifest, readSummary, iterateParts, readBlob, openZipHandle,
+  AtlasResourceLimitError,
 } from "@atls/sdk";
 ```
 
@@ -36,6 +30,22 @@ interface OpenAtlasOptions {
   /** Default true. When true, a malformed record throws MalformedRecordError.
    *  When false, malformed records are skipped and counted in stats.corruptedRecordCount. */
   strict?: boolean;
+
+  /** Optional overrides for default bounded ZIP, zstd, and JSONL read limits. */
+  limits?: Partial<AtlasReadLimits>;
+}
+```
+
+```ts
+interface AtlasReadLimits {
+  maxEntries: number;
+  maxZipEntryBytes: number;
+  maxJsonRootBytes: number;
+  maxPartCompressedBytes: number;
+  maxPartDecompressedBytes: number;
+  maxBlobCompressedBytes: number;
+  maxBlobDecompressedBytes: number;
+  maxJsonlLineBytes: number;
 }
 ```
 

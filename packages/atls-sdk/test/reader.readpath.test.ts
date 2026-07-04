@@ -1,7 +1,17 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import { describe, test, expect } from "vitest";
@@ -10,7 +20,16 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import archiver from "archiver";
-import { openAtlas, openZipHandle, iterateParts } from "../src/index.js";
+import { compress } from "@mongodb-js/zstd";
+import {
+  AtlasDuplicateEntryError,
+  AtlasResourceLimitError,
+  MalformedRecordError,
+  iterateParts,
+  openAtlas,
+  openZipHandle,
+  readBlob,
+} from "../src/index.js";
 import type { DatasetName } from "../src/types.js";
 import { createFixtureArchive } from "./helpers/fixtureArchive.js";
 
@@ -72,6 +91,106 @@ describe("SDK read path (BUG-0110 / BUG-0111 / BUG-0073)", () => {
     } finally {
       atlas.close();
       await fs.rm(copy, { force: true });
+    }
+  });
+
+  test("BUG-0225: rejects a zstd dataset part that expands past the configured limit", async () => {
+    const payload = Buffer.concat([
+      Buffer.from("{\"payload\":\""),
+      Buffer.alloc(2 * 1024 * 1024, 0x41),
+      Buffer.from("\"}\n"),
+    ]);
+    const compressed = Buffer.from(await compress(payload));
+    const path = await buildZip([
+      { name: "manifest.json", body: JSON.stringify({ formatVersion: "1.0.0" }) },
+      { name: "summary.json", body: JSON.stringify({ stats: { totalPages: 1, totalErrors: 0 } }) },
+      { name: "page_metadata/part-0001.jsonl.zst", body: compressed },
+    ]);
+
+    try {
+      await expect((async () => {
+        for await (const _ of iterateParts(path, "page_metadata" as DatasetName, {
+          limits: { maxPartDecompressedBytes: 64 * 1024 },
+        })) {
+          // consume
+        }
+      })()).rejects.toBeInstanceOf(AtlasResourceLimitError);
+    } finally {
+      await fs.rm(path, { force: true });
+    }
+  });
+
+  test("BUG-0225: rejects a zstd blob that expands past the configured limit", async () => {
+    const payload = Buffer.alloc(2 * 1024 * 1024, 0x42);
+    const compressed = Buffer.from(await compress(payload));
+    const ref = `sha256/${"a".repeat(64)}`;
+    const path = await buildZip([
+      { name: "manifest.json", body: JSON.stringify({ formatVersion: "1.0.0" }) },
+      { name: "summary.json", body: JSON.stringify({ stats: { totalPages: 0, totalErrors: 0 } }) },
+      { name: `blobs/${ref}.zst`, body: compressed },
+    ]);
+
+    try {
+      await expect(readBlob(path, ref, {
+        limits: { maxBlobDecompressedBytes: 64 * 1024 },
+      })).rejects.toBeInstanceOf(AtlasResourceLimitError);
+    } finally {
+      await fs.rm(path, { force: true });
+    }
+  });
+
+  test("BUG-0230: rejects an uncompressed JSONL line that exceeds the configured limit", async () => {
+    const path = await buildZip([
+      { name: "manifest.json", body: JSON.stringify({ formatVersion: "1.0.0" }) },
+      { name: "navigation/part-0001.jsonl", body: `{"payload":"${"x".repeat(2048)}"}\n` },
+    ]);
+
+    try {
+      await expect((async () => {
+        for await (const _ of iterateParts(path, "navigation" as DatasetName, {
+          limits: { maxJsonlLineBytes: 128 },
+        })) {
+          // consume
+        }
+      })()).rejects.toBeInstanceOf(AtlasResourceLimitError);
+    } finally {
+      await fs.rm(path, { force: true });
+    }
+  });
+
+  test("BUG-0227: rejects duplicate ZIP entry names while indexing", async () => {
+    const path = await buildZip([
+      { name: "manifest.json", body: "{}\n" },
+      { name: "manifest.json", body: "{\"formatVersion\":\"1.0.0\"}\n" },
+    ]);
+
+    try {
+      await expect(openZipHandle(path)).rejects.toBeInstanceOf(AtlasDuplicateEntryError);
+    } finally {
+      await fs.rm(path, { force: true });
+    }
+  });
+
+  test("rejects path-traversal ZIP entry names while indexing", async () => {
+    const path = await buildZip([
+      { name: "manifest.json", body: "{}\n" },
+      { name: "escape", body: "nope" },
+    ]);
+
+    try {
+      const bytes = await fs.readFile(path);
+      const original = Buffer.from("escape");
+      const invalid = Buffer.from("..\\bad");
+      let offset = bytes.indexOf(original);
+      while (offset >= 0) {
+        invalid.copy(bytes, offset);
+        offset = bytes.indexOf(original, offset + invalid.length);
+      }
+      await fs.writeFile(path, bytes);
+
+      await expect(openZipHandle(path)).rejects.toThrow(/invalid relative path|Invalid ZIP entry name/);
+    } finally {
+      await fs.rm(path, { force: true });
     }
   });
 
@@ -155,6 +274,17 @@ describe("SDK read path (BUG-0110 / BUG-0111 / BUG-0073)", () => {
       expect(after - before).toBeLessThan(10);
     } finally {
       await fs.rm(corrupt, { force: true });
+    }
+  });
+});
+
+describe("BUG-0228 (fixed): readJson() surfaces a typed error on corrupt JSON", () => {
+  test("a corrupt manifest.json throws MalformedRecordError instead of a generic Error", async () => {
+    const path = await buildZip([{ name: "manifest.json", body: "NOT VALID JSON {" }]);
+    try {
+      await expect(openAtlas(path)).rejects.toThrow(MalformedRecordError);
+    } finally {
+      await fs.rm(path, { force: true });
     }
   });
 });

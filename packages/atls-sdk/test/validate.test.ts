@@ -1,11 +1,22 @@
 /*
- * Copyright © 2025 Cai Frazier.
- * All rights reserved. Unauthorized copying, modification, or distribution is prohibited.
- * Proprietary and confidential.
+ * Copyright 2026 Cai Frazier
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "vitest";
 import { validate } from "../src/validate.js";
+import { openAtlas } from "../src/index.js";
 import { join } from "path";
 import { tmpdir } from "os";
 import { createFixtureArchive, type FixtureArchive } from "./helpers/fixtureArchive.js";
@@ -16,6 +27,9 @@ let missingFormatVersionArchive: FixtureArchive;
 let nonCanonicalBlobRefArchive: FixtureArchive;
 let nonCanonicalAssetBlobRefArchive: FixtureArchive;
 let pageNullTitleArchive: FixtureArchive;
+let zeroMajorFormatVersionArchive: FixtureArchive;
+let brokenLinkArchive: FixtureArchive;
+let pageMissingSocialArchive: FixtureArchive;
 
 beforeAll(async () => {
   validArchive = await createFixtureArchive();
@@ -24,6 +38,11 @@ beforeAll(async () => {
   nonCanonicalBlobRefArchive = await createFixtureArchive({ nonCanonicalBlobRef: true });
   nonCanonicalAssetBlobRefArchive = await createFixtureArchive({ nonCanonicalAssetBlobRef: true });
   pageNullTitleArchive = await createFixtureArchive({ pageNullTitle: true });
+  zeroMajorFormatVersionArchive = await createFixtureArchive({ formatVersionValue: "0.9.0" });
+  // The single page's own navigation edge self-links to pageUrl; a 404
+  // response for that same URL makes it a genuine broken internal link.
+  brokenLinkArchive = await createFixtureArchive({ responseStatusCode: 404 });
+  pageMissingSocialArchive = await createFixtureArchive({ pageMissingSocial: true });
 });
 
 afterAll(async () => {
@@ -33,6 +52,9 @@ afterAll(async () => {
   await nonCanonicalBlobRefArchive?.cleanup();
   await nonCanonicalAssetBlobRefArchive?.cleanup();
   await pageNullTitleArchive?.cleanup();
+  await zeroMajorFormatVersionArchive?.cleanup();
+  await brokenLinkArchive?.cleanup();
+  await pageMissingSocialArchive?.cleanup();
 });
 
 describe("SDK validate()", () => {
@@ -71,14 +93,29 @@ describe("SDK validate()", () => {
     const result = await validate(validArchive.path, {
       checkBrokenLinks: true,
     });
-    
+
     // Broken links are warnings, not errors
     const brokenLinkWarnings = result.issues.filter(
       (i) => i.code === "EDGE_BROKEN_LINK"
     );
-    
+
     // This test just ensures the check runs without errors
     expect(brokenLinkWarnings).toBeInstanceOf(Array);
+  });
+
+  test("BUG-0055/BUG-0231 (fixed): a 404 response on an internal link actually fires EDGE_BROKEN_LINK", async () => {
+    // Regression guard: checkBrokenLinks previously read pageRecord.statusCode,
+    // a field canonical page_metadata records never have, so this warning was
+    // permanently unreachable regardless of archive content. It now reads
+    // status from the responses dataset.
+    const result = await validate(brokenLinkArchive.path, {
+      checkBrokenLinks: true,
+      checkIntegrity: true,
+    });
+
+    const brokenLinkWarnings = result.issues.filter((i) => i.code === "EDGE_BROKEN_LINK");
+    expect(brokenLinkWarnings.length).toBeGreaterThan(0);
+    expect(brokenLinkWarnings[0].details?.statusCode).toBe(404);
   });
   
   test("respects maxIssues limit", async () => {
@@ -143,6 +180,25 @@ describe("SDK validate()", () => {
     });
   });
 
+  test("BUG-0055/BUG-0136/BUG-0231 (fixed): a page_metadata record missing a required field fails schema validation", async () => {
+    // Regression guard: validatePageSchema previously hand-rolled a handful
+    // of truthy checks on non-canonical fields (url/finalUrl/statusCode/depth)
+    // that don't exist on real page_metadata records, so a genuinely invalid
+    // canonical record (missing the required `social` field) previously
+    // validated clean. It now runs the real PageMetadataDatasetRecordV1Schema.
+    const result = await validate(pageMissingSocialArchive.path, {
+      checkIntegrity: false,
+      checkBrokenLinks: false,
+    });
+
+    expect(result.valid).toBe(false);
+    const schemaIssues = result.issues.filter(
+      (i) => i.code === "DATASET_SCHEMA_VIOLATION" && i.dataset === "page_metadata"
+    );
+    expect(schemaIssues.length).toBeGreaterThan(0);
+    expect(schemaIssues[0].message).toContain("social");
+  });
+
   test("reports edge integrity errors", async () => {
     const result = await validate(invalidArchive.path, {
       checkIntegrity: true,
@@ -163,6 +219,23 @@ describe("SDK validate()", () => {
     expect(issue).toBeDefined();
     expect(issue?.severity).toBe("error");
     expect(result.valid).toBe(false);
+  });
+
+  test("BUG-0094(c) (fixed): validate() and openAtlas() agree on a 0.x-major formatVersion", async () => {
+    // Both paths now share the same major-version rule (formatVersion.ts),
+    // so a 0.x archive is rejected consistently rather than validate()'s own
+    // Phase 1 check silently allowing what openAtlas() would already reject.
+    await expect(openAtlas(zeroMajorFormatVersionArchive.path)).rejects.toThrow(/formatVersion/i);
+
+    const result = await validate(zeroMajorFormatVersionArchive.path, {
+      checkIntegrity: false,
+      checkBrokenLinks: false,
+    });
+    expect(result.valid).toBe(false);
+    const issue = result.issues.find(
+      (i) => i.code === "MANIFEST_UNSUPPORTED_FORMAT_VERSION" || i.code === "MANIFEST_INVALID_FORMAT_VERSION"
+    );
+    expect(issue).toBeDefined();
   });
 
   test("strict mode enforces full spec-level manifest fields", async () => {
