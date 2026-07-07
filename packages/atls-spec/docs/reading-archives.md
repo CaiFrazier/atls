@@ -18,7 +18,7 @@ with zipfile.ZipFile("crawl.atls") as z:
     manifest = json.loads(z.read("manifest.json"))
     summary  = json.loads(z.read("summary.json"))
 
-print(manifest["schemaVersion"])              # "2025-10-22"
+print(manifest["schemaVersion"])              # "2026-07-01"
 print(manifest["identity"]["primary_origin"]) # snake_case in manifest
 print(summary["identity"]["primaryOrigin"])   # camelCase in summary
 print(list(manifest.get("datasets", {})))     # which datasets are present
@@ -99,7 +99,7 @@ for await (const page of atlas.readers.pageMetadata()) {
 atlas.close();
 ```
 
-Full API details can be found in the [Atlas SDK reference](../../atlas-sdk/README.md).
+Full API details can be found in the [Atlas SDK reference](../../atls-sdk/README.md).
 
 ---
 

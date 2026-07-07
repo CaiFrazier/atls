@@ -46,7 +46,7 @@ The comprehensive, code-verified format spec lives in [`SPECIFICATION.md`](./SPE
 
 - [Archive Structure](./docs/archive-structure.md) — ZIP layout, root files, dataset parts, blobs
 - [Storage & Encoding](./docs/storage-and-encoding.md) — JSONL, Zstandard, blob addressing, hashing
-- [Identity & Keys](./docs/identity-and-keys.md) — `page_id` join model, per-dataset keys
+- [Identity & Keys](./docs/identity-and-keys.md) — `pageId` join model, per-dataset keys
 - [Versioning & Compatibility](./docs/versioning.md) — version axes, `specLevel`, compat rules
 - [Root Metadata Files](./docs/root-files.md) — manifest / summary / capabilities / provenance fields
 - [Dataset Reference](./docs/datasets.md) — all 19 datasets, every field, presence-by-mode

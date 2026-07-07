@@ -6,7 +6,7 @@ TypeScript SDK for reading and validating Atlas `.atls` archives.
 
 > **Full API reference:** [`docs/API.md`](./docs/API.md) — every method, option, and return type.
 > The Atlas archive **format** itself is specified in
-> [`@cf/atlas-spec`](../atlas-spec/SPECIFICATION.md).
+> [`@caifrazier/atls-spec`](../atls-spec/SPECIFICATION.md).
 
 Primary exports:
 

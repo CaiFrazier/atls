@@ -32,7 +32,7 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 | `events` | ✓ | ✓ | ✓ | `eventId` | Zod |
 | `pipeline_failures` | ✓ | ✓ | ✓ | — | Zod |
 | `pipeline_alerts` | ✓ | ✓ | ✓ | — | Zod |
-| `quarantine` | ✓* | ✓* | ✓* | `quarantineId` | **none** |
+| `quarantine` | ✓* | ✓* | ✓* | `quarantineId` | Zod |
 | `structured_data` | — | ✓ | ✓ | `pageId` | Zod |
 | `security` | — | ✓ | ✓ | `pageId` | Zod |
 | `accessibility` | ✓ (base) | ✓ (+forms/focus) | ✓ (+wcag/axe) | `pageId` | Zod |
@@ -43,8 +43,8 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 | `reconstruction_index` | ✓† | ✓† | ✓† | `pageId` | Zod |
 | `frontier_ledger` | opt | opt | opt | `url` | Zod |
 
-`*` pruned/written only when records exist · `†` built at finalization under default replay tier ·
-**none** = emitted by the writer but has no Zod schema in `@cf/atlas-spec` (see
+`*` pruned/written only when records exist · `†` built at finalization under default replay tier.
+Every emitted dataset now has a published Zod schema in `@caifrazier/atls-spec` (see
 [schema-system.md](./schema-system.md)).
 
 ---
@@ -107,7 +107,7 @@ Network truth — one record per fetched page. Schema: `responses.schema.ts`. Ke
 - `redirectChain[]`, `redirectChainLength`.
 - `contentType`, `contentLength`, `headers` (normalized map).
 - Timing: `fetchStartedAt`, `fetchCompletedAt`, `renderStartedAt`, `renderCompletedAt`,
-  `fetchMs`, `renderMs`, `render_mode`, `navEndReason`.
+  `fetchMs`, `renderMs`, `renderMode`, `navEndReason`.
 - `encoding` (**required**) — character encoding.
 - `bodyBlobRef` (**required**) — blob ref to the source HTML body.
 - `renderedBodyBlobRef`, `renderedDomHash` — post-JS rendered HTML (full mode only).
@@ -118,8 +118,8 @@ Use `responses.statusCode` as the transport truth — `page_metadata` has no sta
 
 ## assets
 
-Images, video, audio, documents. **No Zod schema** — shape defined in `types.ts:757-926`
-(`AssetRecord`). Keys: `pageId` + `assetId` (UUID v5, deterministic).
+Images, video, audio, documents. Schema: `runtime-core.schema.ts` (`AssetRecordSchema`, generated
+as `assets.v1.schema.json`). Keys: `pageId` + `assetId` (UUID v5, deterministic).
 
 - Identity: `pageId`, `assetId`, `pageUrl`, `assetUrl`, `type` (`image\|video\|audio\|document`).
 - Image basics: `alt`, `hasAlt`, `naturalWidth/Height`, `displayWidth/Height`, `estimatedBytes`,
@@ -282,8 +282,9 @@ Hard failures and non-fatal alerts. Schema: `cartographer-datasets.schema.ts:275
 
 ## quarantine
 
-Records that failed schema validation, retained for forensics. **No Zod schema** — shape from the
-cartographer `QuarantineRecord` interface. Keys: `quarantineId` + `crawlId`.
+Records that failed schema validation, retained for forensics. Schema:
+`cartographer-datasets.schema.ts` (`QuarantineRecordV1Schema`, generated as
+`quarantine.v1.schema.json`). Keys: `quarantineId` + `crawlId`.
 
 - `quarantineId` · `crawlId` · `pageId` (optional) · `url`.
 - `dataset` — which dataset's record failed.
@@ -315,4 +316,4 @@ when a discovery tracker is wired.
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against codebase: 2026-07-06._

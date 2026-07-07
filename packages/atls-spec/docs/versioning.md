@@ -12,10 +12,10 @@ _Verified against `packages/cartographer/src/io/atlas/manifest.ts` and
 
 | Field | Casing | Current value | Meaning |
 |---|---|---|---|
-| `atlasVersion` | camelCase | `"1.0"` | Public Atlas product line. |
-| `formatVersion` | camelCase | `"1.0.0"` | Archive container/format version. Breaking container changes bump the major. |
-| `specVersion` | camelCase | `"1.0.0"` | Specification contract version. |
-| `schemaVersion` | camelCase | `"2025-10-22"` | **Date-stamped** dataset-schema release tag. |
+| `atlasVersion` | camelCase | `"1.1"` | Public Atlas product line. |
+| `formatVersion` | camelCase | `"1.1.0"` | Archive container/format version. Breaking container changes bump the major. |
+| `specVersion` | camelCase | `"1.1.0"` | Specification contract version. |
+| `schemaVersion` | camelCase | `"2026-07-01"` | **Date-stamped** dataset-schema release tag. |
 | `generator` | camelCase | `"cartographer-engine/1.0.0-rc.1"` | Producer id + version; reflects the engine package version. |
 
 These literals are set in `manifest.ts:355-357` and emitted at `manifest.ts:962-965`. `generator`
@@ -25,11 +25,11 @@ is built from `CARTOGRAPHER_VERSION` (`manifest.ts:1126`).
 
 ## Two independent axes — do not conflate
 
-1. **`schemaVersion`** (`"2025-10-22"`) is a **date-stamped tag the writer stamps into every
+1. **`schemaVersion`** (`"2026-07-01"`) is a **date-stamped tag the writer stamps into every
    archive**. It identifies the on-disk dataset layout and is what a reader should branch on to
    decide "which archive layout is this."
 
-2. **The `@cf/atlas-spec` package version** (`1.0.0-rc.1`, from `package.json`) is the npm semver
+2. **The `@caifrazier/atls-spec` package version** (`1.0.0-rc.1`, from `package.json`) is the npm semver
    of the schema *definitions*. It is **not** written into archives and evolves on its own cadence.
 
 A reader must never use the spec package version to reason about an archive's layout — it isn't in
@@ -39,7 +39,7 @@ the archive. Read `manifest.schemaVersion`.
 
 ```bash
 python3 -c "import zipfile,json; print(json.loads(zipfile.ZipFile('crawl.atls').read('manifest.json'))['schemaVersion'])"
-# -> 2025-10-22
+# -> 2026-07-01
 ```
 
 ---

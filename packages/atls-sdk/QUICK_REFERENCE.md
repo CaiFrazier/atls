@@ -41,11 +41,11 @@ for await (const record of atlas.readers.dataset('events')) {
 ## Select Helper
 
 ```ts
-// status codes live in the `responses` dataset (snake_case fields), not page_metadata
+// status codes live in the `responses` dataset, not page_metadata
 for await (const row of select('./crawl.atls', {
   dataset: 'responses',
-  where: (r) => r.status_code >= 400,
-  fields: ['url', 'status_code'],
+  where: (r) => r.statusCode >= 400,
+  fields: ['url', 'statusCode'],
   limit: 100,
 })) {
   console.log(row);
@@ -74,4 +74,4 @@ atlas.close();
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against codebase: 2026-07-06._

@@ -4,7 +4,26 @@
   "description": "The Atlas archive format specification: Zod schemas, generated JSON Schemas, TypeScript types, and validators",
   "type": "module",
   "author": "Cai Frazier",
-  "license": "Apache-2.0 AND CC-BY-4.0",
+  "license": "Apache-2.0 OR CC-BY-4.0",
+  "keywords": [
+    "atlas",
+    "atls",
+    "crawler",
+    "seo",
+    "accessibility",
+    "spec",
+    "json-schema",
+    "zod"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CaiFrazier/atls.git",
+    "directory": "packages/atls-spec"
+  },
+  "bugs": {
+    "url": "https://github.com/CaiFrazier/atls/issues"
+  },
+  "homepage": "https://github.com/CaiFrazier/atls/tree/main/packages/atls-spec#readme",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -19,13 +38,22 @@
     "./package.json": "./package.json",
     "./dist/*": "./dist/*"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "SPECIFICATION.md",
+    "docs",
+    "LICENSE",
+    "LICENSE-SPEC.md"
+  ],
   "scripts": {
     "build": "tsc -b && node dist/schemas/generator.js",
     "build:schemas": "node dist/schemas/generator.js",
     "dev": "tsc -b --watch",
     "test": "VITEST_POOL=forks VITEST_MIN_WORKERS=1 VITEST_MAX_WORKERS=1 vitest run --pool=forks --minWorkers=1 --maxWorkers=1",
     "lint": "eslint .",
-    "clean": "rimraf dist tsconfig.tsbuildinfo"
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "prepublishOnly": "pnpm build && pnpm test"
   },
   "dependencies": {
     "zod": "^3.23.8",

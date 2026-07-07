@@ -97,8 +97,8 @@ for await (const page of atlas.readers.pageMetadata()) {
 atlas.close();
 ```
 
-> Records are joined across datasets on `page_id`. `pageMetadata()` returns the *flattened* shape
-> (`title` at top level, not `core.title`) via `@cf/atlas-spec`'s `pageMetadataMapping`.
+> Records are joined across datasets on `pageId`. `pageMetadata()` returns the *flattened* shape
+> (`title` at top level, not `core.title`) via `@caifrazier/atls-spec`'s `pageMetadataMapping`.
 
 ---
 
@@ -130,11 +130,11 @@ interface SelectOptions {
   limit?: number;                       // cap rows
 }
 
-// status codes live in `responses` (snake_case fields)
+// status codes live in `responses`
 for await (const row of select("./crawl.atls", {
   dataset: "responses",
-  where: (r) => r.status_code >= 400,
-  fields: ["url", "status_code"],
+  where: (r) => r.statusCode >= 400,
+  fields: ["url", "statusCode"],
   limit: 100,
 })) {
   console.log(row);
@@ -179,8 +179,9 @@ const result = await validate("./crawl.atls", { strict: false });
 console.log(result.valid, result.stats.errorsFound, result.stats.warningsFound);
 ```
 
-> Coverage gap: `assets` and `quarantine` have no Zod schema and are not field-validated. See the
-> [Atlas schema-system chapter](../../atlas-spec/docs/schema-system.md).
+> `assets` is schema-validated against `assets.v1`. `quarantine` has a published schema but is not
+> re-validated (it holds records that already failed validation). See the
+> [Atlas schema-system chapter](../../atls-spec/docs/schema-system.md).
 
 ---
 
@@ -203,7 +204,7 @@ indicative, not exhaustive.
 
 ## `buildCrossModeIndex(readers) → Promise<CrossModeIndex>`
 
-Aligns records across archives crawled in different render modes, keyed by URL (since `page_id` is
+Aligns records across archives crawled in different render modes, keyed by URL (since `pageId` is
 not stable across crawls). Requires ≥2 readers; resolves each reader's mode from its `specLevel`.
 Exports `CrossModeIndex` and `CrossModeEntry`.
 
@@ -223,10 +224,10 @@ archives today** when given the long folder name — it sidesteps the broken fol
 | `readBlob(zipHandle, ref)` | `=> Promise<Buffer>` | Resolve a blob ref. |
 
 ```ts
-// Works on current 2025-10-22 archives:
+// Works on current 2026-07-01 archives:
 for await (const line of iterateParts("./crawl.atls", "page_metadata")) {
   const rec = JSON.parse(line);
-  console.log(rec.page_id, rec.url);
+  console.log(rec.pageId, rec.url);
 }
 ```
 
@@ -236,9 +237,9 @@ Decompression uses `@mongodb-js/zstd`.
 
 ## Types
 
-Record types (`PageRecord`, `AssetRecord`, `ResponseRecordV1`, …) come from `@cf/atlas-spec`. The
-authoritative field reference is the [Atlas dataset reference](../../atlas-spec/docs/datasets.md).
+Record types (`PageRecord`, `AssetRecord`, `ResponseRecordV1`, …) come from `@caifrazier/atls-spec`. The
+authoritative field reference is the [Atlas dataset reference](../../atls-spec/docs/datasets.md).
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against codebase: 2026-07-06._
