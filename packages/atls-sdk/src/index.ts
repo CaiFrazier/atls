@@ -102,6 +102,10 @@ export {
   AtlasResourceLimitError,
   AtlasDuplicateEntryError,
   AtlasInvalidEntryNameError,
+  AtlasPathError,
+  AtlasAbortError,
+  AtlasDecompressionError,
+  AtlasEntryNotFoundError,
 } from "./reader.js";
 export type { AtlasReadOptions, AtlasReadLimits } from "./reader.js";
 export {

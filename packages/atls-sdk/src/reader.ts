@@ -101,6 +101,46 @@ export class MalformedRecordError extends Error {
   }
 }
 
+// BUG-0229: typed errors for the previously stringly-typed `throw new Error(...)` sites in the
+// read path, so consumers can branch on a stable `.code` instead of matching message substrings.
+// Messages are kept byte-identical to the pre-existing throws for backward compatibility.
+
+/** Invalid archive path or blob ref passed to a reader entry point. */
+export class AtlasPathError extends Error {
+  readonly code = "ATLAS_INVALID_PATH";
+  constructor(message: string) {
+    super(message);
+    this.name = "AtlasPathError";
+  }
+}
+
+/** A read was cancelled via its AbortSignal. */
+export class AtlasAbortError extends Error {
+  readonly code = "ATLAS_ABORTED";
+  constructor(message = "Operation aborted.") {
+    super(message);
+    this.name = "AtlasAbortError";
+  }
+}
+
+/** Zstd decompression of a part/blob/entry failed. */
+export class AtlasDecompressionError extends Error {
+  readonly code = "ATLAS_DECOMPRESSION_FAILED";
+  constructor(message: string) {
+    super(message);
+    this.name = "AtlasDecompressionError";
+  }
+}
+
+/** A requested entry (part file, blob, etc.) is not present in the archive. */
+export class AtlasEntryNotFoundError extends Error {
+  readonly code = "ATLAS_ENTRY_NOT_FOUND";
+  constructor(readonly fileName: string) {
+    super(`${fileName} not found in archive`);
+    this.name = "AtlasEntryNotFoundError";
+  }
+}
+
 /**
  * Iterate over all JSONL records in a dataset directory
  * (for example: page_metadata, navigation, assets).
@@ -123,16 +163,16 @@ function resolveLimits(limits?: Partial<AtlasReadLimits>): AtlasReadLimits {
 
 function assertAtlasPath(atlsPath: string): void {
   if (typeof atlsPath !== "string" || atlsPath.trim().length === 0) {
-    throw new Error("Atlas path must be a non-empty string.");
+    throw new AtlasPathError("Atlas path must be a non-empty string.");
   }
   if (!atlsPath.toLowerCase().endsWith(".atls")) {
-    throw new Error(`Atlas path must end with ".atls": ${atlsPath}`);
+    throw new AtlasPathError(`Atlas path must end with ".atls": ${atlsPath}`);
   }
 }
 
 function checkAbort(signal?: AbortSignal): void {
   if (signal?.aborted) {
-    throw new Error("Operation aborted.");
+    throw new AtlasAbortError();
   }
 }
 
@@ -221,7 +261,7 @@ async function readStreamToBuffer(
 
     const onAbort = () => {
       cleanup();
-      reject(new Error("Operation aborted."));
+      reject(new AtlasAbortError());
     };
 
     const onData = (chunk: Buffer | string) => {
@@ -357,7 +397,7 @@ export function decompressZstdBuffer(
     if (err instanceof AtlasResourceLimitError) {
       throw err;
     }
-    throw new Error(`Failed to decompress ${resource}: ${err instanceof Error ? err.message : String(err)}`);
+    throw new AtlasDecompressionError(`Failed to decompress ${resource}: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   return Buffer.concat(chunks, total);
@@ -489,7 +529,7 @@ export class ZipHandle {
 
     const entry = this.entries.get(fileName);
     if (!entry) {
-      throw new Error(`${fileName} not found in archive`);
+      throw new AtlasEntryNotFoundError(fileName);
     }
     assertKnownSizeWithinLimit(fileName, entry.uncompressedSize, maxBytes);
 
@@ -581,7 +621,7 @@ async function* streamPartFile(
     if (err instanceof AtlasResourceLimitError) {
       throw err;
     }
-    throw new Error(`Failed to decompress part ${fileName}: ${String(err)}`);
+    throw new AtlasDecompressionError(`Failed to decompress part ${fileName}: ${String(err)}`);
   }
 
   for (const line of bufferLines(payload, handle.limits.maxJsonlLineBytes, fileName)) {
@@ -661,7 +701,7 @@ export async function readBlob(atlsPath: string, blobRef: string, options?: Atla
 export async function readBlob(handle: ZipHandle, blobRef: string): Promise<Buffer>;
 export async function readBlob(target: string | ZipHandle, blobRef: string, options: AtlasReadOptions = {}): Promise<Buffer> {
   if (typeof blobRef !== "string" || blobRef.trim().length === 0) {
-    throw new Error("Blob ref must be a non-empty string.");
+    throw new AtlasPathError("Blob ref must be a non-empty string.");
   }
 
   const blobPath = normalizeBlobPath(blobRef);
@@ -679,7 +719,7 @@ export async function readBlob(target: string | ZipHandle, blobRef: string, opti
     if (err instanceof AtlasResourceLimitError) {
       throw err;
     }
-    throw new Error(`Failed to decompress blob ${blobPath}: ${String(err)}`);
+    throw new AtlasDecompressionError(`Failed to decompress blob ${blobPath}: ${String(err)}`);
   }
 }
 
