@@ -405,7 +405,11 @@ const AxeCheckResultSchema = z.object({
   id: z.string(),
   impact: AxeImpactSchema.nullable().optional(),
   message: z.string(),
-  data: z.record(z.string(), JsonValueSchema).nullable().optional(),
+  // axe-core's per-check `data` is polymorphic — it can be an object (most checks), a string,
+  // a number, or an array depending on the rule (e.g. contrast checks emit an object, others emit
+  // a bare string). Constraining it to an object-record silently quarantined ~25% of real-site
+  // accessibility records (their pages carried a string `data`). Accept any JSON value.
+  data: JsonValueSchema.nullable().optional(),
   relatedNodes: z.array(AxeRelatedNodeSchema).optional(),
 });
 
