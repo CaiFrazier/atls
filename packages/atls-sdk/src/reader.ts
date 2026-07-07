@@ -691,27 +691,7 @@ export async function* iterateDataset(
   dataset: DatasetName,
   options: IterateDatasetOptions = {}
 ): AsyncIterable<string> {
-  assertAtlasPath(atlsPath);
-  checkAbort(options.signal);
-
-  const provided = options.zipHandle;
-  if (provided) {
-    const partFiles = provided.listPartFiles(dataset);
-    for (const partFile of partFiles) {
-      checkAbort(options.signal);
-      yield* streamPartFile(provided, partFile, options);
-    }
-    return;
-  }
-
-  const handle = await openZipHandle(atlsPath, { limits: options.limits });
-  try {
-    const partFiles = handle.listPartFiles(dataset);
-    for (const partFile of partFiles) {
-      checkAbort(options.signal);
-      yield* streamPartFile(handle, partFile, options);
-    }
-  } finally {
-    handle.close();
-  }
+  // Thin alias for iterateParts (BUG-0241): both stream a dataset's part files line by line.
+  // Kept as a named export for API stability; delegates to avoid the byte-identical duplicate.
+  yield* iterateParts(atlsPath, dataset, options);
 }

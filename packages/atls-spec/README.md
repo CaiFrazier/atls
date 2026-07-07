@@ -17,7 +17,6 @@ It provides:
 
 - Core types: `src/types.ts`
 - Record split exports: `src/types/records/`
-- Normalization helpers: `src/normalize.ts` (legacy camelCase → snake_case field adapters)
 - Page-metadata flattening: `src/pageMetadataMapping.ts` (nested on-disk record → flat consumer shape)
 - Schema exports: `src/schemas/index.ts`
 

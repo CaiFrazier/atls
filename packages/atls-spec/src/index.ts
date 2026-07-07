@@ -25,8 +25,6 @@
 export * from './types.js';
 // Export split record type entrypoints
 export * from './types/records/index.js';
-// Export normalization utilities
-export * from './normalize.js';
 // Export page metadata mapping (nested ↔ flat adapter)
 export * from './pageMetadataMapping.js';
 
