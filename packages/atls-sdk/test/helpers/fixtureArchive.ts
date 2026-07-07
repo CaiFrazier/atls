@@ -49,6 +49,30 @@ export type FixtureOptions = {
   responseStatusCode?: number;
   /** Omit the required `social` field from page_metadata, to exercise schema-violation handling. */
   pageMissingSocial?: boolean;
+  /**
+   * BUG-0123(c): write the listed datasets as ZERO-record parts — still listed
+   * in manifest.parts (so presence holds and reads route through the streaming
+   * path and its blank-line skip, not the presence early-return) but with an
+   * empty part file and recordCount 0. Summary totals are derived from actual
+   * record counts so validate() sees no totalPages/totalEdges mismatch.
+   */
+  emptyDatasets?: string[];
+  /**
+   * BUG-0114: place part FILES under the newer-format alias folders
+   * (`pages/`, `edges/` — see NEWER_FORMAT_FOLDER_MAP in src/index.ts) while
+   * manifest `datasets`/`parts` KEYS stay canonical. This is the layout that
+   * forces the readers' resolveFolder() alias fallback — the code path behind
+   * the historical "0 records on newer archives" regression, which no fixture
+   * ever exercised.
+   */
+  newerFormatFolders?: boolean;
+};
+
+/** Mirror of NEWER_FORMAT_FOLDER_MAP in src/index.ts (canonical → alias). */
+const NEWER_FOLDER_ALIASES: Record<string, string> = {
+  page_metadata: "pages",
+  navigation: "edges",
+  pipeline_failures: "failed_pages",
 };
 
 type DatasetPart = {
@@ -174,10 +198,27 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     bodyBlobRef: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
   };
 
-  const pageMetadataPart = await buildJsonlPart([pageMetadataRecord], "page_metadata/page_metadata_part_00.jsonl.zst");
-  const navigationPart = await buildJsonlPart([navigationRecord], "navigation/navigation_part_00.jsonl.zst");
-  const assetsPart = await buildJsonlPart([assetRecord], "assets/assets_part_00.jsonl.zst");
-  const responsesPart = await buildJsonlPart([responseRecord], "responses/responses_part_00.jsonl.zst");
+  // BUG-0114: with newerFormatFolders, the part FILES live under the alias
+  // folders while all manifest keys stay canonical — see FixtureOptions.
+  const folderFor = (dataset: string): string =>
+    options.newerFormatFolders ? (NEWER_FOLDER_ALIASES[dataset] ?? dataset) : dataset;
+
+  // BUG-0123(c): emptied datasets keep their part file and manifest listing
+  // but carry zero records.
+  const emptied = new Set(options.emptyDatasets ?? []);
+  const recordsFor = (dataset: string, records: unknown[]): unknown[] =>
+    emptied.has(dataset) ? [] : records;
+
+  const pageMetadataPart = await buildJsonlPart(
+    recordsFor("page_metadata", [pageMetadataRecord]),
+    `${folderFor("page_metadata")}/${folderFor("page_metadata")}_part_00.jsonl.zst`
+  );
+  const navigationPart = await buildJsonlPart(
+    recordsFor("navigation", [navigationRecord]),
+    `${folderFor("navigation")}/${folderFor("navigation")}_part_00.jsonl.zst`
+  );
+  const assetsPart = await buildJsonlPart(recordsFor("assets", [assetRecord]), "assets/assets_part_00.jsonl.zst");
+  const responsesPart = await buildJsonlPart(recordsFor("responses", [responseRecord]), "responses/responses_part_00.jsonl.zst");
 
   // Maps dataset name → list of parts for that dataset
   const partBuffers: Record<string, DatasetPart[]> = {
@@ -273,9 +314,9 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
       redactPii: true,
     },
     summary: {
-      total_pages: 1,
-      total_links: 1,
-      total_assets: 1,
+      total_pages: pageMetadataPart.recordCount,
+      total_links: navigationPart.recordCount,
+      total_assets: assetsPart.recordCount,
       total_errors: 0,
     },
   };
@@ -296,14 +337,12 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
       },
     },
     stats: {
-      totalPages: 1,
-      totalEdges: 1,
-      totalAssets: 1,
+      totalPages: pageMetadataPart.recordCount,
+      totalEdges: navigationPart.recordCount,
+      totalAssets: assetsPart.recordCount,
       totalErrors: 0,
-      totalResponses: 1,
-      statusCodes: {
-        "200": 1,
-      },
+      totalResponses: responsesPart.recordCount,
+      statusCodes: responsesPart.recordCount > 0 ? { "200": responsesPart.recordCount } : {},
       renderModes: {
         [renderMode]: 1,
       },

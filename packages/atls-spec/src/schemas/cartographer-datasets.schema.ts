@@ -21,7 +21,7 @@
 import { z } from "zod";
 import { EventType } from "../types.js";
 import { JsonValueSchema } from "./json-value.schema.js";
-import { ScreenshotTileSchema } from "./runtime-core.schema.js";
+import { EdgeLocationEnum, LinkTypeEnum, ScreenshotTileSchema } from "./runtime-core.schema.js";
 
 const StringMapSchema = z.record(z.string(), z.union([z.string(), z.null()]));
 
@@ -67,6 +67,10 @@ export const PageMetadataDatasetRecordV1Schema = z.object({
     descriptionLength: z.number().int().nonnegative().optional(),
     h1: z.string().optional(),
     canonicalTag: z.string().optional(),
+    // BUG-0140: the canonical tag's href resolved to an ABSOLUTE URL against
+    // the page's base URL — `canonicalTag` is the raw as-authored value (may
+    // be relative), `canonicalResolved` is what it actually points at.
+    canonicalResolved: z.string().optional(),
     language: z.string().optional(),
     charset: z.string().optional(),
     favicon: z.string().optional(),
@@ -120,8 +124,11 @@ const NavigationEdgeSchema = z.object({
   relTokens: z.array(z.string()).optional(),
   nofollow: z.boolean().optional(),
   isExternal: z.boolean().optional(),
-  location: z.string().optional(),
-  linkType: z.string().optional(),
+  // BUG-0126: shares EdgeRecordSchema's enums instead of accepting any string —
+  // the writer (extractors/navigation.ts, AssetProcessor.ts) emits only these
+  // values, verified against source before tightening.
+  location: EdgeLocationEnum.optional(),
+  linkType: LinkTypeEnum.optional(),
   isPrimaryNav: z.boolean().optional(),
   isBreadcrumb: z.boolean().optional(),
   isSkipLink: z.boolean().optional(),
@@ -230,7 +237,14 @@ export const StructuredDataDatasetRecordV1Schema = z.object({
 export const TechnologyDatasetRecordV1Schema = z.object({
   pageId: z.string().uuid(),
   url: z.string().url(),
-  detectedTechnologies: z.array(z.record(z.string(), JsonValueSchema)),
+  // BUG-0126: was z.array(z.record(JsonValue)) — accept-anything. The producer
+  // (extractors/wappalyzer.ts) always emits {name, categories, version?} plus
+  // extras (confidence/website/icon), preserved via passthrough.
+  detectedTechnologies: z.array(z.object({
+    name: z.string(),
+    version: z.string().optional(),
+    categories: z.array(z.string()).optional(),
+  }).passthrough()),
   serverSignatures: z.object({
     server: z.string().optional(),
     xPoweredBy: z.string().optional(),
@@ -318,6 +332,9 @@ export const PerformanceDatasetRecordV1Schema = z.object({
 });
 
 export const PipelineFailureRecordV1Schema = z.object({
+  // BUG-0131: optional — fetch/render-phase failures occur before a page UUID
+  // is assigned; write-phase failures carry it. Join by url; pageId when present.
+  pageId: z.string().uuid().optional(),
   url: z.string(),
   origin: z.string(),
   hostname: z.string(),
@@ -525,6 +542,9 @@ export const SitemapDatasetRecordV1Schema = z.object({
 });
 
 export const FrontierLedgerRecordV1Schema = z.object({
+  // BUG-0131: optional — discovery accounting is URL-keyed; a pageId exists
+  // only for URLs that were actually visited/captured.
+  pageId: z.string().uuid().optional(),
   url: z.string(),
   normalizedUrl: z.string(),
   status: z.enum(["discovered", "queued", "visited", "skipped"]),
@@ -533,6 +553,26 @@ export const FrontierLedgerRecordV1Schema = z.object({
   discoveredFrom: z.string().optional(),
   discoveredAt: z.string().datetime().optional(),
   hostGroup: z.string(),
+});
+
+/**
+ * Quarantine dataset (BUG-0128): records that failed write-time schema
+ * validation, preserved verbatim for forensic analysis. Deliberately NOT
+ * enforced at the producer's write gate — a quarantine record that itself
+ * failed validation would have nowhere to go. `pageId` is a plain string
+ * (not `.uuid()`): the quarantined source record is malformed by definition,
+ * so its identifiers may be too. `url` falls back to `unknown://record` when
+ * the source record carries no usable URL.
+ */
+export const QuarantineRecordV1Schema = z.object({
+  quarantineId: z.string().uuid(),
+  crawlId: z.string(),
+  pageId: z.string().optional(),
+  url: z.string(),
+  dataset: z.string(),
+  validationError: z.string(),
+  quarantinedAt: z.string().datetime(),
+  rawRecord: JsonValueSchema,
 });
 
 export type PageMetadataDatasetRecordV1 = z.infer<typeof PageMetadataDatasetRecordV1Schema>;
@@ -549,3 +589,4 @@ export type EventRecordV1 = z.infer<typeof EventRecordV1Schema>;
 export type AccessibilityDatasetRecordV1 = z.infer<typeof AccessibilityDatasetRecordV1Schema>;
 export type SitemapDatasetRecordV1 = z.infer<typeof SitemapDatasetRecordV1Schema>;
 export type FrontierLedgerRecordV1 = z.infer<typeof FrontierLedgerRecordV1Schema>;
+export type QuarantineRecordV1 = z.infer<typeof QuarantineRecordV1Schema>;

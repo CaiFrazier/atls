@@ -33,7 +33,11 @@ export const ResponseRecordV1Schema = z.object({
   // ===== Request / Response Metadata =====
   url: z.string().describe('Requested URL'),
   finalUrl: z.string().describe('Final URL after redirects'),
-  statusCode: z.number().describe('HTTP status code'),
+  // BUG-0126: bounded. min(0), not min(100) — the producer legitimately emits
+  // statusCode 0 as a "no HTTP response" sentinel (BlobStore.ts writeResponseBody
+  // `metadata?.statusCode ?? 0`; WARC import falls back to 0 for unparseable
+  // status lines). Real HTTP statuses are 100-599; 0 means none was received.
+  statusCode: z.number().int().min(0).max(599).describe('HTTP status code (0 = no HTTP response received)'),
   statusText: z.string().optional().describe('HTTP status text'),
   requestMethod: z.string().optional().describe('HTTP method used for the request (e.g., GET)'),
   responseType: z.string().optional().describe('Response type (from fetch/render pipeline)'),

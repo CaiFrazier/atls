@@ -1643,21 +1643,28 @@ export interface AtlasManifest {
   };
   
   // Coverage matrix
+  // BUG-0224 (2026-07-04): recased camelCase — the last snake_case seam
+  // post-RC2. Archives written before this date carry the snake spellings
+  // (total_pages, row_count, …); readers should dual-read both.
+  // BUG-0245: totalEdges/totalAssets added (the SDK's strict validate always
+  // required them but the producer never emitted them).
   coverage?: {
     matrix: Array<{
       part: string;               // Dataset key (e.g. "navigation", "page_metadata", "security")
       expected: boolean;          // Should this part exist?
       present: boolean;           // Is this part present?
-      row_count: number;          // Actual record count
-      coverage_pct?: number;      // Optional: estimated completeness
-      reason_if_absent?: string;  // "not_in_render_mode" | "no_records" | "disabled"
+      rowCount: number;           // Actual record count
+      coveragePct?: number;       // Optional: estimated completeness
+      reasonIfAbsent?: string;    // "not_in_render_mode" | "no_records" | "disabled"
     }>;
-    total_pages: number;
-    successful_pages: number;
-    failed_status_pages: number;
-    pages_with_errors: number;
+    totalPages: number;
+    totalEdges: number;
+    totalAssets: number;
+    successfulPages: number;
+    failedStatusPages: number;
+    pagesWithErrors: number;
     incomplete: boolean;          // Crawl terminated early?
-    truncated_parts?: string[];   // Parts that hit limits
+    truncatedParts?: string[];    // Parts that hit limits
   };
   
   configIncluded: boolean;

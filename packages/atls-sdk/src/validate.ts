@@ -619,7 +619,10 @@ function validateManifestSchema(
       const totalPages = coverage.total_pages ?? coverage.totalPages;
       const totalEdges = coverage.total_edges ?? coverage.totalEdges;
       const totalAssets = coverage.total_assets ?? coverage.totalAssets;
-      const totalErrors = coverage.total_errors ?? coverage.totalErrors ?? coverage.pages_with_errors;
+      // BUG-0224/BUG-0245 (2026-07-04): cartographer's coverage block is now
+      // camelCase and emits pagesWithErrors — included in the fallback chain
+      // alongside the legacy snake spellings.
+      const totalErrors = coverage.total_errors ?? coverage.totalErrors ?? coverage.pagesWithErrors ?? coverage.pages_with_errors;
       requireFiniteNumber(totalPages, "coverage.total_pages", "Manifest missing required coverage.total_pages field");
       requireFiniteNumber(totalEdges, "coverage.total_edges", "Manifest missing required coverage.total_edges field");
       requireFiniteNumber(totalAssets, "coverage.total_assets", "Manifest missing required coverage.total_assets field");

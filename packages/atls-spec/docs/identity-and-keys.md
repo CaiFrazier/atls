@@ -14,6 +14,12 @@ Those records are tied together by a shared **`pageId`**, not by URL.
 
 > Always join on `pageId`, never on `url`. A URL can appear in redirect chains, be normalized
 > differently, or repeat; `pageId` is the stable identity for "this captured page."
+>
+> Concretely: on a redirected page, `page_metadata.url` is the **final** URL while
+> `responses.url` is the **request** URL (`responses.finalUrl` holds the final one). A
+> `page_metadata.url → responses.url` join silently drops every redirected page. If you must
+> key by URL (e.g. joining archives from different crawls), index responses by *both* `url`
+> and `finalUrl`.
 
 ```
 page_metadata.pageId ─┬─ navigation.pageId

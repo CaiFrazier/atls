@@ -24,10 +24,12 @@ import { DOMSnapshotRecordV1Schema } from "./dom_snapshot.schema.js";
 
 const RenderModeEnum = z.enum(["raw", "import", "prerender", "full"]);
 const NavEndReasonEnum = z.enum(["fetch", "load", "networkidle", "timeout", "error"]);
-const EdgeLocationEnum = z.enum(["nav", "header", "footer", "aside", "main", "other", "unknown"]);
+// BUG-0126: exported so the navigation dataset schema can share the same enums
+// instead of accepting any string.
+export const EdgeLocationEnum = z.enum(["nav", "header", "footer", "aside", "main", "other", "unknown"]);
 const AssetTypeEnum = z.enum(["image", "video", "audio", "document"]);
 const LazyStrategyEnum = z.enum(["native", "intersection-observer", "data-src", "none"]);
-const LinkTypeEnum = z.enum([
+export const LinkTypeEnum = z.enum([
   "navigation",
   "content",
   "action",

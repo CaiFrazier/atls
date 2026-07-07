@@ -61,6 +61,11 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'sitemaps.v1', schema: schemas.SitemapDatasetRecordV1Schema },
   { name: 'frontier_ledger.v1', schema: schemas.FrontierLedgerRecordV1Schema },
   { name: 'reconstruction_index.v1', schema: schemas.ReconstructionIndexRecordV1Schema },
+  // BUG-0128: quarantine records now have a published schema. It documents the
+  // shape and ships in archives, but the producer deliberately does NOT enforce
+  // it at the write gate (a quarantine record failing validation would have
+  // nowhere to go).
+  { name: 'quarantine.v1', schema: schemas.QuarantineRecordV1Schema },
   // NOTE: audit_results.v1 is intentionally excluded from Cartographer archives.
   // That schema is owned by Horizon (downstream analysis) and is not emitted by the crawl engine.
   // The schema remains available in @caifrazier/atls-spec for Horizon's use.

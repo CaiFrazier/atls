@@ -129,5 +129,7 @@ export {
   SitemapDatasetRecordV1Schema,
   type SitemapDatasetRecordV1,
   FrontierLedgerRecordV1Schema,
-  type FrontierLedgerRecordV1
+  type FrontierLedgerRecordV1,
+  QuarantineRecordV1Schema,
+  type QuarantineRecordV1
 } from './cartographer-datasets.schema.js';

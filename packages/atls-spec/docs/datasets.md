@@ -12,9 +12,9 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 
 ## Conventions
 
-- **Casing:** top-level dataset fields are snake_case **except** `page_metadata`, `navigation`,
-  `content`, `structured_data`, `accessibility`, `performance`, `render_state`, `security`, and
-  `technology`, which use camelCase nested objects (a historical split — match what's shown).
+- **Casing:** all dataset record fields are camelCase (RC2+, `schemaVersion >= 2026-07-01`).
+  Older archives predating the naming-parity sweep may contain snake_case fields — readers
+  targeting legacy archives should tolerate both spellings.
 - **Join key:** every page-scoped record carries `pageId` (UUID v7). Exceptions are called out
   per dataset — see [identity-and-keys.md](./identity-and-keys.md).
 - **Presence:** which datasets appear depends on render mode. The matrix below is authoritative.
@@ -27,7 +27,7 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 | `navigation` | ✓ | ✓ | ✓ | `pageId` | Zod |
 | `content` | ✓ | ✓ | ✓ | `pageId` | Zod |
 | `responses` | ✓ | ✓ | ✓ | `pageId` | Zod |
-| `assets` | ✓ | ✓ | ✓ | `pageId`/`assetId` | **none** |
+| `assets` | ✓ | ✓ | ✓ | `pageId`/`assetId` | Zod |
 | `technology` | ✓ | ✓ | ✓ | `pageId` | Zod |
 | `events` | ✓ | ✓ | ✓ | `eventId` | Zod |
 | `pipeline_failures` | ✓ | ✓ | ✓ | — | Zod |

@@ -108,6 +108,7 @@ export interface FlatPageMetadata {
   descriptionLength?: number;
   h1?: string;
   canonicalTag?: string;
+  canonicalResolved?: string;
   language?: string;
   charset?: string;
   favicon?: string;
@@ -139,8 +140,28 @@ export interface FlatPageMetadata {
     dnsPrefetch?: string[];
   };
 
-  // ── Passthrough fields from core/indexing ──
-  [key: string]: unknown;
+  // BUG-0133: the former `[key: string]: unknown` index signature is GONE —
+  // it erased compile-time safety (any typo'd property access compiled).
+  // Passthrough extras from core/indexing are still present at runtime; read
+  // them via an explicit cast, e.g. `(flat as FlatPageMetadataWithExtras).x`.
+}
+
+/**
+ * FlatPageMetadata plus the runtime passthrough extras. Use this (explicitly)
+ * when reading non-schema fields; the base type stays typo-safe.
+ */
+export type FlatPageMetadataWithExtras = FlatPageMetadata & Record<string, unknown>;
+
+/**
+ * BUG-0133: thrown when a record handed to `flattenPageMetadataRecord()` is
+ * neither nested-shaped nor a plausible flat page_metadata record — previously
+ * such garbage was cast straight through as `FlatPageMetadata`.
+ */
+export class PageMetadataShapeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PageMetadataShapeError";
+  }
 }
 
 /**
@@ -165,8 +186,17 @@ export function flattenPageMetadataRecord(
   const hasNestedShape = raw.core != null && typeof raw.core === "object" && !Array.isArray(raw.core);
 
   if (!hasNestedShape) {
-    // Already flat or unknown shape — pass through as-is
-    return raw as FlatPageMetadata;
+    // BUG-0133: the flat-passthrough branch used to cast ANY object straight
+    // through — `{foo: 1}` became a "FlatPageMetadata". Require the identity
+    // core (pageId/page_id + url) before passing a legacy flat record along.
+    const pageId = raw.pageId ?? raw.page_id;
+    if (typeof pageId !== "string" || typeof raw.url !== "string") {
+      throw new PageMetadataShapeError(
+        "flattenPageMetadataRecord: record is neither nested-shaped (no core object) nor a flat page_metadata record (missing string pageId/url)"
+      );
+    }
+    // Legacy flat record (pre-nested-format archive) — pass through as-is.
+    return raw as unknown as FlatPageMetadata;
   }
 
   const { core, indexing, social, resourceHints, ...topLevel } =
@@ -180,6 +210,7 @@ export function flattenPageMetadataRecord(
     descriptionLength,
     h1,
     canonicalTag,
+    canonicalResolved,
     language,
     charset,
     favicon,
@@ -207,6 +238,7 @@ export function flattenPageMetadataRecord(
     descriptionLength,
     h1,
     canonicalTag,
+    canonicalResolved,
     language,
     charset,
     favicon,

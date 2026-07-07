@@ -18,6 +18,7 @@ import { readManifest, readSummary, iterateDataset, iterateParts, readBlob, open
 import type { AtlasReadOptions, AtlasReadLimits } from "./reader.js";
 import { datasetPresent, collectDatasetNames, isKnownDatasetName, AtlasUnknownDatasetError } from "./datasetPresence.js";
 import { enforceFormatVersionSupport } from "./formatVersion.js";
+import { checkCompatible } from "./compatibility.js";
 import type {
   AtlasManifest,
   AtlasSummary,
@@ -111,6 +112,13 @@ export {
 } from "./formatVersion.js";
 export { AtlasUnknownDatasetError } from "./datasetPresence.js";
 export type { ParsedFormatVersion } from "./formatVersion.js";
+export {
+  SDK_VERSION,
+  SdkCompatibilityError,
+  checkCompatible,
+  assertCompatible,
+} from "./compatibility.js";
+export type { CompatibilityCheckResult } from "./compatibility.js";
 
 function buildPackView(manifest: AtlasManifest): PackView {
   const packs = Array.isArray(manifest.packs) ? manifest.packs.map(pack => ({ ...pack })) : [];
@@ -234,6 +242,19 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
     const readerStats: AtlasReaderStats = { corruptedRecordCount: 0 };
     const manifest = await readManifest(zipHandle);
     enforceFormatVersionSupport(manifest);
+    // BUG-0134: the archive's declared SDK floor (capabilities.v1.json
+    // compatibility.minSdkVersion) was never consumed anywhere. Warn-only
+    // here — opening an old/foreign archive must not hard-fail on a metadata
+    // hint; callers wanting enforcement use assertCompatible() explicitly.
+    try {
+      const capabilities = await zipHandle.readJson("capabilities.v1.json");
+      const compat = checkCompatible(capabilities);
+      if (!compat.compatible) {
+        console.warn(`[Atlas SDK] ${compat.reason}. Datasets may not read correctly; call assertCompatible() to hard-fail instead.`);
+      }
+    } catch {
+      // capabilities.v1.json absent or unreadable — nothing to enforce.
+    }
     const summary = await readSummary(zipHandle);
     const packs = buildPackView(manifest);
     const datasetCandidates = collectDatasetNames(manifest);

@@ -356,3 +356,78 @@ describe('flattenPageMetadataRecord', () => {
     expect((flat as any).customField).toBe('extra-value');
   });
 });
+
+// BUG-0128: quarantine records previously had NO Zod schema anywhere — the
+// dataset shipped in archives with a dangling schemaRef and no validatable shape.
+describe('QuarantineRecordV1Schema (BUG-0128)', () => {
+  const validRecord = {
+    quarantineId: '018f6d2e-1234-7abc-9def-0123456789ab',
+    crawlId: 'crawl-abc',
+    pageId: 'not-necessarily-a-uuid',
+    url: 'https://example.com/page',
+    dataset: 'page_metadata',
+    validationError: "Schema validation failed for dataset 'page_metadata'",
+    quarantinedAt: '2026-07-04T12:00:00.000Z',
+    rawRecord: { pageId: 123, core: null, junk: ['x'] },
+  };
+
+  test('accepts a real quarantine record shape', async () => {
+    const { QuarantineRecordV1Schema } = await import('../src/schemas/index.js');
+    const result = QuarantineRecordV1Schema.safeParse(validRecord);
+    expect(result.success).toBe(true);
+  });
+
+  test('accepts the no-URL fallback and absent pageId', async () => {
+    const { QuarantineRecordV1Schema } = await import('../src/schemas/index.js');
+    const { pageId, ...withoutPageId } = validRecord;
+    const result = QuarantineRecordV1Schema.safeParse({
+      ...withoutPageId,
+      url: 'unknown://record',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test('rejects a record missing required forensic fields', async () => {
+    const { QuarantineRecordV1Schema } = await import('../src/schemas/index.js');
+    const { validationError, ...missing } = validRecord;
+    expect(QuarantineRecordV1Schema.safeParse(missing).success).toBe(false);
+    expect(
+      QuarantineRecordV1Schema.safeParse({ ...validRecord, quarantinedAt: 'yesterday' }).success
+    ).toBe(false);
+    expect(
+      QuarantineRecordV1Schema.safeParse({ ...validRecord, quarantineId: 'not-a-uuid' }).success
+    ).toBe(false);
+  });
+});
+
+// BUG-0133: flattenPageMetadataRecord's flat-passthrough branch used to cast
+// ANY object straight through as FlatPageMetadata — `{foo: 1}` compiled and
+// flowed downstream as a "page". Garbage now throws a typed shape error.
+describe('flattenPageMetadataRecord shape guard (BUG-0133)', () => {
+  test('throws PageMetadataShapeError on garbage input', async () => {
+    const { flattenPageMetadataRecord, PageMetadataShapeError } = await import('../src/pageMetadataMapping.js');
+    expect(() => flattenPageMetadataRecord({ foo: 1, bar: 'garbage' })).toThrow(PageMetadataShapeError);
+    expect(() => flattenPageMetadataRecord({} as never)).toThrow(PageMetadataShapeError);
+  });
+
+  test('still passes a legacy flat record through (pageId/url present)', async () => {
+    const { flattenPageMetadataRecord } = await import('../src/pageMetadataMapping.js');
+    const legacy = { page_id: 'legacy-1', url: 'https://example.com/', title: 'Old' };
+    const flat = flattenPageMetadataRecord(legacy);
+    expect((flat as Record<string, unknown>).title).toBe('Old');
+  });
+
+  test('flattens canonicalResolved from the nested core block (BUG-0140)', async () => {
+    const { flattenPageMetadataRecord } = await import('../src/pageMetadataMapping.js');
+    const flat = flattenPageMetadataRecord({
+      pageId: '018f6d2e-1234-7abc-9def-0123456789ab',
+      url: 'https://example.com/page',
+      capturedAt: '2026-07-04T12:00:00.000Z',
+      core: { canonicalTag: '/canonical', canonicalResolved: 'https://example.com/canonical' },
+      indexing: {},
+      social: { openGraph: {}, twitterCard: {} },
+    } as never);
+    expect(flat.canonicalTag).toBe('/canonical');
+    expect(flat.canonicalResolved).toBe('https://example.com/canonical');
+  });
+});

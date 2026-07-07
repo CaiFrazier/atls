@@ -35,6 +35,11 @@ const schemasDir = join(__dirname, '../dist/schemas');
  * Datasets with a known, unrelated source of `{}` — a genuine `z.unknown()`
  * field (not JsonValueSchema recursion), which has no better JSON Schema
  * representation. Tracked as a separate follow-up, not part of BUG-0232.
+ *
+ * BUG-0125 (2026-07-04): manifest.v1 dropped from 11 empty-object regions to
+ * 2 after its nine `z.record(z.unknown())` sub-objects were typed — the two
+ * that remain (`packs` entries, `compareCompatibility`) are deliberately
+ * free-form.
  */
 const KNOWN_UNKNOWN_FIELD_RESIDUALS = new Set(['manifest.v1', 'summary.v1']);
 
@@ -79,6 +84,26 @@ describe('JSON Schema generator output (BUG-0232)', () => {
       } else {
         expect(emptyCount).toBe(0);
       }
+    });
+  }
+});
+
+// BUG-0233 (residual): the {}-subschema check above never proved the generated
+// files are actually VALID JSON Schema — a structurally broken schema (bad
+// $ref, malformed keyword) would ship silently. Ajv-compile every generated
+// file; a fresh Ajv instance per schema avoids cross-file $id collisions.
+describe('JSON Schema generator output compiles under Ajv (BUG-0233)', () => {
+  for (const { name } of schemaMap) {
+    test(`${name}.schema.json compiles`, async () => {
+      const { default: Ajv } = await import('ajv');
+      const { default: addFormats } = await import('ajv-formats');
+      const ajv = new Ajv({ strict: false });
+      addFormats(ajv);
+
+      const content = readFileSync(join(schemasDir, `${name}.schema.json`), 'utf-8');
+      const parsed = JSON.parse(content);
+
+      expect(() => ajv.compile(parsed)).not.toThrow();
     });
   }
 });
