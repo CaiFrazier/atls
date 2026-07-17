@@ -15,7 +15,7 @@ _Verified against `packages/cartographer/src/io/atlas/manifest.ts` and
 | `atlasVersion` | camelCase | `"1.1"` | Public Atlas product line. |
 | `formatVersion` | camelCase | `"1.1.0"` | Archive container/format version. Breaking container changes bump the major. |
 | `specVersion` | camelCase | `"1.1.0"` | Specification contract version. |
-| `schemaVersion` | camelCase | `"2026-07-01"` | **Date-stamped** dataset-schema release tag. |
+| `schemaVersion` | camelCase | `"2026-07-17"` | **Date-stamped** dataset-schema release tag. |
 | `generator` | camelCase | `"cartographer-engine/1.0.0-rc.1"` | Producer id + version; reflects the engine package version. |
 
 These literals are set in `manifest.ts:355-357` and emitted at `manifest.ts:962-965`. `generator`
@@ -25,7 +25,7 @@ is built from `CARTOGRAPHER_VERSION` (`manifest.ts:1126`).
 
 ## Two independent axes — do not conflate
 
-1. **`schemaVersion`** (`"2026-07-01"`) is a **date-stamped tag the writer stamps into every
+1. **`schemaVersion`** (`"2026-07-17"`) is a **date-stamped tag the writer stamps into every
    archive**. It identifies the on-disk dataset layout and is what a reader should branch on to
    decide "which archive layout is this."
 
@@ -39,8 +39,22 @@ the archive. Read `manifest.schemaVersion`.
 
 ```bash
 python3 -c "import zipfile,json; print(json.loads(zipfile.ZipFile('crawl.atls').read('manifest.json'))['schemaVersion'])"
-# -> 2026-07-01
+# -> 2026-07-17
 ```
+
+### `schemaVersion` history
+
+- **`2026-07-17`** (B1 — custom extraction): adds the `extraction` dataset (one record per
+  page × consumer-configured rule, with `ruleId`@`ruleVersion` provenance and an
+  `ok`\|`empty`\|`error`\|`unavailable-source` honesty status) and the CONDITIONAL
+  `extraction.rules` capability (declared only when the crawl actually ran with rules).
+  Additive: archives without rules carry neither the dataset nor the flag.
+- **`2026-07-16`** (B4 — sitemap completeness): adds the `sitemap_urls` dataset (per-URL entries),
+  an optional `truncated` flag on `sitemaps` records, an optional `manifest.sitemapCoverage`
+  (`absent`\|`failed`\|`partial`\|`complete`), and the `seo.sitemap_coverage` capability. Additive:
+  older readers still parse everything except the new fields, and a reader must treat a missing
+  `sitemapCoverage`/`truncated` as *unknown*, never as `false`/`complete`.
+- **`2026-07-01`** (RC2): camelCase field-naming cutover across all datasets.
 
 ---
 

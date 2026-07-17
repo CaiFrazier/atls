@@ -272,6 +272,11 @@ export const AtlasManifestV1Schema = z
       truncatedParts: z.array(z.string()).optional(),
     }).passthrough().optional(),
 
+    // B4 (schemaVersion 2026-07-16): crawl-level sitemap-discovery honesty flag.
+    // Optional so pre-B4 archives validate; a reader maps a missing value to
+    // "absent" (never "complete"). See SitemapCoverage in types.ts.
+    sitemapCoverage: z.enum(['absent', 'failed', 'partial', 'complete']).optional(),
+
     configIncluded: z.boolean(),
     redactionApplied: z.boolean(),
     storage: BlobStorageMetadataSchema.optional(),

@@ -20,7 +20,10 @@
  * Core types for Atlas archive specification.
  * Used by both the Cartographer engine and Atlas SDK.
  */
-import type { DOMSnapshotRecordV1, ResponseRecordV1, SitemapDatasetRecordV1, PipelineFailureRecordV1, AccessibilityDatasetRecordV1, EventRecordV1, AssetRecordV1 } from "./schemas/index.js";
+import type { DOMSnapshotRecordV1, ResponseRecordV1, SitemapDatasetRecordV1, SitemapUrlDatasetRecordV1, ExtractionDatasetRecordV1, PipelineFailureRecordV1, AccessibilityDatasetRecordV1, EventRecordV1, AssetRecordV1, SecurityFormV1 } from "./schemas/index.js";
+
+/** B2 (W7 2a) — per-form submission-security facts. See SecurityFormV1Schema. */
+export type SecurityFormRecord = SecurityFormV1;
 import {
   AssetRecordSchema,
   DOMSnapshotRecordSchema,
@@ -621,7 +624,9 @@ export interface PageRecord {
     stylesWithSRI: number;
     missingResources?: Array<{url: string; type: "script" | "stylesheet"}>;
   };
-  
+  // B2 (W7 2a): per-form submission-security facts (raw → writer carrier).
+  forms?: SecurityFormRecord[];
+
   // SEO & Tech (prerender/full modes only)
   structuredData?: AtlasPageStructuredData;
   techStack?: string[]; // Detected technologies: ["React", "WordPress", etc.]
@@ -918,6 +923,32 @@ export interface FrontierLedgerRecord {
 // BUG-0124: single source of truth — alias to the Zod-inferred type so the schema
 // and this type can never drift, and Zod renames propagate to all consumers.
 export type SitemapRecord = SitemapDatasetRecordV1;
+
+/**
+ * SitemapUrlRecord (B4) - Per-URL entry declared in a non-index sitemap, with the
+ * per-entry metadata the crawl parses. See SitemapUrlDatasetRecordV1Schema.
+ */
+export type SitemapUrlRecord = SitemapUrlDatasetRecordV1;
+
+/**
+ * ExtractionRecord (B1) - One custom extraction-rule outcome for one page, with
+ * ruleId@ruleVersion provenance and a crawl-time rule snapshot. See
+ * ExtractionDatasetRecordV1Schema for the honesty semantics of `status`.
+ */
+export type ExtractionRecord = ExtractionDatasetRecordV1;
+
+/**
+ * SitemapCoverage (B4) - Crawl-level honesty classification of sitemap discovery,
+ * stamped on `manifest.sitemapCoverage`. Follows the degradation ladder: a reader
+ * MUST treat a missing field (pre-B4 archive) as `absent`, never as `complete`.
+ * - `absent`   discovery was skipped, or only a guessed `/sitemap.xml` was tried
+ *              and it did not resolve — no sitemap to trust.
+ * - `failed`   declared sitemap(s) were attempted but none fetched/parsed.
+ * - `partial`  sitemaps were read but a cap tripped, a fetch/parse failed, or a
+ *              fetched sitemap yielded no parseable entries — coverage incomplete.
+ * - `complete` every attempted sitemap fetched and parsed with no truncation.
+ */
+export type SitemapCoverage = 'absent' | 'failed' | 'partial' | 'complete';
 
 // ============================================================================
 // Event Log Dataset
@@ -1801,6 +1832,8 @@ export interface AtlasSummary {
     totalRenderRecords?: number; // Render metadata records (full mode only)
     totalAccTreeRecords?: number; // Accessibility tree snapshot records (full mode only)
     totalSitemapRecords?: number; // Sitemap discovery records
+    totalSitemapUrlRecords?: number; // B4: per-URL sitemap entries (sitemap_urls dataset)
+    totalExtractionRecords?: number; // B1: custom extraction-rule results (extraction dataset)
     totalQuarantineRecords?: number; // Records quarantined due to schema non-conformance
     totalRobotsRecords?: number; // Robots.txt records
     statusCodes: Record<string, number>;

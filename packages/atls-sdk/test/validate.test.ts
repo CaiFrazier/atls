@@ -300,4 +300,22 @@ describe("SDK validate() truncation", () => {
     expect(result.truncated).toBe(true);
     expect(result.issues.length).toBe(1);
   });
+
+  test("BUG-0247: a truncated run is never valid — it is indeterminate", async () => {
+    // brokenLinkArchive emits at least one WARNING (EDGE_BROKEN_LINK) and no
+    // errors, so maxIssues:1 deterministically exhausts the cap on a warning —
+    // the exact BUG-0247 shape: errors could hide past the cap, so a clean
+    // count must NOT read as valid. (validArchive is useless here: it yields
+    // zero issues, never truncates, and would silently test nothing.)
+    const result = await validate(brokenLinkArchive.path, {
+      checkBrokenLinks: true,
+      checkIntegrity: true,
+      maxIssues: 1,
+    });
+
+    expect(result.truncated).toBe(true);
+    expect(result.stats.errorsFound).toBe(0);
+    expect(result.valid).toBe(false);
+    expect(result.indeterminate).toBe(true);
+  });
 });

@@ -268,6 +268,38 @@ export const RenderStateDatasetRecordV1Schema = z.object({
   captureTimestamp: z.number().int(),
 });
 
+/**
+ * Per-form security facts (B2, schemaVersion 2026-07-16). One entry per `<form>`
+ * on the page. Captures the form's submission posture as risk evidence — and,
+ * per the never-capture-secrets rule, NEVER any user-entered value: only control
+ * `name`/`type` attributes. `sensitiveControls` lists password / credential-like
+ * inputs by name+type so a consumer can weigh an insecure submission.
+ */
+export const SecurityFormV1Schema = z.object({
+  // Evidence location: the form's id selector, else an nth-of-type hint.
+  formIndex: z.number().int().nonnegative(),
+  selector: z.string(),
+  // Submission method (HTML defaults to "get"); "dialog" is valid but non-submitting.
+  method: z.enum(["get", "post", "dialog"]),
+  // The authored action shape after credential, query, and fragment redaction
+  // ("" = submit to self). The historical field name remains for compatibility.
+  actionRaw: z.string(),
+  // Resolved absolute action after the same redaction; null when malformed.
+  actionNormalized: z.string().nullable(),
+  actionProtocol: z.enum(["http", "https"]).nullable(),
+  actionOrigin: z.string().nullable(),
+  // Classification of where/how the form submits.
+  actionState: z.enum(["same-origin", "external", "insecure", "relative", "malformed"]),
+  // True when an https page submits to an http action (credentials over plaintext).
+  mixedAction: z.boolean(),
+  hasPasswordField: z.boolean(),
+  // NEVER user-entered values — name + type attributes only (never-capture-secrets).
+  sensitiveControls: z.array(z.object({
+    name: z.string(),
+    type: z.string(),
+  })),
+});
+
 export const SecurityDatasetRecordV1Schema = z.object({
   pageId: z.string().uuid(),
   url: z.string().url(),
@@ -301,6 +333,10 @@ export const SecurityDatasetRecordV1Schema = z.object({
     protocol: z.enum(["http", "https"]),
   }).passthrough(),
   securityHeaders: z.record(z.string(), z.string().optional()),
+  // B2 (schemaVersion 2026-07-16): per-form submission-security facts. Optional so
+  // pre-B2 archives validate; presence is advertised by the `security.forms`
+  // capability. A reader treats `undefined` as "not captured", never as "no forms".
+  forms: z.array(SecurityFormV1Schema).optional(),
   capturedAt: z.string().datetime(),
 });
 
@@ -543,6 +579,83 @@ export const SitemapDatasetRecordV1Schema = z.object({
   parseError: z.string().nullable(),
   depth: z.number().int().nonnegative(),
   referencedBy: z.string().url().nullable(),
+  // B4 (schemaVersion 2026-07-16): true when this sitemap's entries were not all
+  // processed/emitted because a discovery cap tripped (per-crawl enqueue limit or
+  // the per-crawl sitemap-URL emission bound). Absent on archives written before
+  // 2026-07-16 — a reader must treat `undefined` as "unknown", never as `false`,
+  // so a pre-B4 archive is never misread as "fully covered". Crawl-level rollup is
+  // `manifest.sitemapCoverage`.
+  truncated: z.boolean().optional(),
+});
+
+/**
+ * Per-URL sitemap entry (B4, schemaVersion 2026-07-16). One record per `<url>`
+ * declared in a non-index sitemap (`<urlset>`), preserving the per-entry metadata
+ * the crawl parses but historically discarded. The dataset records only what the
+ * sitemap *declared* plus whether the engine accepted the URL into the frontier;
+ * whether a declared URL was ultimately crawled is a cross-dataset question the
+ * consumer answers by joining `normalizedUrl` to the pages it captured (the engine
+ * has no honest, un-pruned, status-aware source for that at write time).
+ */
+export const SitemapUrlDatasetRecordV1Schema = z.object({
+  crawlId: z.string(),
+  // The sitemap file that declared this URL (an entry may appear in several).
+  sourceSitemapUrl: z.string().url(),
+  // The `<loc>` exactly as declared, before canonicalization.
+  loc: z.string(),
+  // Canonicalized under the crawl's URL policy. `null` = the URL was declared but
+  // filtered out by scope/policy (out-of-scope host, disallowed pattern, malformed)
+  // — distinct from a URL that was in scope. This distinction is itself signal.
+  normalizedUrl: z.string().nullable(),
+  // `<lastmod>` / `<changefreq>` / `<priority>` as declared (null when absent).
+  lastmod: z.string().nullable(),
+  changefreq: z.string().nullable(),
+  priority: z.string().nullable(),
+  // The engine accepted this URL into the crawl frontier as a new entry. `false`
+  // means it was in-scope-but-not-newly-enqueued (already known) or out of scope.
+  // Not a crawl-outcome claim; the consumer derives crawled-vs-missing by join.
+  enqueued: z.boolean(),
+});
+
+/**
+ * Custom extraction result (B1). One record per (page × configured rule). The
+ * rule DEFINITIONS are mutable and live in the consumer's registry (Continuum);
+ * the archive records only the immutable outcome plus enough provenance
+ * (`ruleId`@`ruleVersion` + a name/kind/valueType snapshot taken at crawl time)
+ * to remain self-describing after the rule is edited or deleted. Editing a rule
+ * NEVER rewrites a historical archive.
+ *
+ * `sourceStage` is which captured source the rule read: `raw` = the pre-JavaScript
+ * server HTML (available in every render mode); `rendered` = the browser DOM
+ * (prerender/full crawls only). A rendered-scope rule executed in raw mode yields
+ * `status: "unavailable-source"` — the honest degradation state — never a
+ * fabricated empty result. `status: "empty"` means the source was evaluated and
+ * nothing matched; `error` carries the reason for `status: "error"` only.
+ */
+export const ExtractionDatasetRecordV1Schema = z.object({
+  crawlId: z.string(),
+  pageId: z.string().uuid(),
+  url: z.string(),
+  ruleId: z.string(),
+  ruleVersion: z.number().int().positive(),
+  // Snapshot of the rule at crawl time (definitions are mutable upstream).
+  ruleName: z.string(),
+  kind: z.enum(["css", "xpath", "regex"]),
+  // Added as optional fields so older extraction.v1 archives remain valid while
+  // new archives preserve the complete evaluator input and policy snapshot.
+  expression: z.string().optional(),
+  attribute: z.string().nullable().optional(),
+  multiplicity: z.enum(["first", "all"]).optional(),
+  failurePolicy: z.enum(["empty", "error"]).optional(),
+  evaluatorVersion: z.number().int().positive().optional(),
+  valueType: z.enum(["text", "number", "boolean", "date"]),
+  sourceStage: z.enum(["raw", "rendered"]),
+  status: z.enum(["ok", "empty", "error", "unavailable-source"]),
+  // Typed extracted values ("ok" only; bounded by the engine's match cap).
+  values: z.array(z.union([z.string(), z.number(), z.boolean()])),
+  error: z.string().nullable(),
+  // The engine's match cap truncated the result set (disclosed, never silent).
+  truncatedMatches: z.boolean(),
 });
 
 export const FrontierLedgerRecordV1Schema = z.object({
@@ -586,11 +699,14 @@ export type StructuredDataDatasetRecordV1 = z.infer<typeof StructuredDataDataset
 export type TechnologyDatasetRecordV1 = z.infer<typeof TechnologyDatasetRecordV1Schema>;
 export type RenderStateDatasetRecordV1 = z.infer<typeof RenderStateDatasetRecordV1Schema>;
 export type SecurityDatasetRecordV1 = z.infer<typeof SecurityDatasetRecordV1Schema>;
+export type SecurityFormV1 = z.infer<typeof SecurityFormV1Schema>;
 export type PerformanceDatasetRecordV1 = z.infer<typeof PerformanceDatasetRecordV1Schema>;
 export type PipelineFailureRecordV1 = z.infer<typeof PipelineFailureRecordV1Schema>;
 export type PipelineAlertRecordV1 = z.infer<typeof PipelineAlertRecordV1Schema>;
 export type EventRecordV1 = z.infer<typeof EventRecordV1Schema>;
 export type AccessibilityDatasetRecordV1 = z.infer<typeof AccessibilityDatasetRecordV1Schema>;
 export type SitemapDatasetRecordV1 = z.infer<typeof SitemapDatasetRecordV1Schema>;
+export type SitemapUrlDatasetRecordV1 = z.infer<typeof SitemapUrlDatasetRecordV1Schema>;
+export type ExtractionDatasetRecordV1 = z.infer<typeof ExtractionDatasetRecordV1Schema>;
 export type FrontierLedgerRecordV1 = z.infer<typeof FrontierLedgerRecordV1Schema>;
 export type QuarantineRecordV1 = z.infer<typeof QuarantineRecordV1Schema>;

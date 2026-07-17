@@ -35,6 +35,8 @@ import {
   ResponseRecordV1Schema as ResponseRecordV1ZodSchema,
   ResourceRecordV1Schema,
   SitemapDatasetRecordV1Schema,
+  SitemapUrlDatasetRecordV1Schema,
+  ExtractionDatasetRecordV1Schema,
   EventRecordV1Schema,
   AccessibilityDatasetRecordV1Schema,
   PipelineFailureRecordV1Schema,
@@ -66,7 +68,18 @@ export interface ValidationIssue {
  * Validation result
  */
 export interface ValidationResult {
+  /**
+   * True only when the archive was fully checked and no errors were found.
+   * BUG-0247: a truncated run can find zero errors merely because it stopped
+   * early, so `valid` is never true while `truncated` (see `indeterminate`).
+   */
   valid: boolean;
+  /**
+   * BUG-0247: the run hit the issue cap before finishing, found no errors *so
+   * far*, but cannot vouch for the unchecked remainder. Neither valid nor
+   * invalid — the caller must treat the archive as unverified.
+   */
+  indeterminate: boolean;
   issues: ValidationIssue[];
   stats: {
     pageMetadataChecked: number;
@@ -81,6 +94,8 @@ export interface ValidationResult {
     responsesChecked: number;
     resourcesChecked: number;
     sitemapsChecked: number;
+    sitemapUrlsChecked: number;
+    extractionChecked: number;
     eventsChecked: number;
     accessibilityChecked: number;
     pipelineFailuresChecked: number;
@@ -192,6 +207,8 @@ export async function validate(
     responsesChecked: 0,
     resourcesChecked: 0,
     sitemapsChecked: 0,
+    sitemapUrlsChecked: 0,
+    extractionChecked: 0,
     eventsChecked: 0,
     accessibilityChecked: 0,
     pipelineFailuresChecked: 0,
@@ -379,6 +396,8 @@ export async function validate(
       { name: "responses", statKey: "responsesChecked", reader: activeAtlas.readers.responses, schema: ResponseRecordV1ZodSchema },
       { name: "resources", statKey: "resourcesChecked", reader: activeAtlas.readers.resources, schema: ResourceRecordV1Schema },
       { name: "sitemaps", statKey: "sitemapsChecked", reader: () => activeAtlas.readers.dataset("sitemaps"), schema: SitemapDatasetRecordV1Schema },
+      { name: "sitemap_urls", statKey: "sitemapUrlsChecked", reader: () => activeAtlas.readers.sitemapUrls(), schema: SitemapUrlDatasetRecordV1Schema },
+      { name: "extraction", statKey: "extractionChecked", reader: () => activeAtlas.readers.extraction(), schema: ExtractionDatasetRecordV1Schema },
       { name: "events", statKey: "eventsChecked", reader: activeAtlas.readers.events, schema: EventRecordV1Schema },
       { name: "accessibility", statKey: "accessibilityChecked", reader: activeAtlas.readers.accessibility, schema: AccessibilityDatasetRecordV1Schema },
       { name: "pipeline_failures", statKey: "pipelineFailuresChecked", reader: activeAtlas.readers.pipelineFailures, schema: PipelineFailureRecordV1Schema },
@@ -477,8 +496,13 @@ export async function validate(
     atlas?.close();
   }
   
+  // BUG-0247: a truncated run only checked part of the archive, so "no errors
+  // found" is inconclusive, not a pass. Report it as indeterminate and refuse
+  // to claim validity.
+  const indeterminate = truncated && stats.errorsFound === 0;
   return {
-    valid: stats.errorsFound === 0,
+    valid: stats.errorsFound === 0 && !truncated,
+    indeterminate,
     issues,
     stats,
     truncated,

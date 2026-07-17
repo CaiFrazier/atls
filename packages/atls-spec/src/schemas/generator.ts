@@ -59,6 +59,8 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'pipeline_alerts.v1', schema: schemas.PipelineAlertRecordV1Schema },
   { name: 'events.v1', schema: schemas.EventRecordV1Schema },
   { name: 'sitemaps.v1', schema: schemas.SitemapDatasetRecordV1Schema },
+  { name: 'sitemap_urls.v1', schema: schemas.SitemapUrlDatasetRecordV1Schema },
+  { name: 'extraction.v1', schema: schemas.ExtractionDatasetRecordV1Schema },
   { name: 'frontier_ledger.v1', schema: schemas.FrontierLedgerRecordV1Schema },
   { name: 'reconstruction_index.v1', schema: schemas.ReconstructionIndexRecordV1Schema },
   // BUG-0128: quarantine records now have a published schema. It documents the

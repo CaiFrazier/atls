@@ -66,6 +66,12 @@ export const CapabilitiesSealSchema = z.object({
  * Standard capabilities:
  * - seo.core: Basic SEO signals (title, meta, headers)
  * - seo.enhanced: Advanced SEO (structured data, OG, Twitter Card)
+ * - seo.sitemap_coverage: Per-URL sitemap entries (sitemap_urls dataset) plus the
+ *   manifest.sitemapCoverage honesty flag and per-file `truncated` (B4)
+ * - security.forms: Per-form submission-security facts on the security dataset
+ *   (action posture, mixed-action, sensitive controls by name/type only) (B2)
+ * - extraction.rules: Custom extraction-rule results (extraction dataset) with
+ *   ruleId@ruleVersion provenance; present only when the crawl ran with rules (B1)
  * - a11y.core: Accessibility data (WCAG violations, color contrast)
  * - render.dom: Post-render DOM snapshots
  * - render.netlog: Network performance logs

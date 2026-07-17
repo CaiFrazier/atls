@@ -40,6 +40,8 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 | `render_state` | — | — | ✓ | `pageId` | Zod |
 | `resources` | — | — | ✓* | `resId` | Zod |
 | `sitemaps` | ✓* | ✓* | ✓* | `sitemapId` | Zod |
+| `sitemap_urls` | ✓* | ✓* | ✓* | `loc` | Zod |
+| `extraction` | ✓* | ✓* | ✓* | `pageId`+`ruleId` | Zod |
 | `reconstruction_index` | ✓† | ✓† | ✓† | `pageId` | Zod |
 | `frontier_ledger` | opt | opt | opt | `url` | Zod |
 
@@ -177,6 +179,15 @@ Transport and third-party posture. Schema: `cartographer-datasets.schema.ts:212-
 - `thirdPartyDomains[]`: `{ domain, resourceCount, resourceTypes[], category
   (analytics\|advertising\|cdn\|unknown), categoryMatcher }`.
 - `transport.protocol` (`http\|https`), `securityHeaders` (header → value/null).
+- `forms[]` (B2 / schemaVersion `2026-07-16`, optional): per-`<form>` submission-security
+  facts — `formIndex`, `selector`, `method`, `actionRaw`/`actionNormalized`/`actionProtocol`/
+  `actionOrigin`, `actionState` (`same-origin\|external\|insecure\|relative\|malformed`),
+  `mixedAction`, `hasPasswordField`, and `sensitiveControls[] {name, type}`. **Never captures
+  input values** — only control name + type. Form actions also strip userinfo, query parameters,
+  and fragments before persistence, so credentials embedded in an action URL are not archived.
+  Absent on pre-B2 archives; the presence of the
+  `forms` field (vs. its absence) is the degrade signal, since the `security` dataset itself
+  predates B2.
 
 ---
 
@@ -250,6 +261,53 @@ Sitemap discovery. Schema: `cartographer-datasets.schema.ts:348-362`. Key: `site
 - `sitemapId` · `crawlId` · `url` · `fetchedAt` · `httpStatus` · `contentType`.
 - `isIndex`, `entriesFound`, `entriesEnqueued`, `parseWarning`, `parseError` (nullable),
   `depth`, `referencedBy` (nullable parent sitemap URL).
+- `truncated` (optional, B4 / schemaVersion `2026-07-16`): `true` when a discovery cap stopped this
+  sitemap's entries from all being processed. Absent on older archives — treat as *unknown*, not
+  `false`.
+
+---
+
+## sitemap_urls
+
+Per-URL sitemap entries (B4 / schemaVersion `2026-07-16`). One record per `<url>` in a non-index
+sitemap, preserving the per-entry metadata the crawl parses. Schema:
+`cartographer-datasets.schema.ts` (`SitemapUrlDatasetRecordV1Schema`). Carries `crawlId`, not
+`pageId`. Written only when a sitemap declared URLs. Reader: `atlas.readers.sitemapUrls()`.
+
+- `crawlId` · `sourceSitemapUrl` (the sitemap file that declared this URL) · `loc` (raw `<loc>`).
+- `normalizedUrl` (nullable — `null` when the URL was filtered out of scope by crawl policy).
+- `lastmod`, `changefreq`, `priority` (all nullable — as declared).
+- `enqueued`: the engine accepted the URL into the frontier as a new entry. Not a crawl-outcome
+  claim; join `normalizedUrl` to the pages actually captured to classify missing-from-crawl.
+
+The crawl-level rollup is `manifest.sitemapCoverage` (`absent`\|`failed`\|`partial`\|`complete`).
+
+---
+
+## extraction
+
+Custom extraction-rule results (B1 / schemaVersion `2026-07-17`). One record per page ×
+consumer-configured rule. Schema: `cartographer-datasets.schema.ts`
+(`ExtractionDatasetRecordV1Schema`). Present ONLY when the crawl ran with rules; the
+`extraction.rules` capability flag advertises that. Reader: `atlas.readers.extraction()`.
+
+Rule DEFINITIONS are mutable and live in the consumer (Continuum registry); the archive
+records only the immutable outcome plus a crawl-time snapshot, so editing a rule never
+rewrites a historical archive.
+
+- `crawlId` · `pageId` · `url` — page anchors.
+- `ruleId` · `ruleVersion` — rule provenance.
+- `ruleName` · `kind` (`css`\|`xpath`\|`regex`) · `expression` · `attribute` · `multiplicity` ·
+  `failurePolicy` · `valueType` (`text`\|`number`\|`boolean`\|`date`) · `evaluatorVersion` —
+  the complete evaluator input and policy snapshot at crawl time. The added hotfix.2 fields are
+  optional so archives written before evaluator version 2 remain valid.
+- `sourceStage`: which captured source was read — `raw` (pre-JS server body, every mode) or
+  `rendered` (browser DOM, prerender/full crawls).
+- `status`: `ok` (values extracted) · `empty` (evaluated, nothing matched) · `error` (the rule
+  failed on this page; see `error`) · `unavailable-source` (the mode never produced the source
+  the rule targets — honesty state, NOT an empty result).
+- `values`: typed extracted values (bounded by the engine's match cap).
+- `truncatedMatches`: the cap truncated the result set (disclosed, never silent).
 
 ---
 

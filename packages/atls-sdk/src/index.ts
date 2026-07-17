@@ -32,6 +32,8 @@ import type {
   AtlasPackState,
   ResponseRecordV1,
   ResourceRecordV1,
+  SitemapUrlRecord,
+  ExtractionRecord,
 } from "./types.js";
 import {
   parseAssetRecord,
@@ -217,6 +219,10 @@ export interface AtlasReader {
     accessibility: () => AsyncIterable<AccessibilityRecord>;
     responses: () => AsyncIterable<ResponseRecordV1>;
     resources: () => AsyncIterable<ResourceRecordV1>;
+    /** B4: per-URL sitemap entries (loc + lastmod/changefreq/priority + enqueued). */
+    sitemapUrls: () => AsyncIterable<SitemapUrlRecord>;
+    /** B1: custom extraction-rule results (present only when the crawl ran with rules). */
+    extraction: () => AsyncIterable<ExtractionRecord>;
     dataset: <T = any>(name: DatasetName) => AsyncIterable<T>;
   };
 }
@@ -424,6 +430,8 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
         accessibility: makeIterator<AccessibilityRecord>("accessibility"),
         responses: makeIterator<ResponseRecordV1>("responses", responseParser),
         resources: makeIterator<ResourceRecordV1>("resources"),
+        sitemapUrls: makeIterator<SitemapUrlRecord>("sitemap_urls"),
+        extraction: makeIterator<ExtractionRecord>("extraction"),
         dataset<T = any>(name: DatasetName) {
           return makeIterator<T>(toCanonicalDatasetName(name))();
         }

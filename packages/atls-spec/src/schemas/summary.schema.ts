@@ -95,6 +95,8 @@ export const AtlasSummarySchema = z.object({
     totalRenderRecords: z.number().int().nonnegative().optional(),
     totalAccTreeRecords: z.number().int().nonnegative().optional(),
     totalSitemapRecords: z.number().int().nonnegative().optional(),
+    totalSitemapUrlRecords: z.number().int().nonnegative().optional(),
+    totalExtractionRecords: z.number().int().nonnegative().optional(),
     totalQuarantineRecords: z.number().int().nonnegative().optional(),
     totalRobotsRecords: z.number().int().nonnegative().optional(),
     statusCodes: z.record(StatusCodeKeySchema, z.number().int().nonnegative()),

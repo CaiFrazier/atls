@@ -34,6 +34,8 @@ import type {
   EventRecord, // Phase 7: Event log
   AccessibilityRecord,
   ResourceRecordV1,
+  SitemapUrlRecord, // B4: per-URL sitemap entries
+  ExtractionRecord, // B1: custom extraction-rule results
 } from '@caifrazier/atls-spec';
 
 // Re-export for convenience
@@ -50,6 +52,8 @@ export type {
   EventRecord, // Phase 7: Event log
   AccessibilityRecord,
   ResourceRecordV1,
+  SitemapUrlRecord, // B4: per-URL sitemap entries
+  ExtractionRecord, // B1: custom extraction-rule results
 };
 
 /**
