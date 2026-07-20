@@ -24,6 +24,7 @@ import { compress } from "@mongodb-js/zstd";
 import {
   AtlasDuplicateEntryError,
   AtlasResourceLimitError,
+  DEFAULT_ATLAS_READ_LIMITS,
   MalformedRecordError,
   iterateParts,
   openAtlas,
@@ -56,6 +57,10 @@ function openFdCount(): number {
 }
 
 describe("SDK read path (BUG-0110 / BUG-0111 / BUG-0073)", () => {
+  test("default ZIP entry bound admits the qualified 100K-page archive shape", () => {
+    expect(DEFAULT_ATLAS_READ_LIMITS.maxEntries).toBe(250_000);
+  });
+
   test("BUG-0110: reads reuse the open archive handle instead of reopening by path", async () => {
     const fixture = await createFixtureArchive();
     // Work on a disposable copy so we can delete it mid-read.

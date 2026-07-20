@@ -33,7 +33,10 @@ export interface AtlasReadLimits {
 }
 
 export const DEFAULT_ATLAS_READ_LIMITS: AtlasReadLimits = {
-  maxEntries: 100_000,
+  // A 100K-page raw Atlas contains page blobs plus their sharded directory
+  // entries and fixed datasets (about 152K entries in the acceptance fixture).
+  // Keep bounded headroom without pre-authorizing million-page archives.
+  maxEntries: 250_000,
   maxZipEntryBytes: 256 * MiB,
   maxJsonRootBytes: 16 * MiB,
   maxPartCompressedBytes: 256 * MiB,
@@ -198,6 +201,19 @@ function openEntryReadStream(zipfile: ZipFile, entry: Entry): Promise<Readable> 
       resolve(readStream);
     });
   });
+}
+
+function closeZipFile(zipfile: ZipFile): void {
+  // yauzl may still have a central-directory read queued when a large archive
+  // handle is explicitly closed. That read can report EBADF on the next tick.
+  // Keep an error listener attached after close so an expected descriptor-close
+  // race cannot become an unhandled process-level exception.
+  zipfile.on("error", () => undefined);
+  try {
+    zipfile.close();
+  } catch {
+    // Closing an already-closed descriptor is idempotent for callers.
+  }
 }
 
 function validateEntryName(fileName: string): void {
@@ -423,11 +439,7 @@ export class ZipHandle {
       // BUG-0073: the zipfile is opened with autoClose:false, so a failed index
       // pass (e.g. corrupt central directory) would otherwise leak its file
       // descriptor. Close it before propagating the error.
-      try {
-        zipfile.close();
-      } catch {
-        // ignore close errors
-      }
+      closeZipFile(zipfile);
       throw err;
     }
     return handle;
@@ -492,11 +504,7 @@ export class ZipHandle {
       return;
     }
     this.closed = true;
-    try {
-      this.zipfile.close();
-    } catch {
-      // ignore close errors
-    }
+    closeZipFile(this.zipfile);
   }
 
   listPartFiles(subdir: string): string[] {
