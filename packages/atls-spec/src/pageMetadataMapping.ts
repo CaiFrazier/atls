@@ -140,6 +140,22 @@ export interface FlatPageMetadata {
     dnsPrefetch?: string[];
   };
 
+  // ── Capture quality (top-level pass-through from storage) ──
+  capture_degraded?: boolean;
+  degraded_reason?: string;
+  limits?: {
+    requestsCapped?: boolean;
+    maxRequestsPerPage?: number;
+    bytesCapped?: boolean;
+    maxBytesPerPage?: number;
+    assetsTruncated?: boolean;
+    maxAssetsPerPage?: number;
+    structuredDataTruncated?: boolean;
+    maxStructuredDataItems?: number;
+    totalRequests?: number;
+    totalBytes?: number;
+  };
+
   // BUG-0133: the former `[key: string]: unknown` index signature is GONE —
   // it erased compile-time safety (any typo'd property access compiled).
   // Passthrough extras from core/indexing are still present at runtime; read

@@ -117,6 +117,27 @@ export {
   AtlasUnsupportedFormatVersionError,
 } from "./formatVersion.js";
 export { AtlasUnknownDatasetError } from "./datasetPresence.js";
+export {
+  describeArchive,
+  describeDataset,
+  readDatasetSlice,
+  readRecord,
+  readSchema,
+  statBlob,
+  AtlasRecordNotFoundError,
+} from "./describe.js";
+export type {
+  ArchiveDescription,
+  DatasetDescription,
+  DatasetPartDescription,
+  DatasetState,
+  DatasetSlice,
+  DatasetSliceRecord,
+  ReadDatasetSliceOptions,
+  ReadRecordOptions,
+  DatasetSchemaResult,
+  BlobStat,
+} from "./describe.js";
 export type { ParsedFormatVersion } from "./formatVersion.js";
 export {
   SDK_VERSION,

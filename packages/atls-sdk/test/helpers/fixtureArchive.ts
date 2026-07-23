@@ -66,6 +66,22 @@ export type FixtureOptions = {
    * ever exercised.
    */
   newerFormatFolders?: boolean;
+  /**
+   * Practitioner Update Phase 1 (describe.ts): write part files for a dataset
+   * folder that the manifest never declares — exercises the `unexpected` state.
+   */
+  unlistedDatasetParts?: { dataset: string; records: unknown[] };
+  /**
+   * Practitioner Update Phase 1 (describe.ts): keep these datasets declared in
+   * the manifest but omit their part FILES from the zip — exercises `corrupt`.
+   */
+  omitPartFiles?: string[];
+  /**
+   * Practitioner Update Phase 1 (describe.ts): embed stub JSON Schemas under
+   * `schemas/` and declare them via each dataset's schema_uri — exercises
+   * readSchema().
+   */
+  includeSchemas?: boolean;
 };
 
 /** Mirror of NEWER_FORMAT_FOLDER_MAP in src/index.ts (canonical → alias). */
@@ -241,6 +257,13 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     partBuffers[dataset].push(corruptPart);
   }
 
+  // Built AFTER partBuffers is finalized so it never leaks into the manifest.
+  let unlistedPart: DatasetPart | null = null;
+  if (options.unlistedDatasetParts) {
+    const { dataset, records } = options.unlistedDatasetParts;
+    unlistedPart = await buildJsonlPart(records, `${dataset}/${dataset}_part_00.jsonl.zst`);
+  }
+
   const datasets = {
     page_metadata: {
       name: "page_metadata",
@@ -372,9 +395,24 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     archive.append(JSON.stringify(manifest, null, 2), { name: "manifest.json" });
     archive.append(JSON.stringify(summary, null, 2), { name: "summary.json" });
 
-    for (const parts of Object.values(partBuffers)) {
+    const omitted = new Set(options.omitPartFiles ?? []);
+    for (const [dataset, parts] of Object.entries(partBuffers)) {
+      if (omitted.has(dataset)) continue;
       for (const part of parts) {
         archive.append(part.buffer, { name: part.path });
+      }
+    }
+
+    if (unlistedPart) {
+      archive.append(unlistedPart.buffer, { name: unlistedPart.path });
+    }
+
+    if (options.includeSchemas) {
+      for (const dataset of Object.keys(partBuffers)) {
+        archive.append(
+          JSON.stringify({ $id: `https://atls.dev/schemas/${dataset}.v1.schema.json`, type: "object" }),
+          { name: `schemas/${dataset}.v1.schema.json` }
+        );
       }
     }
 

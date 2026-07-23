@@ -293,6 +293,14 @@ describe('flattenPageMetadataRecord', () => {
       preload: ['https://example.com/font.woff2'],
       prefetch: [],
     },
+    capture_degraded: true,
+    degraded_reason: 'byte_budget_exceeded_media_blocked',
+    limits: {
+      bytesCapped: true,
+      maxBytesPerPage: 50_000_000,
+      totalRequests: 60,
+      totalBytes: 51_894_445,
+    },
     capturedAt: '2025-10-26T14:00:00Z',
   };
 
@@ -326,6 +334,14 @@ describe('flattenPageMetadataRecord', () => {
 
     // Resource hints preserved as sub-object
     expect(flat.resourceHints).toEqual({ preload: ['https://example.com/font.woff2'], prefetch: [] });
+    expect(flat.capture_degraded).toBe(true);
+    expect(flat.degraded_reason).toBe('byte_budget_exceeded_media_blocked');
+    expect(flat.limits).toEqual({
+      bytesCapped: true,
+      maxBytesPerPage: 50_000_000,
+      totalRequests: 60,
+      totalBytes: 51_894_445,
+    });
   });
 
   test('nested groups are not present in flat output', () => {

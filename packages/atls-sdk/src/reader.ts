@@ -521,6 +521,42 @@ export class ZipHandle {
     return parts.sort();
   }
 
+  /**
+   * Central-directory size metadata for one entry, without opening it.
+   * `uncompressedBytes` is the stored payload size — for `.zst` entries that is
+   * still the zstd-compressed size, not the inflated record bytes.
+   */
+  statEntry(fileName: string): { compressedBytes: number; uncompressedBytes: number } | null {
+    this.ensureOpen();
+    const entry = this.entries.get(fileName);
+    if (!entry) return null;
+    return { compressedBytes: entry.compressedSize, uncompressedBytes: entry.uncompressedSize };
+  }
+
+  /** Part files of a dataset folder with their central-directory sizes. */
+  listPartEntries(subdir: string): Array<{ fileName: string; compressedBytes: number; uncompressedBytes: number }> {
+    return this.listPartFiles(subdir).map((fileName) => {
+      const stat = this.statEntry(fileName);
+      return { fileName, compressedBytes: stat?.compressedBytes ?? 0, uncompressedBytes: stat?.uncompressedBytes ?? 0 };
+    });
+  }
+
+  /** Count and total stored bytes of entries under a prefix (e.g. `blobs/`). */
+  summarizePrefix(prefix: string): { count: number; compressedBytes: number; uncompressedBytes: number } {
+    this.ensureOpen();
+    let count = 0;
+    let compressedBytes = 0;
+    let uncompressedBytes = 0;
+    for (const [fileName, entry] of this.entries) {
+      if (!fileName.startsWith(prefix)) continue;
+      if (fileName.endsWith("/")) continue;
+      count += 1;
+      compressedBytes += entry.compressedSize;
+      uncompressedBytes += entry.uncompressedSize;
+    }
+    return { count, compressedBytes, uncompressedBytes };
+  }
+
   listEntries(): string[] {
     this.ensureOpen();
     return [...this.entries.keys()].sort();
@@ -564,7 +600,7 @@ export async function openZipHandle(atlsPath: string, options: AtlasReadOptions 
   return ZipHandle.open(atlsPath, options);
 }
 
-function normalizeBlobPath(blobRef: string): string {
+export function normalizeBlobPath(blobRef: string): string {
   const trimmed = blobRef.trim();
   const hasZst = trimmed.toLowerCase().endsWith(".zst");
 
@@ -636,6 +672,19 @@ async function* streamPartFile(
     checkAbort(options.signal);
     yield line;
   }
+}
+
+/**
+ * Stream the non-empty JSONL lines of ONE part file from an already-open
+ * handle. Used by the cursor APIs in describe.ts to resume mid-dataset without
+ * re-streaming earlier parts.
+ */
+export async function* iteratePartLines(
+  handle: ZipHandle,
+  partFileName: string,
+  options: Omit<IterateDatasetOptions, "zipHandle"> = {}
+): AsyncIterable<string> {
+  yield* streamPartFile(handle, partFileName, { ...options, zipHandle: handle });
 }
 
 /**

@@ -113,6 +113,23 @@ export const PageMetadataDatasetRecordV1Schema = z.object({
     }).optional(),
     favicon: z.string().optional(),
   }).optional(),
+  // Capture-quality disclosure is part of the page record itself so a
+  // consumer can determine whether the stored evidence is complete without
+  // performing a URL join against operational alert/event streams.
+  capture_degraded: z.boolean().optional(),
+  degraded_reason: z.string().optional(),
+  limits: z.object({
+    requestsCapped: z.boolean().optional(),
+    maxRequestsPerPage: z.number().int().nonnegative().optional(),
+    bytesCapped: z.boolean().optional(),
+    maxBytesPerPage: z.number().int().nonnegative().optional(),
+    assetsTruncated: z.boolean().optional(),
+    maxAssetsPerPage: z.number().int().nonnegative().optional(),
+    structuredDataTruncated: z.boolean().optional(),
+    maxStructuredDataItems: z.number().int().nonnegative().optional(),
+    totalRequests: z.number().int().nonnegative().optional(),
+    totalBytes: z.number().nonnegative().optional(),
+  }).optional(),
   capturedAt: z.string().datetime(),
 });
 
