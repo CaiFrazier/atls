@@ -22,9 +22,22 @@ import { z } from 'zod';
 
 /**
  * Response Record v1.0 Schema
- * 
+ *
  * Stores raw HTML response bodies in blob storage for offline replay.
  * Essential for recomputing SEO signals, accessibility audits, and diffs.
+ *
+ * Two kinds of row share this schema (BUG-0258):
+ *  - Terminal rows — the crawled request's final response (2xx/4xx/5xx, or the
+ *    statusCode-0 "no response" sentinel). These always carry a body: `encoding`
+ *    and `bodyBlobRef` are present. The producer guarantees this at the write
+ *    gate; the schema keeps them optional only so the redirect-row shape below
+ *    can share this schema without a discriminated union (V1 must remain a plain
+ *    ZodObject — runtime-core.schema.ts calls `.passthrough()` on it).
+ *  - Redirect rows — one row per intermediate 3xx hop of a redirect chain,
+ *    keyed by that hop's requested `url`, with `isRedirect: true`, the 3xx
+ *    `statusCode`, and the resolved `location`. These have no body, so
+ *    `encoding`/`bodyBlobRef` are absent. Redirect auditing (Screaming Frog
+ *    parity) and `export --report redirects` read these rows.
  */
 export const ResponseRecordV1Schema = z.object({
   // ===== Identity =====
@@ -44,6 +57,12 @@ export const ResponseRecordV1Schema = z.object({
   fromCache: z.boolean().optional().describe('Whether the response was served from cache'),
   redirectChain: z.array(z.string()).optional().describe('Redirect chain (if any)'),
   redirectChainLength: z.number().optional().describe('Number of redirect hops'),
+  // ===== Redirect rows (BUG-0258) =====
+  // Present on rows that represent a single 3xx hop of a redirect chain, keyed
+  // by the hop's requested `url`. Terminal (non-redirect) rows omit these.
+  isRedirect: z.boolean().optional().describe('True when this row is a single 3xx redirect hop (no body captured)'),
+  location: z.string().optional().describe('Resolved Location target of a 3xx response (the next hop URL)'),
+  redirectType: z.string().optional().describe('Classified redirect type (e.g. "permanent", "temporary", "meta-refresh")'),
   contentType: z.string().optional().describe('Response Content-Type'),
   contentLength: z.number().optional().describe('Response Content-Length'),
   headers: z.record(z.string()).optional().describe('Normalized response headers'),
@@ -63,10 +82,14 @@ export const ResponseRecordV1Schema = z.object({
   navEndReason: z.string().optional().describe('Navigation end reason (load/networkidle/timeout/error/fetch)'),
 
   // ===== Encoding =====
-  encoding: z.string().describe('Character encoding (e.g., "utf-8", "iso-8859-1")'),
+  // Optional so redirect (3xx hop) rows, which capture no body, can omit it.
+  // The producer sets it on every terminal row (BUG-0258).
+  encoding: z.string().optional().describe('Character encoding (e.g., "utf-8", "iso-8859-1"); absent on redirect hop rows'),
 
   // ===== Blob Reference =====
-  bodyBlobRef: z.string().describe('Reference to HTML body in blob storage (e.g., "sha256/ab/cd/abcd...")'),
+  // Optional so redirect (3xx hop) rows, which capture no body, can omit it.
+  // The producer sets it on every terminal row (BUG-0258).
+  bodyBlobRef: z.string().optional().describe('Reference to HTML body in blob storage (e.g., "sha256/ab/cd/abcd..."); absent on redirect hop rows'),
 
   // ===== Rendered DOM (full mode only) =====
   renderedBodyBlobRef: z.string().optional().describe('Reference to post-JavaScript rendered HTML body in blob storage (full mode only)'),
