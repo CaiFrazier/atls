@@ -272,6 +272,38 @@ export interface AtlasStructuredDataValidationIssue {
   itemId?: string;
 }
 
+export interface AtlasStructuredDataDiagnostic {
+  id: string;
+  itemId: string;
+  entityId?: string;
+  plane: "capture" | "syntax" | "schema_org" | "consumer_profile";
+  code: string;
+  level: "error" | "warning" | "info";
+  certainty: "definite" | "heuristic";
+  path: string;
+  property?: string;
+  expectedTypes?: string[];
+  actualKind?: string;
+  actualTypes?: string[];
+  message: string;
+}
+
+export interface AtlasSchemaOrgAudit {
+  engineVersion: number;
+  vocabularyVersion: string;
+  vocabularySourceUrl: string;
+  vocabularyReleasedAt: string;
+  vocabularySha256: string;
+  outcome: "no_findings" | "findings" | "not_applicable";
+  coverage: "complete" | "partial" | "unavailable";
+  diagnosticCounts: {
+    error: number;
+    warning: number;
+    info: number;
+  };
+  diagnostics: AtlasStructuredDataDiagnostic[];
+}
+
 export interface AtlasSchemaTypeTreeNode {
   type: string;
   count: number;
@@ -319,6 +351,7 @@ export interface AtlasStructuredDataItem {
   bytes: number;
   truncated?: boolean;
   graphPointer?: string;
+  diagnosticIds?: string[];
   validation?: AtlasStructuredDataValidationIssue[];
   source?: AtlasStructuredDataSourceMeta;
   provenance?: {
@@ -334,6 +367,8 @@ export interface AtlasPageStructuredData {
   schemaTypes?: string[];
   schemaTypeTree?: AtlasSchemaTypeTreeNode[];
   validationIssues?: AtlasStructuredDataValidationIssue[];
+  captureIssues?: AtlasStructuredDataDiagnostic[];
+  schemaOrgAudit?: AtlasSchemaOrgAudit;
   hasJsonLd?: boolean;
   hasMicrodata?: boolean;
   hasRdfa?: boolean;

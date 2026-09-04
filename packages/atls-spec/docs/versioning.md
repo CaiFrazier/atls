@@ -4,7 +4,7 @@ The Atlas format carries several version identifiers that move on independent ca
 them is the most common source of reader bugs.
 
 _Verified against `packages/cartographer/src/io/atlas/manifest.ts` and
-`packages/atls-spec/package.json` on 2026-06-04._
+`packages/atls-spec/package.json` on 2026-09-04._
 
 ---
 
@@ -15,7 +15,7 @@ _Verified against `packages/cartographer/src/io/atlas/manifest.ts` and
 | `atlasVersion` | camelCase | `"1.1"` | Public Atlas product line. |
 | `formatVersion` | camelCase | `"1.1.0"` | Archive container/format version. Breaking container changes bump the major. |
 | `specVersion` | camelCase | `"1.1.0"` | Specification contract version. |
-| `schemaVersion` | camelCase | `"2026-07-17"` | **Date-stamped** dataset-schema release tag. |
+| `schemaVersion` | camelCase | `"2026-09-04"` | **Date-stamped** dataset-schema release tag. |
 | `generator` | camelCase | `"cartographer-engine/1.0.0-rc.1"` | Producer id + version; reflects the engine package version. |
 
 These literals are set in `manifest.ts:355-357` and emitted at `manifest.ts:962-965`. `generator`
@@ -25,7 +25,7 @@ is built from `CARTOGRAPHER_VERSION` (`manifest.ts:1126`).
 
 ## Two independent axes — do not conflate
 
-1. **`schemaVersion`** (`"2026-07-17"`) is a **date-stamped tag the writer stamps into every
+1. **`schemaVersion`** (`"2026-09-04"`) is a **date-stamped tag the writer stamps into every
    archive**. It identifies the on-disk dataset layout and is what a reader should branch on to
    decide "which archive layout is this."
 
@@ -39,11 +39,17 @@ the archive. Read `manifest.schemaVersion`.
 
 ```bash
 python3 -c "import zipfile,json; print(json.loads(zipfile.ZipFile('crawl.atls').read('manifest.json'))['schemaVersion'])"
-# -> 2026-07-17
+# -> 2026-09-04
 ```
 
 ### `schemaVersion` history
 
+- **`2026-09-04`** (Schema.org audit): adds stable structured-data item ids, typed capture/syntax
+  diagnostics, diagnostic links, audit coverage/outcome, and pinned Schema.org vocabulary
+  provenance. Adds the `seo.schema_org_audit` capability. The audit reports findings without
+  changing captured markup, and remains distinct from Atlas archive integrity validation.
+- **`2026-07-23`** (redirect evidence): response records may carry bodiless redirect evidence
+  (`isRedirect`, `location`, `redirectType`) with optional encoding and body references.
 - **`2026-07-17`** (B1 — custom extraction): adds the `extraction` dataset (one record per
   page × consumer-configured rule, with `ruleId`@`ruleVersion` provenance and an
   `ok`\|`empty`\|`error`\|`unavailable-source` honesty status) and the CONDITIONAL
@@ -86,4 +92,4 @@ authoritative presence map is in [datasets.md](./datasets.md).
 
 ---
 
-_Last verified against codebase: 2026-07-01._
+_Last verified against codebase: 2026-09-04._

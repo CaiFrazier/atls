@@ -140,18 +140,28 @@ as `assets.v1.schema.json`). Keys: `pageId` + `assetId` (UUID v5, deterministic)
 
 ## structured_data
 
-Schema.org and social markup. Schema: `cartographer-datasets.schema.ts:149-183`. Key: `pageId`.
+Schema.org and social markup. Schema: `cartographer-datasets.schema.ts` (`StructuredDataDatasetRecordV1Schema`). Key: `pageId`.
 Present in prerender/full.
 
 - `pageId` · `url` · `capturedAt`.
-- `jsonLd[]`: `{ type, payload, source, validationIssues[] }`.
-- `microdata[]`: `{ itemType, properties, source }`.
-- `rdfa[]`: `{ itemType, properties, source }`.
+- `jsonLd[]`: `{ id, type, payload, source, graphPointer?, diagnosticIds?, validationIssues[] }`.
+- `microdata[]`: `{ id, itemType, properties, source, diagnosticIds? }`.
+- `rdfa[]`: `{ id, itemType, properties, source, diagnosticIds? }`.
 - `openGraph[]` / `twitterCard[]`: `{ type, payload, source, validationIssues[] }`.
 - `schemaTypes[]` — unique types found. `schemaTypeTree` — hierarchical type view.
 - `summary`: `hasJsonLd`, `hasMicrodata`, `hasRdfa`, `hasOpenGraph`, `hasTwitterCard`, `itemCount`,
   `bytesTotal`, `truncated`.
-- `validationIssues[]`: `{ type (malformed_json\|unknown_type\|missing_required), message, source }`.
+- `validationIssues[]`: legacy extraction/parser issues. This field does not establish Schema.org validity.
+- `captureIssues[]`: typed capture and syntax diagnostics with item ids, evidence plane, severity,
+  certainty, and JSON Pointer path.
+- `schemaOrgAudit`: non-destructive vocabulary audit output. It records the audit engine version,
+  pinned Schema.org vocabulary version, source URL, release date, and SHA-256, outcome (`no_findings\|findings\|not_applicable`),
+  coverage (`complete\|partial\|unavailable`), diagnostic counts, and typed diagnostics. Schema.org
+  domains and ranges are treated as expected-use guidance, so mismatches are findings rather than
+  grounds for discarding captured markup.
+
+Archive contract validation checks this record's shape and reference integrity. It does not turn a
+`schemaOrgAudit.outcome` into an archive-valid/archive-invalid verdict.
 
 ---
 
@@ -374,4 +384,4 @@ when a discovery tracker is wired.
 
 ---
 
-_Last verified against codebase: 2026-07-06._
+_Last verified against codebase: 2026-09-04._

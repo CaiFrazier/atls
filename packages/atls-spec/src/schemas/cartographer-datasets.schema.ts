@@ -205,11 +205,91 @@ export const ContentDatasetRecordV1Schema = z.object({
   capturedAt: z.string().datetime(),
 });
 
+export const StructuredDataDiagnosticSchema = z.object({
+  id: z.string().min(1),
+  itemId: z.string().min(1),
+  entityId: z.string().min(1).optional(),
+  plane: z.enum(['capture', 'syntax', 'schema_org', 'consumer_profile']),
+  code: z.string().min(1),
+  level: z.enum(['error', 'warning', 'info']),
+  certainty: z.enum(['definite', 'heuristic']),
+  path: z.string(),
+  property: z.string().optional(),
+  expectedTypes: z.array(z.string()).optional(),
+  actualKind: z.string().optional(),
+  actualTypes: z.array(z.string()).optional(),
+  message: z.string().min(1),
+});
+
+export const SchemaOrgAuditSchema = z.object({
+  engineVersion: z.number().int().positive(),
+  vocabularyVersion: z.string().min(1),
+  vocabularySourceUrl: z.string().url(),
+  vocabularyReleasedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  vocabularySha256: z.string().regex(/^[a-f0-9]{64}$/),
+  outcome: z.enum(['no_findings', 'findings', 'not_applicable']),
+  coverage: z.enum(['complete', 'partial', 'unavailable']),
+  diagnosticCounts: z.object({
+    error: z.number().int().nonnegative(),
+    warning: z.number().int().nonnegative(),
+    info: z.number().int().nonnegative(),
+  }),
+  diagnostics: z.array(StructuredDataDiagnosticSchema),
+}).superRefine((audit, ctx) => {
+  for (const level of ['error', 'warning', 'info'] as const) {
+    const actual = audit.diagnostics.filter((diagnostic) => diagnostic.level === level).length;
+    if (audit.diagnosticCounts[level] !== actual) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['diagnosticCounts', level],
+        message: `Expected ${actual} ${level} diagnostics`,
+      });
+    }
+  }
+  const diagnosticIds = audit.diagnostics.map((diagnostic) => diagnostic.id);
+  if (new Set(diagnosticIds).size !== diagnosticIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['diagnostics'],
+      message: 'Diagnostic IDs must be unique',
+    });
+  }
+  const expectedOutcome = audit.diagnostics.length > 0 ? 'findings' : undefined;
+  if (expectedOutcome && audit.outcome !== expectedOutcome) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['outcome'],
+      message: 'An audit with diagnostics must have outcome findings',
+    });
+  } else if (!expectedOutcome && audit.outcome === 'findings') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['outcome'],
+      message: 'An audit without diagnostics cannot have outcome findings',
+    });
+  }
+  const requiresPartialCoverage = audit.diagnostics.some((diagnostic) =>
+    diagnostic.plane === 'capture'
+    || diagnostic.code === 'UNSUPPORTED_CONTEXT'
+    || diagnostic.code === 'MISSING_CONTEXT'
+    || diagnostic.code === 'UNRESOLVED_ENTITY_REFERENCE');
+  if (requiresPartialCoverage && audit.coverage === 'complete') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['coverage'],
+      message: 'Capture, context, or unresolved-reference diagnostics require partial or unavailable coverage',
+    });
+  }
+});
+
 const StructuredDataItemSchema = z.object({
+  id: z.string().min(1).optional(),
   type: z.string(),
   payload: z.record(z.string(), JsonValueSchema),
   source: z.string(),
   validationIssues: z.array(z.string()).optional(),
+  graphPointer: z.string().optional(),
+  diagnosticIds: z.array(z.string()).optional(),
   // A capped debug prefix of the raw text for a payload that failed to parse
   // or was truncated (data is then {}). Absent for normal, valid items.
   rawText: z.string().optional(),
@@ -220,14 +300,18 @@ export const StructuredDataDatasetRecordV1Schema = z.object({
   url: z.string().url(),
   jsonLd: z.array(StructuredDataItemSchema),
   microdata: z.array(z.object({
+    id: z.string().min(1).optional(),
     itemType: z.string(),
     properties: z.record(z.string(), JsonValueSchema),
     source: z.string(),
+    diagnosticIds: z.array(z.string()).optional(),
   })),
   rdfa: z.array(z.object({
+    id: z.string().min(1).optional(),
     itemType: z.string(),
     properties: z.record(z.string(), JsonValueSchema),
     source: z.string(),
+    diagnosticIds: z.array(z.string()).optional(),
   })).optional(),
   openGraph: z.array(StructuredDataItemSchema),
   twitterCard: z.array(StructuredDataItemSchema),
@@ -248,7 +332,67 @@ export const StructuredDataDatasetRecordV1Schema = z.object({
     message: z.string(),
     source: z.string(),
   })),
+  captureIssues: z.array(StructuredDataDiagnosticSchema).optional(),
+  schemaOrgAudit: SchemaOrgAuditSchema.optional(),
   capturedAt: z.string().datetime(),
+}).superRefine((record, ctx) => {
+  if (!record.schemaOrgAudit) return;
+  const items = [...record.jsonLd, ...record.microdata, ...(record.rdfa ?? [])];
+  const definedItemIds = items.map((item) => item.id).filter((id): id is string => typeof id === 'string');
+  if (definedItemIds.length !== items.length || new Set(definedItemIds).size !== definedItemIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['items'],
+      message: 'Audited structured-data items must have unique IDs',
+    });
+  }
+  const itemIds = new Set(items.map((item) => item.id).filter((id): id is string => typeof id === 'string'));
+  const diagnosticsById = new Map(record.schemaOrgAudit.diagnostics.map((diagnostic) => [diagnostic.id, diagnostic]));
+  for (const diagnostic of record.schemaOrgAudit.diagnostics) {
+    if (!itemIds.has(diagnostic.itemId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['schemaOrgAudit', 'diagnostics'],
+        message: `Diagnostic references unknown itemId ${diagnostic.itemId}`,
+      });
+    }
+  }
+  for (const [index, item] of items.entries()) {
+    const linkedIds = item.diagnosticIds ?? [];
+    if (new Set(linkedIds).size !== linkedIds.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items', index, 'diagnosticIds'],
+        message: 'Item diagnostic links must be unique',
+      });
+    }
+    for (const diagnosticId of item.diagnosticIds ?? []) {
+      const diagnostic = diagnosticsById.get(diagnosticId);
+      if (!diagnostic) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['items', index, 'diagnosticIds'],
+          message: `Item references unknown diagnostic ${diagnosticId}`,
+        });
+      } else if (diagnostic.itemId !== item.id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['items', index, 'diagnosticIds'],
+          message: `Item ${item.id ?? '(missing ID)'} references diagnostic for ${diagnostic.itemId}`,
+        });
+      }
+    }
+  }
+  const linkedDiagnosticIds = new Set(items.flatMap((item) => item.diagnosticIds ?? []));
+  for (const diagnostic of record.schemaOrgAudit.diagnostics) {
+    if (!linkedDiagnosticIds.has(diagnostic.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['schemaOrgAudit', 'diagnostics'],
+        message: `Diagnostic ${diagnostic.id} is not linked from its item`,
+      });
+    }
+  }
 });
 
 export const TechnologyDatasetRecordV1Schema = z.object({

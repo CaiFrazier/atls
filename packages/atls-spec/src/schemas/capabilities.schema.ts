@@ -66,6 +66,7 @@ export const CapabilitiesSealSchema = z.object({
  * Standard capabilities:
  * - seo.core: Basic SEO signals (title, meta, headers)
  * - seo.enhanced: Advanced SEO (structured data, OG, Twitter Card)
+ * - seo.schema_org_audit: Pinned Schema.org vocabulary findings and audit coverage
  * - seo.sitemap_coverage: Per-URL sitemap entries (sitemap_urls dataset) plus the
  *   manifest.sitemapCoverage honesty flag and per-file `truncated` (B4)
  * - security.forms: Per-form submission-security facts on the security dataset
