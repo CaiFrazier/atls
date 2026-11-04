@@ -27,6 +27,8 @@ export * from './types.js';
 export * from './types/records/index.js';
 // Export page metadata mapping (nested ↔ flat adapter)
 export * from './pageMetadataMapping.js';
+// Export the dataset registry shared by producers and readers
+export * from './datasetKeys.js';
 
 // Export Zod schemas and types
 export * from './schemas/index.js';
