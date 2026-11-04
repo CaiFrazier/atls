@@ -15,6 +15,7 @@
  */
 
 import { describe, test, expect } from "vitest";
+import { ATLAS_DATASET_KEYS } from "@caifrazier/atls-spec";
 import { diffManifests, formatManifestDiff } from "../src/diff.js";
 import type { AtlasManifest } from "../src/types.js";
 
@@ -163,9 +164,14 @@ describe("diffManifests", () => {
     expect(diff.totalBytesB).toBe(1000);
   });
 
-  test("covers all 15 default datasets", () => {
+  test("covers every registry dataset by default, the 15 canonical ones included", () => {
     const diff = diffManifests(stubManifest(), stubManifest());
     const names = diff.datasets.map((d) => d.dataset);
+    // One shared registry: the default is exactly ATLAS_DATASET_KEYS, in its order.
+    expect(names).toEqual(Object.keys(ATLAS_DATASET_KEYS));
+    for (const extension of ["sitemaps", "sitemap_urls", "extraction", "quarantine", "reconstruction_index", "frontier_ledger"]) {
+      expect(names).toContain(extension);
+    }
     expect(names).toContain("navigation");
     expect(names).toContain("page_metadata");
     expect(names).toContain("content");
@@ -181,7 +187,7 @@ describe("diffManifests", () => {
     expect(names).toContain("events");
     expect(names).toContain("pipeline_failures");
     expect(names).toContain("pipeline_alerts");
-    expect(names).toHaveLength(15);
+    expect(names).toHaveLength(21);
   });
 
   test("BUG-0094(e) (fixed): presentA/presentB distinguish absent from present-with-zero-count", () => {

@@ -14,36 +14,23 @@
  * limitations under the License.
  */
 
+import { ATLAS_DATASET_KEYS } from "@caifrazier/atls-spec";
 import type { AtlasManifest, CanonicalDatasetName } from "./types.js";
 import { datasetPresent } from "./datasetPresence.js";
 
 /**
- * Canonical dataset names compared by default when diffing manifests.
+ * Dataset names compared by default when diffing manifests: every dataset in
+ * the Atlas dataset registry (`ATLAS_DATASET_KEYS` in @caifrazier/atls-spec),
+ * in registry order. Producers write from the same registry, so there is no
+ * second hand-kept list here to drift (the drift this file once fixed by hand).
  *
- * Keyed as a `Record<CanonicalDatasetName, true>` rather than a plain array
- * literal so TypeScript enforces exhaustiveness: adding a new value to
- * `CanonicalDatasetName` without adding it here is a compile error, and vice
- * versa. This is the second hardcoded-dataset-list-drift bug found in this
- * codebase (see validate.ts's DATASET_ZOD_SCHEMAS) — worth the structural fix.
+ * The annotation keeps the old exhaustiveness guarantee in one direction: a
+ * `CanonicalDatasetName` missing from the registry is a compile error. The
+ * registry may hold more than the canonical names, which is how producer
+ * extensions such as sitemaps and extraction are compared by default.
  */
-const DEFAULT_DIFF_DATASET_MEMBERSHIP: Record<CanonicalDatasetName, true> = {
-  navigation: true,
-  page_metadata: true,
-  content: true,
-  assets: true,
-  structured_data: true,
-  technology: true,
-  security: true,
-  performance: true,
-  render_state: true,
-  accessibility: true,
-  responses: true,
-  resources: true,
-  events: true,
-  pipeline_failures: true,
-  pipeline_alerts: true,
-};
-const DEFAULT_DIFF_DATASETS: readonly string[] = Object.keys(DEFAULT_DIFF_DATASET_MEMBERSHIP);
+const DEFAULT_DIFF_DATASET_REGISTRY: Readonly<Record<CanonicalDatasetName, string>> & typeof ATLAS_DATASET_KEYS = ATLAS_DATASET_KEYS;
+const DEFAULT_DIFF_DATASETS: readonly string[] = Object.keys(DEFAULT_DIFF_DATASET_REGISTRY);
 
 /** Per-dataset delta in a manifest diff. */
 export interface DatasetDelta {
@@ -87,7 +74,7 @@ function getDatasetBytes(manifest: AtlasManifest, dataset: string): number {
 }
 
 export interface DiffManifestsOptions {
-  /** Override the list of dataset names to compare. Defaults to all 15 canonical datasets. */
+  /** Override the list of dataset names to compare. Defaults to every dataset in `ATLAS_DATASET_KEYS`. */
   datasets?: readonly string[];
 }
 
