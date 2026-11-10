@@ -19,11 +19,14 @@ import { AtlasResourceLimitError, decompressZstdBuffer, openZipHandle } from "./
 import type { AtlasReadLimits, ZipHandle } from "./reader.js";
 import {
   acceptedContentDigests,
+  assetId,
   completionReasonForEndReason,
+  contentSha256,
   integrityEdition,
   isDatasetPartPath,
   parseBlobRef,
   sha256Hex,
+  TRAILING_SLASH_POLICY,
 } from "@caifrazier/atls-spec";
 import {
   parseFormatVersion,
@@ -260,10 +263,16 @@ export async function validate(
   try {
     atlas = await openAtlas(atlsPath, { strict: false, limits });
     const activeAtlas = atlas;
+    // atlasVersion is the stamp. specVersion and formatVersion do not
+    // keep a 1.2 or 1.3 line on the 1.1 writer rules.
+    const writerRules = archiveRequiresWriterRules(atlas.manifest);
     
     // Phase 1: Check manifest schema
     if (checkManifest) {
       validateManifestSchema(atlas.manifest, addIssue, { strict });
+    }
+    if (writerRules) {
+      validateWriterSlashDeclarations(atlas.manifest, addIssue);
     }
 
     // Spec 1.3: when both endReason and completionReason are present, they
@@ -283,12 +292,13 @@ export async function validate(
     }
 
     // Phase 1b: part checksums, contentSha256, and blob hashes.
-    // archiveSha256 and auditHash are ignored.
+    // Readers do not treat archiveSha256 or auditHash as a ZIP hash.
+    // A 1.2 or later atlasVersion must omit both fields.
     const blobPaths = new Set<string>();
     if (issues.length < maxIssues) {
       const zip = await openZipHandle(atlsPath, { limits });
       try {
-        await verifyPartDigests(zip, atlas.manifest, addIssue);
+        await verifyPartDigests(zip, atlas.manifest, addIssue, writerRules);
         if (!skipBlobVerification) {
           await verifyBlobEntries(zip, addIssue, blobPaths);
         }
@@ -308,6 +318,12 @@ export async function validate(
 
       // Validate page schema
       if (!validatePageSchema(pageRecord, addIssue, { strict })) {
+        if (writerRules) {
+          collectBlobRefIssues(pageRecord, "page_metadata", blobPaths, addIssue, {
+            writerRules: true,
+            checkExists: false,
+          });
+        }
         continue; // Skip integrity checks if schema invalid
       }
 
@@ -315,8 +331,11 @@ export async function validate(
       if (pageUrl) {
         pageUrls.add(pageUrl);
       }
-      if (!skipBlobVerification) {
-        collectBlobRefIssues(pageRecord, "page_metadata", blobPaths, addIssue);
+      if (!skipBlobVerification || writerRules) {
+        collectBlobRefIssues(pageRecord, "page_metadata", blobPaths, addIssue, {
+          writerRules,
+          checkExists: !skipBlobVerification,
+        });
       }
 
       if (issues.length >= maxIssues) break;
@@ -404,8 +423,18 @@ export async function validate(
       stats.assetsChecked++;
       
       // Validate asset schema
-      if (!validateAssetSchema(asset, addIssue, { strict })) {
+      const assetSchemaOk = validateAssetSchema(asset, addIssue, { strict });
+      if (!assetSchemaOk) {
+        if (writerRules) {
+          collectBlobRefIssues(asset, "assets", blobPaths, addIssue, {
+            writerRules: true,
+            checkExists: false,
+          });
+        }
         continue;
+      }
+      if (writerRules) {
+        checkWriterAssetId(asset, addIssue);
       }
       
       // Check referential integrity
@@ -419,8 +448,11 @@ export async function validate(
           details: { assetUrl: asset.assetUrl, pageUrl: asset.pageUrl },
         });
       }
-      if (!skipBlobVerification) {
-        collectBlobRefIssues(asset, "assets", blobPaths, addIssue);
+      if (!skipBlobVerification || writerRules) {
+        collectBlobRefIssues(asset, "assets", blobPaths, addIssue, {
+          writerRules,
+          checkExists: !skipBlobVerification,
+        });
       }
       
       if (issues.length >= maxIssues) break;
@@ -475,8 +507,17 @@ export async function validate(
               dataset: name,
               record,
             });
-          } else if (!skipBlobVerification) {
-            collectBlobRefIssues(record, name, blobPaths, addIssue);
+          } else if (!skipBlobVerification || writerRules) {
+            collectBlobRefIssues(record, name, blobPaths, addIssue, {
+              writerRules,
+              checkExists: !skipBlobVerification,
+            });
+          }
+          if (!parsed.success && writerRules) {
+            collectBlobRefIssues(record, name, blobPaths, addIssue, {
+              writerRules: true,
+              checkExists: false,
+            });
           }
           if (issues.length >= maxIssues) break;
         }
@@ -516,8 +557,11 @@ export async function validate(
               record,
             });
           } else {
-            if (!skipBlobVerification) {
-              collectBlobRefIssues(parsed.data, "robots", blobPaths, addIssue);
+            if (!skipBlobVerification || writerRules) {
+              collectBlobRefIssues(parsed.data, "robots", blobPaths, addIssue, {
+                writerRules,
+                checkExists: !skipBlobVerification,
+              });
             }
             if (parsed.data.blockedNoCopy && !failClosed) {
               addIssue({
@@ -541,6 +585,12 @@ export async function validate(
             }
             seenOrigins.add(parsed.data.origin);
           }
+          if (!parsed.success && writerRules) {
+            collectBlobRefIssues(record, "robots", blobPaths, addIssue, {
+              writerRules: true,
+              checkExists: false,
+            });
+          }
           if (issues.length >= maxIssues) break;
         }
       } catch (err) {
@@ -549,6 +599,28 @@ export async function validate(
           code: "DATASET_UNREADABLE",
           message: `robots dataset is present but could not be read (likely truncated or corrupt): ${err instanceof Error ? err.message : String(err)}`,
           dataset: "robots",
+        });
+      }
+    }
+
+    // reconstruction_index is not schema-checked. A 1.2 or later stamp still
+    // rejects the legacy blob spelling on screenshot, favicon, body, and tile src.
+    if (writerRules && atlas.hasDataset("reconstruction_index" as any) && issues.length < maxIssues) {
+      try {
+        for await (const record of activeAtlas.readers.dataset("reconstruction_index")) {
+          if (!collectBlobRefIssues(record, "reconstruction_index", blobPaths, addIssue, {
+            writerRules: true,
+            checkExists: false,
+          })) {
+            break;
+          }
+        }
+      } catch (err) {
+        addIssue({
+          severity: "error",
+          code: "DATASET_UNREADABLE",
+          message: `reconstruction_index dataset is present but could not be read (likely truncated or corrupt): ${err instanceof Error ? err.message : String(err)}`,
+          dataset: "reconstruction_index",
         });
       }
     }
@@ -621,6 +693,150 @@ export async function validate(
     stats,
     truncated,
   };
+}
+
+/**
+ * Writer rules follow `atlasVersion` (then `atlas_semver` when that field is
+ * absent). Minor 2 and later, including 1.3, use the 1.2 writer rules.
+ * A 1.1 or earlier stamp keeps the lenient checks. `specVersion` does not
+ * override this stamp.
+ */
+function archiveRequiresWriterRules(manifest: { atlasVersion?: unknown; atlas_semver?: unknown }): boolean {
+  const stamped = typeof manifest.atlasVersion === "string" && manifest.atlasVersion.trim().length > 0
+    ? manifest.atlasVersion
+    : manifest.atlas_semver;
+  if (typeof stamped !== "string") return false;
+  const match = stamped.trim().match(/^v?(\d+)(?:\.(\d+))?/);
+  if (!match) return false;
+  const major = Number(match[1]);
+  const minor = match[2] === undefined ? 0 : Number(match[2]);
+  return major > 1 || (major === 1 && minor >= 2);
+}
+
+function reportDeprecatedIntegrityFields(
+  manifest: Record<string, any>,
+  addIssue: (issue: ValidationIssue) => boolean
+): void {
+  const integrity = manifest.integrity;
+  if (!integrity || typeof integrity !== "object" || Array.isArray(integrity)) return;
+  const present = (["archiveSha256", "auditHash"] as const).filter((key) => integrity[key] !== undefined);
+  if (present.length === 0) return;
+  const names = present.map((key) => `integrity.${key}`).join(" and ");
+  const verb = present.length === 1 ? "is" : "are";
+  addIssue({
+    severity: "error",
+    code: "INTEGRITY_DEPRECATED_FIELD",
+    message: `${names} ${verb} present. A 1.2 or later archive omits integrity.archiveSha256 and integrity.auditHash.`,
+    details: { fields: present },
+  });
+}
+
+interface SlashDeclaration {
+  path: string;
+  value: string;
+}
+
+function slashDeclarations(manifest: Record<string, any>): { canonical?: SlashDeclaration; others: SlashDeclaration[] } {
+  const others: SlashDeclaration[] = [];
+  let canonical: SlashDeclaration | undefined;
+  const urlNorm = manifest.urlNormalization;
+  if (urlNorm && typeof urlNorm === "object" && !Array.isArray(urlNorm)) {
+    if (urlNorm.trailing_slash !== undefined && urlNorm.trailing_slash !== null) {
+      canonical = { path: "urlNormalization.trailing_slash", value: String(urlNorm.trailing_slash) };
+    }
+    if (urlNorm.remove_trailing_slash !== undefined && urlNorm.remove_trailing_slash !== null) {
+      others.push({ path: "urlNormalization.remove_trailing_slash", value: String(urlNorm.remove_trailing_slash) });
+    }
+    if (urlNorm.trailing_slash_policy !== undefined && urlNorm.trailing_slash_policy !== null) {
+      others.push({ path: "urlNormalization.trailing_slash_policy", value: String(urlNorm.trailing_slash_policy) });
+    }
+  }
+  const crawl = manifest.crawlContext;
+  if (crawl && typeof crawl === "object" && !Array.isArray(crawl)) {
+    if (typeof crawl.urlNormalization === "string" && crawl.urlNormalization.length > 0) {
+      others.push({ path: "crawlContext.urlNormalization", value: crawl.urlNormalization });
+    }
+    if (Array.isArray(crawl.urlNormalizationRules)) {
+      crawl.urlNormalizationRules.forEach((rule: unknown, index: number) => {
+        if (typeof rule === "string" && /slash/i.test(rule)) {
+          others.push({ path: `crawlContext.urlNormalizationRules[${index}]`, value: rule });
+        }
+      });
+    }
+  }
+  collectCamelSlashFlags(manifest, "", others);
+  return { canonical, others };
+}
+
+function collectCamelSlashFlags(value: unknown, path: string, others: SlashDeclaration[]): void {
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => collectCamelSlashFlags(item, `${path}[${index}]`, others));
+    return;
+  }
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    const childPath = path ? `${path}.${key}` : key;
+    if ((key === "removeTrailingSlash" || key === "trailingSlashPolicy") && child !== undefined && child !== null) {
+      others.push({ path: childPath, value: String(child) });
+    }
+    collectCamelSlashFlags(child, childPath, others);
+  }
+}
+
+function validateWriterSlashDeclarations(
+  manifest: AtlasManifest,
+  addIssue: (issue: ValidationIssue) => boolean
+): void {
+  const { canonical, others } = slashDeclarations(manifest as Record<string, any>);
+  const count = (canonical ? 1 : 0) + others.length;
+  const canonicalConflicts = canonical !== undefined && canonical.value !== TRAILING_SLASH_POLICY;
+  if (others.length === 0 && !canonicalConflicts) return;
+
+  const listed = [
+    ...(canonical ? [`${canonical.path} is ${canonical.value}`] : []),
+    ...others.map((decl) => `${decl.path} is ${decl.value}`),
+  ];
+  const reasons: string[] = [];
+  if (count > 1) {
+    reasons.push(`it declares ${count} trailing-slash rules (${listed.join("; ")})`);
+  } else if (others.length === 1) {
+    const only = others[0]!;
+    reasons.push(`it declares ${only.path} (${only.value}) instead of urlNormalization.trailing_slash`);
+  }
+  if (others.length > 0) {
+    reasons.push(`the only allowed declaration is urlNormalization.trailing_slash, not ${others.map((decl) => decl.path).join(", ")}`);
+  }
+  if (canonicalConflicts && canonical) {
+    reasons.push(`urlNormalization.trailing_slash is ${canonical.value}, which conflicts with ${TRAILING_SLASH_POLICY}`);
+  }
+  addIssue({
+    severity: "error",
+    code: "TRAILING_SLASH_DECLARATION",
+    message: `A 1.2 or later archive uses only urlNormalization.trailing_slash set to ${TRAILING_SLASH_POLICY}. This archive does not: ${reasons.join("; ")}.`,
+    details: {
+      canonical: canonical ?? null,
+      others,
+    },
+  });
+}
+
+function checkWriterAssetId(
+  asset: { assetId?: unknown; assetUrl?: unknown },
+  addIssue: (issue: ValidationIssue) => boolean
+): boolean {
+  if (typeof asset.assetId !== "string" || typeof asset.assetUrl !== "string") return true;
+  const expected = assetId(asset.assetUrl);
+  if (expected !== null && asset.assetId === expected) return true;
+  const message = expected === null
+    ? `assetId "${asset.assetId}" is not the UUID v5 of normalizeUrl(assetUrl), because "${asset.assetUrl}" is not eligible for normalizeUrl.`
+    : `assetId "${asset.assetId}" is not the UUID v5 of normalizeUrl("${asset.assetUrl}"). Expected ${expected}.`;
+  return addIssue({
+    severity: "error",
+    code: "ASSET_ID_MISMATCH",
+    message,
+    dataset: "assets",
+    details: { assetId: asset.assetId, assetUrl: asset.assetUrl, expected },
+  });
 }
 
 /**
@@ -986,15 +1202,21 @@ function validateManifestCounts(
  * part is uncompressed. Do not decompress Zstandard and do not recompress.
  * contentSha256 rolls those checksums up in UTF-8 path order. Spec 1.1
  * archives may also match en-US or Thai localeCompare order.
- * archiveSha256 and auditHash are not read.
+ * archiveSha256 and auditHash are not verified as ZIP hashes. A 1.2 or
+ * later atlasVersion must omit them.
  */
 async function verifyPartDigests(
   zip: ZipHandle,
   manifest: AtlasManifest,
-  addIssue: (issue: ValidationIssue) => boolean
+  addIssue: (issue: ValidationIssue) => boolean,
+  writerRules: boolean
 ): Promise<void> {
   const manifestAny = manifest as Record<string, any>;
-  const edition = integrityEdition(manifestAny);
+  // A 1.2+ atlasVersion uses byte order even when specVersion is still 1.1.
+  const edition = writerRules ? "1.2" : integrityEdition(manifestAny);
+  if (writerRules) {
+    reportDeprecatedIntegrityFields(manifestAny, addIssue);
+  }
   const declaredFiles = manifestAny.integrity?.files as Record<string, unknown> | undefined;
   const declaredDigest = manifestAny.integrity?.contentSha256;
   const hasFiles = !!declaredFiles && typeof declaredFiles === "object" && !Array.isArray(declaredFiles);
@@ -1093,8 +1315,27 @@ async function verifyPartDigests(
     return;
   }
 
+  const declared = String(declaredDigest).toLowerCase();
+  const byteOrder = contentSha256(actual, "utf8");
+  if (writerRules && declared !== byteOrder) {
+    const localeHits = (["en-US", "th"] as const).filter((locale) => {
+      const digest = contentSha256(actual, locale);
+      return digest === declared && digest !== byteOrder;
+    });
+    if (localeHits.length > 0) {
+      const orders = localeHits.map((locale) => `${locale} localeCompare`).join(" and ");
+      addIssue({
+        severity: "error",
+        code: "CONTENT_SHA256_LOCALE_ORDER",
+        message: `integrity.contentSha256 matches ${orders} path order and not UTF-8 byte order. A 1.2 or later archive accepts byte order only.`,
+        details: { declared: declaredDigest, byteOrder, locales: localeHits },
+      });
+      return;
+    }
+  }
+
   const accepted = acceptedContentDigests(actual, edition);
-  if (!accepted.includes(String(declaredDigest).toLowerCase())) {
+  if (!accepted.includes(declared)) {
     addIssue({
       severity: "error",
       code: "CONTENT_SHA256_MISMATCH",
@@ -1165,13 +1406,26 @@ function collectBlobRefIssues(
   dataset: string,
   blobPaths: Set<string>,
   addIssue: (issue: ValidationIssue) => boolean,
-  depth = 0
+  options: { writerRules: boolean; checkExists: boolean },
+  depth = 0,
+  fieldPath = ""
 ): boolean {
-  if (depth > 8 || value == null) return true;
+  if (depth > 12 || value == null) return true;
   if (typeof value === "string") {
     const parsed = parseBlobRef(value);
     if (!parsed) return true;
-    if (blobPaths.has(parsed.archivePath)) return true;
+    const ref = value.trim();
+    if (options.writerRules && ref === parsed.legacy) {
+      const where = fieldPath ? `${dataset}.${fieldPath}` : dataset;
+      if (!addIssue({
+        severity: "error",
+        code: "LEGACY_BLOB_REF",
+        message: `${where} uses the legacy blob ref spelling ${ref}. A 1.2 or later record uses ${parsed.canonical}.`,
+        dataset,
+        details: { field: fieldPath, ref, canonical: parsed.canonical },
+      })) return false;
+    }
+    if (!options.checkExists || blobPaths.has(parsed.archivePath)) return true;
     return addIssue({
       severity: "error",
       code: "BLOB_NOT_FOUND",
@@ -1181,14 +1435,20 @@ function collectBlobRefIssues(
     });
   }
   if (Array.isArray(value)) {
-    for (const item of value) {
-      if (!collectBlobRefIssues(item, dataset, blobPaths, addIssue, depth + 1)) return false;
+    for (let index = 0; index < value.length; index++) {
+      const childPath = fieldPath ? `${fieldPath}[${index}]` : `[${index}]`;
+      if (!collectBlobRefIssues(value[index], dataset, blobPaths, addIssue, options, depth + 1, childPath)) {
+        return false;
+      }
     }
     return true;
   }
   if (typeof value === "object") {
-    for (const child of Object.values(value as Record<string, unknown>)) {
-      if (!collectBlobRefIssues(child, dataset, blobPaths, addIssue, depth + 1)) return false;
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      const childPath = fieldPath ? `${fieldPath}.${key}` : key;
+      if (!collectBlobRefIssues(child, dataset, blobPaths, addIssue, options, depth + 1, childPath)) {
+        return false;
+      }
     }
   }
   return true;

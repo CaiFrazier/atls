@@ -2,7 +2,7 @@
 
 Specification package for the Atlas (`.atls`) archive format. It ships the Zod schemas, the generated JSON Schemas, the TypeScript types, and the helpers for URL identity, blob refs, and archive digests.
 
-The schema tag is `2026-09-04`. The spec contract is `1.3.0`. Archives stamped 1.1 and 1.2 stay valid. This package covers 22 datasets. Spec 1.3 is not published to npm.
+The schema tag is `2026-09-04`. The spec contract is `1.3.0`. The package version is `1.3.1`. Archives stamped 1.1 and 1.2 stay valid. This package covers 22 datasets. Package 1.3.1 is not published to npm.
 
 Install `@caifrazier/atls-spec`. The name `@atls/spec` is not published on npm.
 

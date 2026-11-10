@@ -25,6 +25,8 @@ These older declarations are informational. Readers ignore them when computing i
 
 The 1.1 writer wrote all three of the first group, and they contradicted each other. The function that produced `urlKey` was `append-unless-file`.
 
+`validate()` reports `TRAILING_SLASH_DECLARATION` when `atlasVersion` is 1.2 or later and the manifest has more than one trailing-slash declaration, any declaration other than `urlNormalization.trailing_slash`, or a `trailing_slash` value other than `append-unless-file`. A 1.1 archive may still carry the older fields. Readers still ignore those fields when computing identity.
+
 ---
 
 ## `normalizeUrl`
@@ -115,6 +117,8 @@ Producers, including importers, use this pair: `page_metadata.url` is the final 
 From spec 1.2, `assetId` is the UUID version 5 (RFC 4122) of the `normalizeUrl` result, in the URL namespace `6ba7b811-9dad-11d1-80b4-00c04fd430c8`. An asset URL that is not eligible for `normalizeUrl` has no spec 1.2 asset id.
 
 Spec 1.1 hashed the raw asset URL with the same namespace and did not normalize it. `https://example.com/a.png` and `https://example.com/a.png/` were different ids. In spec 1.2 they are the same id, because the normalizer drops the trailing slash on `.png`.
+
+Readers do not recompute a 1.1 `assetId`. `validate()` does when `atlasVersion` is 1.2 or later: the stored `assetId` must equal `assetId(assetUrl)`. A mismatch is `ASSET_ID_MISMATCH`.
 
 ---
 

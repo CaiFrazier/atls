@@ -33,7 +33,7 @@ The current-edition column is what this specification documents for archives sta
    manifest**. It names the dataset-schema edition. The reference reader copies it onto
    `describeArchive().schemaVersion` and does not branch on it.
 
-2. **The `@caifrazier/atls-spec` package version** (`1.3.0`, from `package.json`) is the npm
+2. **The `@caifrazier/atls-spec` package version** (`1.3.1`, from `package.json`) is the npm
    semver of the schema package. It is **not** written into archives.
 
 A reader must never use the spec package version to reason about an archive's layout — it isn't in
@@ -181,6 +181,25 @@ New 1.3 counters use null when the producer did not measure the count and 0 when
 zero. A missing key is not a zero. `skippedByReason` on the summary follows that rule. On a
 robots row, `responses429` and `responses5xx` follow it too, and they count the page responses
 received from that origin during the crawl. They do not count fetches of robots.txt.
+
+A writer that emits the `robots` dataset settles each origin's robots outcome, retries included,
+before fetching that origin's first page, and uses that copy for the rest of the crawl. The
+dataset has one row per origin. `frontier_ledger.matchedRobotsRule` stays a string. The
+recommended form is `<Directive>: <pattern>`, for example `Disallow: /cart`.
+
+The meanings of `robotsPolicy.mode`, `robotsPolicy.modeSource`, and `robotsPolicy.failClosed`
+stay stable across 1.3.x. The applied-body digest stays stable across 1.3.x. It is the hash in
+`robots.bodyBlobRef` when that ref stores the applied body. When `bodySource` is `lastGood`,
+that stored body is the last-good copy, so the digest is the `bodyBlobRef` hash.
+`lastGoodBodySha256` is a last-good digest that is not the stored body. A null `bodyBlobRef`
+means no body was stored, and that null does not depend on `fetchStatus`.
+
+`validate()` enforces the spec 1.2 writer rules when `atlasVersion` is 1.2 or later, including
+1.3. Those rules are: omit `integrity.archiveSha256` and `integrity.auditHash`; accept
+`contentSha256` only in UTF-8 byte order; reject the legacy `blobs/sha256/<2>/<2>/<hash>.zst`
+spelling in records; allow only `urlNormalization.trailing_slash` set to `append-unless-file`;
+and require `assetId` to be the UUID v5 of `normalizeUrl(assetUrl)`. An archive stamped 1.1 or
+earlier keeps the lenient checks. Blob readers still resolve the legacy spelling.
 
 ## 1.2 to 1.3
 

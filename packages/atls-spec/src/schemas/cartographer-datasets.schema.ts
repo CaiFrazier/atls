@@ -829,8 +829,9 @@ export const FrontierLedgerRecordV1Schema = z.object({
    */
   skipSource: z.enum(FRONTIER_SKIP_SOURCES).optional(),
   /**
-   * The Disallow pattern that matched, or null when no pattern was recorded.
-   * Optional so a 1.2 row that omits it still validates.
+   * The matched robots rule, or null when no rule was recorded.
+   * The recommended string is `<Directive>: <pattern>`, for example `Disallow: /cart`.
+   * Optional so a 1.2 row that omits it still validates. The field stays a string in spec 1.3.
    */
   matchedRobotsRule: z.string().nullable().optional(),
   depth: z.number().int().nonnegative().optional(),

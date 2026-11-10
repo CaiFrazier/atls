@@ -33,9 +33,15 @@
  * `lastGoodBodySha256` is a plain lowercase SHA-256 hex digest of a last-good
  * body that is not the body stored in `bodyBlobRef`. It is not a blob ref
  * and does not need to resolve in the archive. `bodyBlobRef` is the canonical
- * `sha256/<2>/<2>/<hash>` spelling, or null when no body is stored. The
- * legacy `blobs/.../<hash>.zst` spelling is not accepted here. `validate()`
- * checks that a non-null `bodyBlobRef` resolves.
+ * `sha256/<2>/<2>/<hash>` spelling, or null when no body is stored. A null
+ * `bodyBlobRef` means no body was stored, and that is independent of
+ * `fetchStatus`. The applied-body digest is the `bodyBlobRef` hash when that
+ * ref stores the applied body. When `bodySource` is `lastGood`, that stored
+ * body is the last-good copy. Those meanings stay stable across 1.3.x.
+ * The legacy `blobs/.../<hash>.zst` spelling is not accepted here. `validate()`
+ * checks that a non-null `bodyBlobRef` resolves, and on a 1.2 or later
+ * `atlasVersion` it also reports the legacy spelling. Blob readers still
+ * resolve that spelling.
  */
 
 import { z } from "zod";

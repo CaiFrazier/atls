@@ -17,10 +17,12 @@
     },
     {
       "file": "legacy-blob-ref.atls",
-      "valid": true,
-      "strictValid": true,
-      "errorCodes": [],
-      "note": "bodyBlobRef is blobs/sha256/<2>/<2>/<hash>.zst. Readers accept that spelling. The blob hash still matches."
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "LEGACY_BLOB_REF"
+      ],
+      "note": "Spec 1.2. responses.bodyBlobRef uses the legacy blobs/sha256/<2>/<2>/<hash>.zst spelling. getBlob() still reads that ref. validate() reports LEGACY_BLOB_REF."
     },
     {
       "file": "legacy-blob-ref-1.1.atls",
@@ -107,6 +109,58 @@
         "END_REASON_MISMATCH"
       ],
       "note": "endReason pageCap is present with completionReason finished. The map requires capped."
+    },
+    {
+      "file": "writer-deprecated-digest-1.2.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "INTEGRITY_DEPRECATED_FIELD"
+      ],
+      "note": "Spec 1.2 stamp. integrity.archiveSha256 and integrity.auditHash are present. Readers still do not treat them as a ZIP hash."
+    },
+    {
+      "file": "writer-locale-order-1.2.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "CONTENT_SHA256_LOCALE_ORDER"
+      ],
+      "note": "Spec 1.2 stamp. contentSha256 matches th localeCompare order of sitemap_urls and sitemaps, and not UTF-8 byte order. en-US localeCompare matches byte order for these paths."
+    },
+    {
+      "file": "writer-legacy-blob-ref-1.2.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "DATASET_SCHEMA_VIOLATION",
+        "LEGACY_BLOB_REF",
+        "LEGACY_BLOB_REF",
+        "LEGACY_BLOB_REF",
+        "LEGACY_BLOB_REF",
+        "LEGACY_BLOB_REF",
+        "LEGACY_BLOB_REF",
+        "LEGACY_BLOB_REF"
+      ],
+      "note": "Spec 1.2 stamp. Legacy blob refs on page screenshots, a tile src, responses.bodyBlobRef, reconstruction_index screenshot, favicon, and body refs, and robots.bodyBlobRef. The robots schema also rejects the non-canonical spelling. getBlob() still resolves the legacy spelling."
+    },
+    {
+      "file": "writer-trailing-slash-1.2.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "TRAILING_SLASH_DECLARATION"
+      ],
+      "note": "Spec 1.2 stamp. urlNormalization.trailing_slash is append-unless-file, and the manifest also declares remove_trailing_slash, trailing_slash_policy, urlNormalizationRules, and compareCompatibility.removeTrailingSlash."
+    },
+    {
+      "file": "writer-asset-id-1.2.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "ASSET_ID_MISMATCH"
+      ],
+      "note": "Spec 1.2 stamp. assetId is the UUID v5 of the raw asset URL, not of normalizeUrl(assetUrl)."
     }
   ]
 }
