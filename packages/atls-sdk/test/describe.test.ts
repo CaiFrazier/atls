@@ -76,6 +76,19 @@ describe("describeArchive", () => {
     expect(mystery.declaredRecordCount).toBeNull();
   });
 
+  it("does not report meta, schemas, or blobs as unexpected datasets", async () => {
+    for (const folder of ["meta", "schemas", "blobs"]) {
+      fixture = await createFixtureArchive({
+        unlistedDatasetParts: { dataset: folder, records: [{ k: 1 }] },
+      });
+      const description = await describeArchive(fixture.path);
+      expect(description.datasets.find((d) => d.name === folder || d.folder === folder)).toBeUndefined();
+      expect(description.datasets.some((d) => d.state === "unexpected")).toBe(false);
+      await fixture.cleanup();
+      fixture = null;
+    }
+  });
+
   it("reports declared-but-missing part files as corrupt", async () => {
     fixture = await createFixtureArchive({ omitPartFiles: ["responses"] });
     const description = await describeArchive(fixture.path);
@@ -137,6 +150,45 @@ describe("readDatasetSlice", () => {
     await expect(
       readDatasetSlice(fixture.path, "navigation", { cursor: '{"part":-1}' }),
     ).rejects.toThrow(/Invalid dataset cursor/);
+    await expect(
+      readDatasetSlice(fixture.path, "navigation", { cursor: '{"part":1.5,"line":0,"ordinal":0}' }),
+    ).rejects.toThrow(/Invalid dataset cursor/);
+    await expect(
+      readDatasetSlice(fixture.path, "navigation", {
+        cursor: `{"part":${Number.MAX_SAFE_INTEGER + 2},"line":0,"ordinal":0}`,
+      }),
+    ).rejects.toThrow(/Invalid dataset cursor/);
+  });
+
+  it("rejects a limit or maxBytes that is not a positive integer", async () => {
+    fixture = await createFixtureArchive();
+    await expect(readDatasetSlice(fixture.path, "navigation", { limit: 0 })).rejects.toThrow(
+      /limit must be a positive integer/,
+    );
+    await expect(readDatasetSlice(fixture.path, "navigation", { limit: 1.5 })).rejects.toThrow(RangeError);
+    await expect(readDatasetSlice(fixture.path, "navigation", { maxBytes: 0 })).rejects.toThrow(
+      /maxBytes must be a positive integer/,
+    );
+    await expect(readDatasetSlice(fixture.path, "navigation", { maxBytes: 1.2 })).rejects.toThrow(RangeError);
+  });
+
+  it("stops a slice at maxBytes and resumes at the unreturned row", async () => {
+    fixture = await createFixtureArchive({
+      corruptLines: { dataset: "page_metadata", lines: ['{"extra":1}', '{"extra":2}'] },
+    });
+    const first = await readDatasetSlice(fixture.path, "page_metadata", { limit: 1 });
+    const bytes = Buffer.byteLength(first.records[0]!.json, "utf8");
+    const bounded = await readDatasetSlice(fixture.path, "page_metadata", { limit: 100, maxBytes: bytes });
+    expect(bounded.records).toHaveLength(1);
+    expect(bounded.nextCursor).not.toBeNull();
+    const next = await readDatasetSlice(fixture.path, "page_metadata", {
+      cursor: bounded.nextCursor,
+      limit: 1,
+    });
+    expect(next.records[0]!.ordinal).toBe(1);
+    await expect(
+      readDatasetSlice(fixture.path, "page_metadata", { maxBytes: 1 }),
+    ).rejects.toMatchObject({ code: "ATLAS_RESOURCE_LIMIT" });
   });
 
   it("returns an empty slice for datasets with no parts", async () => {
@@ -180,6 +232,25 @@ describe("readSchema", () => {
   it("returns null when the archive carries no schema", async () => {
     fixture = await createFixtureArchive();
     expect(await readSchema(fixture.path, "page_metadata")).toBeNull();
+  });
+
+  it("falls back to manifest.schemas when the dataset declares no schema path", async () => {
+    fixture = await createFixtureArchive({
+      manifestSchemas: { performance: "schemas/performance.v1.schema.json" },
+    });
+    const result = await readSchema(fixture.path, "performance");
+    expect(result).not.toBeNull();
+    expect(result!.path).toBe("schemas/performance.v1.schema.json");
+    expect((result!.schema as { title?: string }).title).toBe("manifest.schemas");
+  });
+
+  it("prefers a dataset schema declaration over manifest.schemas", async () => {
+    fixture = await createFixtureArchive({
+      includeSchemas: true,
+      manifestSchemas: { page_metadata: "schemas/from-manifest.schema.json" },
+    });
+    const result = await readSchema(fixture.path, "page_metadata");
+    expect(result!.path).toBe("schemas/page_metadata.v1.schema.json");
   });
 });
 

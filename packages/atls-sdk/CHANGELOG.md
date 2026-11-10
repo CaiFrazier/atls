@@ -5,6 +5,11 @@
 Not published. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
 
 - `validate()` enforces the spec 1.2 writer rules when `atlasVersion` is 1.2 or later. Archives stamped 1.1 or earlier keep the previous checks.
+- `readDatasetSlice` accepts `maxBytes` (default 16 MiB). A slice stops before a row that would pass the cap and returns a cursor for that row. One row larger than the cap throws `AtlasResourceLimitError`. `limit` must be a positive integer and is still capped at 10,000.
+- Slice cursors require safe non-negative integers for `part`, `line`, and `ordinal`.
+- `validate({ maxIssues })` requires a positive integer.
+- `describeArchive` does not report `meta/`, `schemas/`, or `blobs/` as unexpected datasets.
+- `readSchema` uses `manifest.schemas` when the dataset entry does not name a schema path.
 - `INTEGRITY_DEPRECATED_FIELD`: `integrity.archiveSha256` or `integrity.auditHash` is present.
 - `CONTENT_SHA256_LOCALE_ORDER`: `integrity.contentSha256` matches `en-US` or `th` `localeCompare` path order and not UTF-8 byte order.
 - `LEGACY_BLOB_REF`: a record uses `blobs/sha256/<2>/<2>/<hash>.zst`. `getBlob`, `readBlob`, and `statBlob` still resolve that spelling.

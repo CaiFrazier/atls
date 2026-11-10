@@ -92,6 +92,11 @@ export type FixtureOptions = {
    */
   includeSchemas?: boolean;
   /**
+   * Dataset name → schema path stored on `manifest.schemas`. Each path is
+   * written as a stub schema. Used when the dataset entry has no schema_uri.
+   */
+  manifestSchemas?: Record<string, string>;
+  /**
    * Attach screenshot refs after the fixture blob id is known.
    * `canonical` is `sha256/<2>/<2>/<hash>`. `legacy` is `blobs/.../<hash>.zst`.
    */
@@ -394,6 +399,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
       redactInputs: true,
       redactPii: true,
     },
+    ...(options.manifestSchemas ? { schemas: options.manifestSchemas } : {}),
     summary: {
       total_pages: pageMetadataPart.recordCount,
       total_links: navigationPart.recordCount,
@@ -470,6 +476,15 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
         archive.append(
           JSON.stringify({ $id: `https://atls.dev/schemas/${dataset}.v1.schema.json`, type: "object" }),
           { name: `schemas/${dataset}.v1.schema.json` }
+        );
+      }
+    }
+
+    if (options.manifestSchemas) {
+      for (const schemaPath of Object.values(options.manifestSchemas)) {
+        archive.append(
+          JSON.stringify({ $id: `https://atls.dev/${schemaPath}`, type: "object", title: "manifest.schemas" }),
+          { name: schemaPath },
         );
       }
     }
