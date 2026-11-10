@@ -27,7 +27,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { ATLAS_DATASET_KEYS, ATLAS_SCHEMA_VERSION, AtlasManifestV1Schema } from "../src/index.js";
+import { ATLAS_DATASET_KEYS, ATLAS_SCHEMA_VERSION, ATLAS_SPEC_VERSION, AtlasManifestV1Schema } from "../src/index.js";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -79,6 +79,13 @@ const TAG_DOCS = [
 ];
 
 describe("spec drift guard", () => {
+  test("spec 1.2 is the documented contract and 1.1 archives stay valid", () => {
+    expect(ATLAS_SPEC_VERSION).toBe("1.2.0");
+    const versioning = readRepo("packages/atls-spec/docs/versioning.md");
+    expect(versioning).toContain("1.1 to 1.2");
+    expect(versioning).toContain(CURRENT_TAG_LINE);
+  });
+
   test("schemaVersion stays an open string and the documented tag is 2026-09-04", () => {
     expect(ATLAS_SCHEMA_VERSION).toBe("2026-09-04");
     const schemaVersion = AtlasManifestV1Schema.shape.schemaVersion as ZodLike;

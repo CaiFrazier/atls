@@ -12,12 +12,16 @@ _Verified against the dataset Zod schemas on 2026-11-10. Current schema tag: `20
 
 - **Casing:** dataset record fields are camelCase from schema tag `2026-07-01` onward, with the
   exceptions the schemas still spell in snake_case (notably `page_metadata.capture_degraded` and
-  `page_metadata.degraded_reason`). See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+  `page_metadata.degraded_reason`). Spec 1.2 does not rename keys. Spec 2.0 is the camelCase
+  target, and 1.x readers keep accepting the snake_case keys. See
+  [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 - **Join key:** every page-scoped record carries `pageId`. Where the schema uses
-  `z.string().uuid()`, any UUID version matches. Exceptions are called out per dataset — see
+  `z.string().uuid()`, any UUID version matches. Spec 1.2 writers use the versions in
   [identity-and-keys.md](./identity-and-keys.md).
-- **Presence:** the matrix below is the reference producer's policy, not a schema constraint. A
-  dataset that the matrix omits for a mode still validates if its record matches the Zod schema.
+- **Presence:** the matrix below is producer guidance, not a validity rule. A dataset the matrix
+  omits for a mode still validates if its record matches the Zod schema. The manifest must declare
+  `page_metadata` (`datasets.page_metadata`, or a non-empty `parts.page_metadata`). It may contain
+  zero records. Spec 1.2 does not turn the rest of the matrix into a schema constraint.
 
 ## Presence by render mode
 
@@ -55,7 +59,9 @@ Every emitted dataset now has a published Zod schema in `@caifrazier/atls-spec` 
 
 On-page SEO signals. Schema: `PageMetadataDatasetRecordV1Schema`. Key: `pageId` (`z.string().uuid()`).
 
-- `pageId` · `url` · `capturedAt` (ISO 8601) — root. `capturedAt` is required.
+- `pageId` · `url` · `capturedAt` (ISO 8601) — root. `capturedAt` is required. `url` is the
+  final URL after redirects. Identity for `urlKey` uses `normalizeUrl` of this URL. See
+  [url-identity.md](./url-identity.md).
 - `core` (object): `title`, `titleLength`, `metaDescription`, `descriptionLength`, `h1`,
   `canonicalTag`, `canonicalResolved`, `language`, `charset`, `favicon`, `viewport`, `themeColor`,
   `generator`. `canonicalTag` is the raw authored value. `canonicalResolved` is that href resolved
@@ -119,9 +125,12 @@ are optional so both kinds validate.
 
 - **Terminal rows** — the crawled request's final response, including `statusCode` `0` when no
   HTTP response was received. Producers set `encoding` and `bodyBlobRef` on these rows.
+  `page_metadata.url` matches this row's final URL. `responses.url` on this row is the URL that
+  was requested, which is the last hop, not the original request when a redirect happened.
 - **Redirect rows** — one row per intermediate 3xx hop, keyed by that hop's requested `url`.
   `isRedirect` is `true`, `statusCode` is the 3xx status, and `location` is the next hop.
   `redirectType` classifies the hop. These rows omit `encoding` and `bodyBlobRef`.
+  `finalUrl` on a redirect row is the terminal URL, not the hop URL.
 
 Fields:
 

@@ -15,8 +15,15 @@
  */
 
 import { openAtlas } from "./index.js";
-import { AtlasResourceLimitError } from "./reader.js";
-import type { AtlasReadLimits } from "./reader.js";
+import { AtlasResourceLimitError, decompressZstdBuffer, openZipHandle } from "./reader.js";
+import type { AtlasReadLimits, ZipHandle } from "./reader.js";
+import {
+  acceptedContentDigests,
+  integrityEdition,
+  isDatasetPartPath,
+  parseBlobRef,
+  sha256Hex,
+} from "@caifrazier/atls-spec";
 import {
   parseFormatVersion,
   SUPPORTED_FORMAT_MAJOR,
@@ -44,8 +51,6 @@ import {
   PageMetadataDatasetRecordV1Schema,
   AssetRecordSchema,
 } from "@caifrazier/atls-spec";
-
-const CANONICAL_BLOB_REF_RE = /^sha256\/[a-f0-9]{2}\/[a-f0-9]{2}\/[a-f0-9]{64}$/;
 
 /**
  * Validation issue severity levels
@@ -152,6 +157,13 @@ export interface ValidateOptions {
    * Defaults come from DEFAULT_ATLAS_READ_LIMITS.
    */
   limits?: Partial<AtlasReadLimits>;
+
+  /**
+   * Skip decompress-and-hash checks of blob entries, and skip the check that
+   * a blob reference resolves to an entry. Part checksums and contentSha256
+   * are still verified. Default false.
+   */
+  skipBlobVerification?: boolean;
 }
 
 /**
@@ -191,6 +203,7 @@ export async function validate(
     errorsOnly = false,
     strict = false,
     limits,
+    skipBlobVerification = false,
   } = options;
   
   const issues: ValidationIssue[] = [];
@@ -248,6 +261,21 @@ export async function validate(
     if (checkManifest) {
       validateManifestSchema(atlas.manifest, addIssue, { strict });
     }
+
+    // Phase 1b: part checksums, contentSha256, and blob hashes.
+    // archiveSha256 and auditHash are ignored.
+    const blobPaths = new Set<string>();
+    if (issues.length < maxIssues) {
+      const zip = await openZipHandle(atlsPath, { limits });
+      try {
+        await verifyPartDigests(zip, atlas.manifest, addIssue);
+        if (!skipBlobVerification) {
+          await verifyBlobEntries(zip, addIssue, blobPaths);
+        }
+      } finally {
+        zip.close();
+      }
+    }
     
     // Phase 2: Build page index for integrity checks
     const pageUrls = new Set<string>();
@@ -266,6 +294,9 @@ export async function validate(
       const pageUrl = typeof pageRecord.url === "string" ? pageRecord.url : "";
       if (pageUrl) {
         pageUrls.add(pageUrl);
+      }
+      if (!skipBlobVerification) {
+        collectBlobRefIssues(pageRecord, "page_metadata", blobPaths, addIssue);
       }
 
       if (issues.length >= maxIssues) break;
@@ -368,6 +399,9 @@ export async function validate(
           details: { assetUrl: asset.assetUrl, pageUrl: asset.pageUrl },
         });
       }
+      if (!skipBlobVerification) {
+        collectBlobRefIssues(asset, "assets", blobPaths, addIssue);
+      }
       
       if (issues.length >= maxIssues) break;
     }
@@ -421,6 +455,8 @@ export async function validate(
               dataset: name,
               record,
             });
+          } else if (!skipBlobVerification) {
+            collectBlobRefIssues(record, name, blobPaths, addIssue);
           }
           if (issues.length >= maxIssues) break;
         }
@@ -805,11 +841,11 @@ function validateCanonicalBlobRef(
     });
     return false;
   }
-  if (!CANONICAL_BLOB_REF_RE.test(value)) {
+  if (!parseBlobRef(value)) {
     addIssue({
       severity: "error",
       code: "STRICT_BLOB_REF_NON_CANONICAL",
-      message: `Strict mode: blob ref "${fieldName}" must use canonical format sha256/aa/bb/<64hex>`,
+      message: `Strict mode: blob ref "${fieldName}" must be sha256/<2>/<2>/<64 hex> or the legacy blobs/sha256/<2>/<2>/<64 hex>.zst spelling`,
       dataset,
       record,
       details: { field: fieldName, value },
@@ -864,4 +900,218 @@ function validateManifestCounts(
       details: { manifest: manifestAssets, actual: actual.assets },
     });
   }
+}
+
+/**
+ * Part checksums are SHA-256 of the ZIP entry payload (the bytes a ZIP reader
+ * returns). That payload is the Zstandard frame, or the raw JSONL when the
+ * part is uncompressed. Do not decompress Zstandard and do not recompress.
+ * contentSha256 rolls those checksums up in UTF-8 path order. Spec 1.1
+ * archives may also match en-US or Thai localeCompare order.
+ * archiveSha256 and auditHash are not read.
+ */
+async function verifyPartDigests(
+  zip: ZipHandle,
+  manifest: AtlasManifest,
+  addIssue: (issue: ValidationIssue) => boolean
+): Promise<void> {
+  const manifestAny = manifest as Record<string, any>;
+  const edition = integrityEdition(manifestAny);
+  const declaredFiles = manifestAny.integrity?.files as Record<string, unknown> | undefined;
+  const declaredDigest = manifestAny.integrity?.contentSha256;
+  const hasFiles = !!declaredFiles && typeof declaredFiles === "object" && !Array.isArray(declaredFiles);
+  const hasDigest = typeof declaredDigest === "string" && declaredDigest.trim().length > 0;
+  if (!hasFiles && !hasDigest && edition !== "1.2") {
+    return;
+  }
+
+  const actual: Record<string, string> = {};
+  for (const relativePath of zip.listEntries()) {
+    if (!isDatasetPartPath(relativePath)) {
+      continue;
+    }
+    const payload = await zip.readEntryBuffer(relativePath, undefined, zip.limits.maxPartCompressedBytes);
+    actual[relativePath] = sha256Hex(payload);
+  }
+
+  if (!hasFiles) {
+    if (edition === "1.2") {
+      addIssue({
+        severity: "error",
+        code: "PART_CHECKSUM_MISSING",
+        message: "Spec 1.2 archive is missing integrity.files",
+      });
+    }
+  } else {
+    for (const [relativePath, declared] of Object.entries(declaredFiles)) {
+      if (!isDatasetPartPath(relativePath)) {
+        if (!addIssue({
+          severity: "error",
+          code: "PART_CHECKSUM_UNEXPECTED",
+          message: `integrity.files key is not a dataset part path: ${relativePath}`,
+          details: { path: relativePath },
+        })) return;
+        continue;
+      }
+      if (!(relativePath in actual)) {
+        if (!addIssue({
+          severity: "error",
+          code: "PART_FILE_MISSING",
+          message: `integrity.files lists a part that is not in the archive: ${relativePath}`,
+          details: { path: relativePath },
+        })) return;
+        continue;
+      }
+      const expected = actual[relativePath]!;
+      if (typeof declared !== "string" || declared.toLowerCase() !== expected) {
+        if (!addIssue({
+          severity: "error",
+          code: "PART_CHECKSUM_MISMATCH",
+          message: `Part checksum does not match the stored bytes: ${relativePath}`,
+          details: { path: relativePath, expected, declared },
+        })) return;
+      }
+    }
+    for (const relativePath of Object.keys(actual)) {
+      if (!(relativePath in declaredFiles)) {
+        if (!addIssue({
+          severity: "error",
+          code: "PART_CHECKSUM_MISSING",
+          message: `Dataset part has no integrity.files checksum: ${relativePath}`,
+          details: { path: relativePath },
+        })) return;
+      }
+    }
+  }
+
+  const datasets = manifestAny.datasets as Record<string, any> | undefined;
+  if (datasets && typeof datasets === "object") {
+    for (const [datasetName, meta] of Object.entries(datasets)) {
+      const checksums = meta?.integrity?.checksums as Record<string, unknown> | undefined;
+      if (!checksums || typeof checksums !== "object") continue;
+      for (const [relativePath, declared] of Object.entries(checksums)) {
+        const expected = actual[relativePath];
+        if (!expected || typeof declared !== "string" || declared.toLowerCase() !== expected) {
+          if (!addIssue({
+            severity: "error",
+            code: "DATASET_CHECKSUM_MISMATCH",
+            message: `Dataset checksum does not match the stored part: ${relativePath}`,
+            dataset: datasetName,
+            details: { path: relativePath, expected, declared },
+          })) return;
+        }
+      }
+    }
+  }
+
+  if (!hasDigest) {
+    if (edition === "1.2") {
+      addIssue({
+        severity: "error",
+        code: "CONTENT_SHA256_MISSING",
+        message: "Spec 1.2 archive is missing integrity.contentSha256",
+      });
+    }
+    return;
+  }
+
+  const accepted = acceptedContentDigests(actual, edition);
+  if (!accepted.includes(String(declaredDigest).toLowerCase())) {
+    addIssue({
+      severity: "error",
+      code: "CONTENT_SHA256_MISMATCH",
+      message: edition === "1.2"
+        ? "integrity.contentSha256 does not match the part checksums in UTF-8 path order"
+        : "integrity.contentSha256 does not match the part checksums in UTF-8 path order or in 1.1 locale order",
+      details: { declared: declaredDigest, accepted },
+    });
+  }
+}
+
+/**
+ * Blob integrity is per blob: decompress the Zstandard frame, SHA-256 the
+ * uncompressed bytes, and compare to the hash in the path. Any Zstandard
+ * level is acceptable. `blobPaths` receives every blob entry path so record
+ * references can be resolved.
+ */
+async function verifyBlobEntries(
+  zip: ZipHandle,
+  addIssue: (issue: ValidationIssue) => boolean,
+  blobPaths: Set<string>
+): Promise<void> {
+  for (const relativePath of zip.listEntries()) {
+    if (!relativePath.startsWith("blobs/") || relativePath.endsWith("/")) {
+      continue;
+    }
+    blobPaths.add(relativePath);
+    const parsed = parseBlobRef(relativePath);
+    if (!parsed || parsed.archivePath !== relativePath) {
+      if (!addIssue({
+        severity: "error",
+        code: "BLOB_PATH_INVALID",
+        message: `Blob entry is not blobs/sha256/<2>/<2>/<64 hex>.zst: ${relativePath}`,
+        details: { path: relativePath },
+      })) return;
+      continue;
+    }
+    let uncompressed: Buffer;
+    try {
+      const compressed = await zip.readEntryBuffer(relativePath, undefined, zip.limits.maxBlobCompressedBytes);
+      uncompressed = decompressZstdBuffer(compressed, {
+        resource: relativePath,
+        maxBytes: zip.limits.maxBlobDecompressedBytes,
+      });
+    } catch (error) {
+      if (!addIssue({
+        severity: "error",
+        code: "BLOB_UNREADABLE",
+        message: `Blob could not be decompressed: ${relativePath}`,
+        details: { path: relativePath, error: error instanceof Error ? error.message : String(error) },
+      })) return;
+      continue;
+    }
+    const actual = sha256Hex(uncompressed);
+    if (actual !== parsed.hash) {
+      if (!addIssue({
+        severity: "error",
+        code: "BLOB_HASH_MISMATCH",
+        message: `Blob bytes do not match the hash in the path: ${relativePath}`,
+        details: { path: relativePath, expected: parsed.hash, actual },
+      })) return;
+    }
+  }
+}
+
+function collectBlobRefIssues(
+  value: unknown,
+  dataset: string,
+  blobPaths: Set<string>,
+  addIssue: (issue: ValidationIssue) => boolean,
+  depth = 0
+): boolean {
+  if (depth > 8 || value == null) return true;
+  if (typeof value === "string") {
+    const parsed = parseBlobRef(value);
+    if (!parsed) return true;
+    if (blobPaths.has(parsed.archivePath)) return true;
+    return addIssue({
+      severity: "error",
+      code: "BLOB_NOT_FOUND",
+      message: `Blob reference does not match an entry: ${parsed.archivePath}`,
+      dataset,
+      details: { path: parsed.archivePath, ref: value },
+    });
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!collectBlobRefIssues(item, dataset, blobPaths, addIssue, depth + 1)) return false;
+    }
+    return true;
+  }
+  if (typeof value === "object") {
+    for (const child of Object.values(value as Record<string, unknown>)) {
+      if (!collectBlobRefIssues(child, dataset, blobPaths, addIssue, depth + 1)) return false;
+    }
+  }
+  return true;
 }

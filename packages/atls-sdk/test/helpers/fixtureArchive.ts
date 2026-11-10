@@ -35,6 +35,8 @@ export type FixtureOptions = {
   nonCanonicalBlobRef?: boolean;
   /** Inject a non-canonical blob ref into the asset record's nested resourceHint.bodyBlobRef. */
   nonCanonicalAssetBlobRef?: boolean;
+  /** Put a string that is neither spelling into resourceHint.bodyBlobRef. */
+  invalidAssetBlobRef?: boolean;
   pageNullTitle?: boolean;
   formatVersionValue?: string;
   /** Override the specLevel written into the summary (1=raw, 2=prerender, 3=full). */
@@ -193,11 +195,11 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     visible: true,
     inViewport: true,
     wasLazyLoaded: false,
-    ...(options.nonCanonicalAssetBlobRef
+    ...(options.nonCanonicalAssetBlobRef || options.invalidAssetBlobRef
       ? {
           resourceHint: {
             resId: "00000000-0000-4000-8000-000000000001",
-            bodyBlobRef: `blobs/${blobRef}.zst`,
+            bodyBlobRef: options.invalidAssetBlobRef ? "not-a-blob-ref" : `blobs/${blobRef}.zst`,
           },
         }
       : {}),

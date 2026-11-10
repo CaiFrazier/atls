@@ -29,8 +29,13 @@ export * from './types/records/index.js';
 export * from './pageMetadataMapping.js';
 // Export the dataset registry shared by producers and readers
 export * from './datasetKeys.js';
-// Documented current schema tag (not a validation enum)
+// Documented current schema tag and spec 1.2 version constants
 export * from './edition.js';
+// Normative integrity, blob, URL identity, and id algorithms (spec 1.2)
+export * from './integrity.js';
+export * from './blobs.js';
+export * from './urlIdentity.js';
+export * from './ids.js';
 
 // Export Zod schemas and types
 export * from './schemas/index.js';

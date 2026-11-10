@@ -60,6 +60,7 @@ const result = await validate('./crawl.atls', {
   checkBrokenLinks: true,
   checkManifest: true,
   strict: false,
+  skipBlobVerification: false,
 });
 
 console.log(result.valid);

@@ -43,17 +43,20 @@ pnpm --filter @caifrazier/atls-spec test
 The comprehensive, code-verified format spec lives in [`SPECIFICATION.md`](./SPECIFICATION.md)
 (the index) and [`docs/`](./docs/):
 
-- [Archive Structure](./docs/archive-structure.md) — ZIP layout, root files, dataset parts, blobs
-- [Storage & Encoding](./docs/storage-and-encoding.md) — JSONL, Zstandard, blob addressing, hashing
-- [Identity & Keys](./docs/identity-and-keys.md) — `pageId` join model, per-dataset keys
-- [Versioning & Compatibility](./docs/versioning.md) — version axes, `specLevel`, compat rules
-- [Root Metadata Files](./docs/root-files.md) — manifest / summary / capabilities / provenance fields
-- [Dataset Reference](./docs/datasets.md) — all 21 datasets, every field, presence-by-mode
-- [Schema System](./docs/schema-system.md) — Zod source, codegen, coverage gaps
-- [Reading Archives](./docs/reading-archives.md) — how to read an archive
+- [Storage & Encoding](./docs/storage-and-encoding.md): JSONL, Zstandard, blob addressing, `contentSha256`
+- [Identity & Keys](./docs/identity-and-keys.md): `pageId` join model, per-dataset keys
+- [URL Identity](./docs/url-identity.md): `normalizeUrl`, `urlKey`, trailing slash, redirect rows
+- [Versioning & Compatibility](./docs/versioning.md): version axes, spec 1.2, 1.1 to 1.2
+- [Root Metadata Files](./docs/root-files.md): manifest / summary / capabilities / provenance fields
+- [Dataset Reference](./docs/datasets.md): all 21 datasets, every field, presence-by-mode
+- [Schema System](./docs/schema-system.md): Zod source, codegen, coverage gaps
+- [Reading Archives](./docs/reading-archives.md): how to read an archive
+- [Changelog](./CHANGELOG.md): spec 1.2
 
-The current schema tag is `2026-09-04` (`ATLAS_SCHEMA_VERSION`). Decisions deferred from this
-edition are in [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md).
+The current schema tag is `2026-09-04` (`ATLAS_SCHEMA_VERSION`). The spec contract is `1.2.0`
+(`ATLAS_SPEC_VERSION`). Decisions for this edition are in
+[`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md). Conformance archives are in
+[`conformance/`](../../conformance/README.md).
 
 ## Notes
 

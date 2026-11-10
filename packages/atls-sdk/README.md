@@ -12,7 +12,8 @@ Primary exports:
 
 - `openAtlas(atlsPath, options?)`
 - `select(atlsPath, options)`
-- `validate(atlsPath, options)`
+- `validate(atlsPath, options)` (`skipBlobVerification` skips blob hashes)
+- `normalizeUrl`, `urlKey`, `assetId`, `contentSha256`
 - `diffManifests` / `formatManifestDiff`, `buildCrossModeIndex`
 - Low-level: `readManifest`, `readSummary`, `iterateParts`, `readBlob`, `openZipHandle`
 - `MalformedRecordError`
