@@ -101,7 +101,7 @@ export function datasetPresent(manifest: AtlasManifest, datasetName: string): bo
     if (coverageEntry.present) {
       return true;
     }
-    // BUG-0224 (2026-07-04): coverage matrix is camelCase post-recase; the
+    // Coverage matrix is camelCase after the 2026-07-04 recase; the
     // snake fallback reads archives written before that date.
     const rowCount = coverageEntry.rowCount
       ?? (coverageEntry as unknown as { row_count?: number }).row_count;

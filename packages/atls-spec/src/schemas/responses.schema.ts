@@ -26,7 +26,7 @@ import { z } from 'zod';
  * Stores raw HTML response bodies in blob storage for offline replay.
  * Essential for recomputing SEO signals, accessibility audits, and diffs.
  *
- * Two kinds of row share this schema (BUG-0258):
+ * Two kinds of row share this schema:
  *  - Terminal rows — the crawled request's final response (2xx/4xx/5xx, or the
  *    statusCode-0 "no response" sentinel). These always carry a body: `encoding`
  *    and `bodyBlobRef` are present. The producer guarantees this at the write
@@ -46,7 +46,7 @@ export const ResponseRecordV1Schema = z.object({
   // ===== Request / Response Metadata =====
   url: z.string().describe('Requested URL'),
   finalUrl: z.string().describe('Final URL after redirects'),
-  // BUG-0126: bounded. min(0), not min(100) — the producer legitimately emits
+  // Bounded. min(0), not min(100). The producer legitimately emits
   // statusCode 0 as a "no HTTP response" sentinel (BlobStore.ts writeResponseBody
   // `metadata?.statusCode ?? 0`; WARC import falls back to 0 for unparseable
   // status lines). Real HTTP statuses are 100-599; 0 means none was received.
@@ -57,7 +57,7 @@ export const ResponseRecordV1Schema = z.object({
   fromCache: z.boolean().optional().describe('Whether the response was served from cache'),
   redirectChain: z.array(z.string()).optional().describe('Redirect chain (if any)'),
   redirectChainLength: z.number().optional().describe('Number of redirect hops'),
-  // ===== Redirect rows (BUG-0258) =====
+  // ===== Redirect rows =====
   // Present on rows that represent a single 3xx hop of a redirect chain, keyed
   // by the hop's requested `url`. Terminal (non-redirect) rows omit these.
   isRedirect: z.boolean().optional().describe('True when this row is a single 3xx redirect hop (no body captured)'),
@@ -83,12 +83,12 @@ export const ResponseRecordV1Schema = z.object({
 
   // ===== Encoding =====
   // Optional so redirect (3xx hop) rows, which capture no body, can omit it.
-  // The producer sets it on every terminal row (BUG-0258).
+  // The producer sets it on every terminal row.
   encoding: z.string().optional().describe('Character encoding (e.g., "utf-8", "iso-8859-1"); absent on redirect hop rows'),
 
   // ===== Blob Reference =====
   // Optional so redirect (3xx hop) rows, which capture no body, can omit it.
-  // The producer sets it on every terminal row (BUG-0258).
+  // The producer sets it on every terminal row.
   bodyBlobRef: z.string().optional().describe('Reference to HTML body in blob storage (e.g., "sha256/ab/cd/abcd..."); absent on redirect hop rows'),
 
   // ===== Rendered DOM (full mode only) =====

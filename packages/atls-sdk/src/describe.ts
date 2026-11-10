@@ -20,7 +20,7 @@
  *
  * Everything here returns PLAIN DATA with JSON-serializable cursors. Nothing
  * accepts callbacks, so these APIs can sit directly behind an IPC boundary
- * (Continuum daemon → renderer) without an in-process predicate crossing it.
+ * for a long-running reader, without an in-process predicate crossing it.
  */
 
 import {

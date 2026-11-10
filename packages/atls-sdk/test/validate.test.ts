@@ -318,7 +318,7 @@ describe("SDK validate() truncation", () => {
   test("BUG-0247: a truncated run is never valid — it is indeterminate", async () => {
     // brokenLinkArchive emits at least one WARNING (EDGE_BROKEN_LINK) and no
     // errors, so maxIssues:1 deterministically exhausts the cap on a warning —
-    // the exact BUG-0247 shape: errors could hide past the cap, so a clean
+    // the exact truncated shape: errors could hide past the cap, so a clean
     // count must NOT read as valid. (validArchive is useless here: it yields
     // zero issues, never truncates, and would silently test nothing.)
     const result = await validate(brokenLinkArchive.path, {

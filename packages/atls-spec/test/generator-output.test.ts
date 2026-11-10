@@ -15,7 +15,7 @@
  */
 
 /**
- * Generator Output Check (BUG-0232)
+ * Generator output check.
  *
  * Regenerates the JSON Schema files and asserts none of them contain a bare
  * empty-object subschema (`{}`, i.e. "accept anything") — the symptom of the
@@ -34,9 +34,9 @@ const schemasDir = join(__dirname, '../dist/schemas');
 /**
  * Datasets with a known, unrelated source of `{}` — a genuine `z.unknown()`
  * field (not JsonValueSchema recursion), which has no better JSON Schema
- * representation. Tracked as a separate follow-up, not part of BUG-0232.
+ * representation. Tracked as a separate follow-up.
  *
- * BUG-0125 (2026-07-04): manifest.v1 dropped from 11 empty-object regions to
+ * On 2026-07-04, manifest.v1 dropped from 11 empty-object regions to
  * 2 after its nine `z.record(z.unknown())` sub-objects were typed — the two
  * that remain (`packs` entries, `compareCompatibility`) are deliberately
  * free-form.
@@ -78,7 +78,7 @@ describe('JSON Schema generator output (BUG-0232)', () => {
       const emptyCount = countEmptyObjectSubschemas(parsed);
 
       if (KNOWN_UNKNOWN_FIELD_RESIDUALS.has(name)) {
-        // Not part of BUG-0232's scope (JsonValueSchema recursion) — these
+        // Outside the recursive JsonValueSchema check. These
         // come from genuine z.unknown() fields. Flagged as a follow-up.
         expect(emptyCount).toBeGreaterThan(0);
       } else {
@@ -88,7 +88,7 @@ describe('JSON Schema generator output (BUG-0232)', () => {
   }
 });
 
-// BUG-0233 (residual): the {}-subschema check above never proved the generated
+// The empty-object subschema check above never proved the generated
 // files are actually VALID JSON Schema — a structurally broken schema (bad
 // $ref, malformed keyword) would ship silently. Ajv-compile every generated
 // file; a fresh Ajv instance per schema avoids cross-file $id collisions.

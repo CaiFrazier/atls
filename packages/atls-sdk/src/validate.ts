@@ -75,14 +75,14 @@ export interface ValidationIssue {
 export interface ValidationResult {
   /**
    * True only when the archive was fully checked and no errors were found.
-   * BUG-0247: a truncated run can find zero errors merely because it stopped
+   * A truncated run can find zero errors merely because it stopped
    * early, so `valid` is never true while `truncated` (see `indeterminate`).
    */
   valid: boolean;
   /**
-   * BUG-0247: the run hit the issue cap before finishing, found no errors *so
-   * far*, but cannot vouch for the unchecked remainder. Neither valid nor
-   * invalid — the caller must treat the archive as unverified.
+   * The run hit the issue cap before finishing, found no errors so
+   * far, but cannot vouch for the unchecked remainder. Neither valid nor
+   * invalid: the caller must treat the archive as unverified.
    */
   indeterminate: boolean;
   issues: ValidationIssue[];
@@ -305,7 +305,7 @@ export async function validate(
     // Phase 2.5: Build a url -> statusCode index from responses, for the
     // broken-link check in Phase 3. page_metadata records carry no
     // statusCode field of their own — status only lives in the responses
-    // dataset. (BUG-0055/BUG-0231: checkBrokenLinks previously read
+    // dataset. (checkBrokenLinks previously read
     // pageRecord.statusCode, a field canonical page_metadata records never
     // have, so it was permanently a no-op.)
     const pageStatusCodes = new Map<string, number>();
@@ -465,7 +465,7 @@ export async function validate(
         // archive. A throw here therefore means it could not be read/decompressed
         // (e.g. a truncated or corrupt part) — that must be surfaced, not
         // silently treated as "absent". Otherwise validate() certifies corrupt
-        // archives as valid. (BUG-0026 / audit C-14)
+        // archives as valid.
         addIssue({
           severity: "error",
           code: "DATASET_UNREADABLE",
@@ -478,8 +478,8 @@ export async function validate(
     // Records that could not be parsed were silently skipped during the lenient
     // reads above (e.g. truncated/corrupt dataset parts) and only tallied in
     // atlas.stats.corruptedRecordCount. Surface them — otherwise validate()
-    // certifies a corrupt archive as valid. (BUG-0054 / audit S-22, and the
-    // lenient-mode complement to the DATASET_UNREADABLE catch above / C-14)
+    // certifies a corrupt archive as valid. This is the
+    // lenient-mode complement to the DATASET_UNREADABLE catch above.
     if (atlas.stats.corruptedRecordCount > 0) {
       addIssue({
         severity: "error",
@@ -532,7 +532,7 @@ export async function validate(
     atlas?.close();
   }
   
-  // BUG-0247: a truncated run only checked part of the archive, so "no errors
+  // A truncated run only checked part of the archive, so "no errors
   // found" is inconclusive, not a pass. Report it as indeterminate and refuse
   // to claim validity.
   const indeterminate = truncated && stats.errorsFound === 0;
@@ -679,7 +679,7 @@ function validateManifestSchema(
       const totalPages = coverage.total_pages ?? coverage.totalPages;
       const totalEdges = coverage.total_edges ?? coverage.totalEdges;
       const totalAssets = coverage.total_assets ?? coverage.totalAssets;
-      // BUG-0224/BUG-0245 (2026-07-04): cartographer's coverage block is now
+      // As of 2026-07-04, the producer's coverage block is now
       // camelCase and emits pagesWithErrors — included in the fallback chain
       // alongside the legacy snake spellings.
       const totalErrors = coverage.total_errors ?? coverage.totalErrors ?? coverage.pagesWithErrors ?? coverage.pages_with_errors;
@@ -694,7 +694,7 @@ function validateManifestSchema(
 /**
  * Validate page record schema
  *
- * BUG-0055/BUG-0136/BUG-0231: previously hand-rolled truthy checks on a
+ * Previously, hand-rolled truthy checks on a
  * handful of fields (url/finalUrl/statusCode/depth — none of which exist on
  * canonical page_metadata records, since those checks predate the nested
  * core/indexing/social format). Replaced with the real
@@ -734,8 +734,8 @@ function validatePageSchema(
 /**
  * Validate asset record schema
  *
- * BUG-0055/BUG-0136/BUG-0231: replaced hand-rolled truthy checks (which had
- * drifted stale — e.g. ASSET_INVALID_TYPE only allowed "image"/"video" even
+ * Replaced hand-rolled truthy checks (which had
+ * drifted stale, for example ASSET_INVALID_TYPE only allowed "image"/"video" even
  * though the current AssetTypeEnum also permits "audio"/"document") with the
  * real `@caifrazier/atls-spec` Zod schema, matching every other dataset in this file.
  */

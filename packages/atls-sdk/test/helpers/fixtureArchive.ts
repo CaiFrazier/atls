@@ -54,7 +54,7 @@ export type FixtureOptions = {
   /** Omit the required `social` field from page_metadata, to exercise schema-violation handling. */
   pageMissingSocial?: boolean;
   /**
-   * BUG-0123(c): write the listed datasets as ZERO-record parts — still listed
+   * Write the listed datasets as zero-record parts, still listed
    * in manifest.parts (so presence holds and reads route through the streaming
    * path and its blank-line skip, not the presence early-return) but with an
    * empty part file and recordCount 0. Summary totals are derived from actual
@@ -62,7 +62,7 @@ export type FixtureOptions = {
    */
   emptyDatasets?: string[];
   /**
-   * BUG-0114: place part FILES under the short alias folders
+   * Place part files under the short alias folders
    * (`pages/`, `edges/` — see DATASET_FOLDER_ALIASES in src/index.ts) while
    * manifest `datasets`/`parts` KEYS stay the long names. This layout forces
    * the readers' alias-folder fallback.
@@ -236,12 +236,12 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     bodyBlobRef: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
   };
 
-  // BUG-0114: with aliasFolders, the part FILES live under the short alias
-  // folders while all manifest keys stay the long names — see FixtureOptions.
+  // With aliasFolders, the part files live under the short alias
+  // folders while all manifest keys stay the long names. See FixtureOptions.
   const folderFor = (dataset: string): string =>
     options.aliasFolders ? (DATASET_FOLDER_ALIASES[dataset] ?? dataset) : dataset;
 
-  // BUG-0123(c): emptied datasets keep their part file and manifest listing
+  // Emptied datasets keep their part file and manifest listing
   // but carry zero records.
   const emptied = new Set(options.emptyDatasets ?? []);
   const recordsFor = (dataset: string, records: unknown[]): unknown[] =>

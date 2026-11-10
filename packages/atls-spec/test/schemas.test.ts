@@ -373,7 +373,7 @@ describe('flattenPageMetadataRecord', () => {
   });
 });
 
-// BUG-0128: quarantine records previously had NO Zod schema anywhere — the
+// Quarantine records previously had no Zod schema anywhere. The
 // dataset shipped in archives with a dangling schemaRef and no validatable shape.
 describe('QuarantineRecordV1Schema (BUG-0128)', () => {
   const validRecord = {
@@ -416,8 +416,8 @@ describe('QuarantineRecordV1Schema (BUG-0128)', () => {
   });
 });
 
-// BUG-0133: flattenPageMetadataRecord's flat-passthrough branch used to cast
-// ANY object straight through as FlatPageMetadata — `{foo: 1}` compiled and
+// flattenPageMetadataRecord's flat-passthrough branch used to cast
+// any object straight through as FlatPageMetadata. `{foo: 1}` compiled and
 // flowed downstream as a "page". Garbage now throws a typed shape error.
 describe('flattenPageMetadataRecord shape guard (BUG-0133)', () => {
   test('throws PageMetadataShapeError on garbage input', async () => {

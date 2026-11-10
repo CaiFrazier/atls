@@ -15,7 +15,7 @@
  */
 
 /**
- * BUG-0114: archives that store part files only under the short alias folders
+ * Archives that store part files only under the short alias folders
  * (`pages/`, `edges/`) must still yield through the long-name readers. Manifest
  * keys stay the long names. These fixtures force that fallback.
  */
