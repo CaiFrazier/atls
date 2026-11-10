@@ -23,8 +23,8 @@ import {
 } from "../src/compatibility.js";
 
 /**
- * BUG-0134: `compatibility.minSdkVersion` (capabilities.v1.json) had ZERO
- * consumers — archives requiring a newer SDK silently opened in older ones.
+ * `compatibility.minSdkVersion` (capabilities.v1.json) had no
+ * consumers. Archives requiring a newer SDK silently opened in older ones.
  */
 describe("SDK compatibility enforcement (BUG-0134)", () => {
   const caps = (minSdkVersion: string) => ({ compatibility: { minSdkVersion, breakingChanges: [] } });

@@ -63,7 +63,7 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'extraction.v1', schema: schemas.ExtractionDatasetRecordV1Schema },
   { name: 'frontier_ledger.v1', schema: schemas.FrontierLedgerRecordV1Schema },
   { name: 'reconstruction_index.v1', schema: schemas.ReconstructionIndexRecordV1Schema },
-  // BUG-0128: quarantine records now have a published schema. It documents the
+  // Quarantine records now have a published schema. It documents the
   // shape and ships in archives, but the producer deliberately does NOT enforce
   // it at the write gate (a quarantine record failing validation would have
   // nowhere to go).
@@ -88,7 +88,7 @@ export async function generateJSONSchemas(): Promise<void> {
     try {
       const jsonSchema = zodToJsonSchema(schema, {
         name,
-        // BUG-0232: 'none' forces full inlining, which cannot represent the
+        // 'none' forces full inlining, which cannot represent the
         // genuinely recursive JsonValue union (json-value.schema.ts) and
         // degrades every recursion point to a bare `{}` (accept-anything).
         // 'root' (the library default) instead emits a self-referential

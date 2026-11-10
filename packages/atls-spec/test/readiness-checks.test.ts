@@ -85,7 +85,7 @@ describe("Atlas Public Readiness Checks", () => {
     }
   });
 
-  test("no file contains proprietary and confidential headers", async () => {
+  test("no file contains proprietary or confidential headers", async () => {
     const specDir = path.join(ROOT_DIR, "packages/atls-spec");
     const sdkDir = path.join(ROOT_DIR, "packages/atls-sdk");
 
@@ -95,17 +95,19 @@ describe("Atlas Public Readiness Checks", () => {
       (f) => !f.endsWith("readiness-checks.test.ts")
     );
 
+    const privateHeader = /\b(?:proprietary|confidential)\b/i;
+
     for (const filePath of allTsFiles) {
       const content = await fs.readFile(filePath, "utf-8");
       const relativePath = path.relative(ROOT_DIR, filePath);
       expect(
-        content.toLowerCase().includes("proprietary and confidential"),
-        `File ${relativePath} must not contain 'Proprietary and confidential'.`
+        privateHeader.test(content),
+        `File ${relativePath} must not contain a proprietary or confidential header.`
       ).toBe(false);
     }
   });
 
-  test("no file leaks the real client domain drancich.com", async () => {
+  test("no file contains absolute local paths", async () => {
     const specDir = path.join(ROOT_DIR, "packages/atls-spec");
     const sdkDir = path.join(ROOT_DIR, "packages/atls-sdk");
 
@@ -115,12 +117,15 @@ describe("Atlas Public Readiness Checks", () => {
       (f) => !f.endsWith("readiness-checks.test.ts")
     );
 
+    // Machine-local absolute paths: macOS and Linux home directories, and Windows user profiles.
+    const absoluteLocalPath = /\/Users\/|\/home\/|[A-Za-z]:[\\/]Users[\\/]/;
+
     for (const filePath of allTsFiles) {
       const content = await fs.readFile(filePath, "utf-8");
       const relativePath = path.relative(ROOT_DIR, filePath);
       expect(
-        content.toLowerCase().includes("drancich.com"),
-        `File ${relativePath} must not contain 'drancich.com'.`
+        absoluteLocalPath.test(content),
+        `File ${relativePath} must not contain an absolute local path.`
       ).toBe(false);
     }
   });

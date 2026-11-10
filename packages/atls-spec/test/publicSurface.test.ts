@@ -15,7 +15,7 @@
  */
 
 /**
- * Public API Surface Guard (BUG-0234)
+ * Public API surface guard.
  *
  * EngineConfig/CrawlConfig (the crawl engine's internal tuning surface —
  * concurrency, retries, proxy rotation, etc.) were removed from this public

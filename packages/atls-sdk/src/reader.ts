@@ -105,7 +105,7 @@ export class MalformedRecordError extends Error {
   }
 }
 
-// BUG-0229: typed errors for the previously stringly-typed `throw new Error(...)` sites in the
+// Typed errors for the previously stringly-typed `throw new Error(...)` sites in the
 // read path, so consumers can branch on a stable `.code` instead of matching message substrings.
 // Messages are kept byte-identical to the pre-existing throws for backward compatibility.
 
@@ -437,7 +437,7 @@ export class ZipHandle {
     try {
       await handle.indexEntries();
     } catch (err) {
-      // BUG-0073: the zipfile is opened with autoClose:false, so a failed index
+      // The zipfile is opened with autoClose:false, so a failed index
       // pass (e.g. corrupt central directory) would otherwise leak its file
       // descriptor. Close it before propagating the error.
       closeZipFile(zipfile);
@@ -578,7 +578,7 @@ export class ZipHandle {
     }
     assertKnownSizeWithinLimit(fileName, entry.uncompressedSize, maxBytes);
 
-    // BUG-0110/BUG-0111: stream directly from the already-open zipfile using the
+    // Stream directly from the already-open zipfile using the
     // entry indexed at open time. Previously every read reopened the archive from
     // disk and linear-scanned its entries (O(K×E)), and openEntryStream buffered
     // the whole entry before wrapping it in Readable.from([payload]).
@@ -641,7 +641,7 @@ async function* streamPartFile(
   checkAbort(options.signal);
 
   if (!fileName.toLowerCase().endsWith(".zst")) {
-    // BUG-0111: stream uncompressed parts line-by-line with bounded memory
+    // Stream uncompressed parts line-by-line with bounded memory
     // instead of buffering the entire part before yielding.
     const readStream = await handle.openEntryStream(fileName, options.signal, handle.limits.maxPartDecompressedBytes);
     yield* streamUtf8Lines(readStream, options.signal, handle.limits.maxJsonlLineBytes, fileName);
@@ -788,7 +788,7 @@ export async function* iterateDataset(
   dataset: DatasetName,
   options: IterateDatasetOptions = {}
 ): AsyncIterable<string> {
-  // Thin alias for iterateParts (BUG-0241): both stream a dataset's part files line by line.
+  // Thin alias for iterateParts: both stream a dataset's part files line by line.
   // Kept as a named export for API stability; delegates to avoid the byte-identical duplicate.
   yield* iterateParts(atlsPath, dataset, options);
 }

@@ -254,7 +254,6 @@ violations/passes/incomplete/inapplicable), `auditEngine {name, version}`, `wcag
 
 > Known issue: `contrastViolations` over-reports (~87% false positives) because the detector
 > ignores transparent backgrounds and mis-pairs foreground color. Prefer `axe` contrast rules.
-> Tracked as **BUG-0013**.
 
 ---
 

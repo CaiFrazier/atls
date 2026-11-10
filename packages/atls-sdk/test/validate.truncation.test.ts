@@ -19,7 +19,7 @@ import { validate } from "../src/validate.js";
 import { createFixtureArchive, type FixtureArchive } from "./helpers/fixtureArchive.js";
 
 /**
- * Regression coverage for BUG-0026 (audit C-14) + BUG-0054 (audit S-22):
+ * Regression coverage for unreadable and corrupt records:
  * validate() opens archives leniently and used to never surface records that
  * could not be parsed (truncated/corrupt dataset parts), certifying corrupt
  * archives as valid. It must now fail loud.

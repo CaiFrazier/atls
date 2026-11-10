@@ -47,7 +47,7 @@ export const ResourceRecordV1Schema = z.object({
   // ===== Content Addressing =====
   // Optional: the 'dimensions' image-capture policy doesn't fetch/hash the body,
   // so no hash is available. Required+regex here previously quarantined every
-  // dimensions-only image resource record as schema-invalid (BUG-0185).
+  // dimensions-only image resource record as schema-invalid.
   hashBodySha256: z.string().regex(/^[a-f0-9]{64}$/).optional().describe('SHA-256 hash of resource body, when the body was fetched and hashed'),
   bodyBlobRef: z.string().optional().describe('Reference to resource body in blob storage'),
 

@@ -24,7 +24,7 @@ import { DOMSnapshotRecordV1Schema } from "./dom_snapshot.schema.js";
 
 const RenderModeEnum = z.enum(["raw", "import", "prerender", "full"]);
 const NavEndReasonEnum = z.enum(["fetch", "load", "networkidle", "timeout", "error"]);
-// BUG-0126: exported so the navigation dataset schema can share the same enums
+// Exported so the navigation dataset schema can share the same enums
 // instead of accepting any string.
 export const EdgeLocationEnum = z.enum(["nav", "header", "footer", "aside", "main", "other", "unknown"]);
 const AssetTypeEnum = z.enum(["image", "video", "audio", "document"]);
@@ -78,7 +78,7 @@ const SourceSchema = z.object({
   type: z.string().optional(),
 });
 
-// BUG-0143: exported so cartographer-datasets.schema.ts can build a
+// Exported so cartographer-datasets.schema.ts can build a
 // ScreenshotReference-shaped schema (string | tiled object) for the
 // page_metadata dataset's media.screenshots field, reusing this definition
 // instead of redeclaring it.
@@ -224,7 +224,7 @@ export const AssetRecordSchema = z
   })
   .passthrough();
 
-/** Zod-inferred asset record type (BUG-0124 single source of truth). */
+/** Zod-inferred asset record type. The schema is the single source of truth. */
 export type AssetRecordV1 = z.infer<typeof AssetRecordSchema>;
 
 export const ErrorRecordSchema = z

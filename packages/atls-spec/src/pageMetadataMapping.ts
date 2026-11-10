@@ -35,7 +35,7 @@
  *    Defined below in this file.
  *    Shape: Flat — all fields at the top level, matching what downstream apps expect.
  *    Produced by: `flattenPageMetadataRecord()` adapter in this module.
- *    Consumers: app-foundation, Horizon, any SDK user calling `readers.pageMetadata()`.
+ *    Consumers: a consumer calling `readers.pageMetadata()`.
  *
  * 3. **PageRecord** interface (in-memory composite)
  *    Defined in `types.ts`.
@@ -168,8 +168,8 @@ export interface FlatPageMetadata {
     totalBytes?: number;
   };
 
-  // BUG-0133: the former `[key: string]: unknown` index signature is GONE —
-  // it erased compile-time safety (any typo'd property access compiled).
+  // The former `[key: string]: unknown` index signature is gone.
+  // It erased compile-time safety (any mistyped property access compiled).
   // Passthrough extras from core/indexing are still present at runtime; read
   // them via an explicit cast, e.g. `(flat as FlatPageMetadataWithExtras).x`.
 }
@@ -181,8 +181,8 @@ export interface FlatPageMetadata {
 export type FlatPageMetadataWithExtras = FlatPageMetadata & Record<string, unknown>;
 
 /**
- * BUG-0133: thrown when a record handed to `flattenPageMetadataRecord()` is
- * neither nested-shaped nor a plausible flat page_metadata record — previously
+ * Thrown when a record handed to `flattenPageMetadataRecord()` is
+ * neither nested-shaped nor a plausible flat page_metadata record. Previously
  * such garbage was cast straight through as `FlatPageMetadata`.
  */
 export class PageMetadataShapeError extends Error {
@@ -214,8 +214,8 @@ export function flattenPageMetadataRecord(
   const hasNestedShape = raw.core != null && typeof raw.core === "object" && !Array.isArray(raw.core);
 
   if (!hasNestedShape) {
-    // BUG-0133: the flat-passthrough branch used to cast ANY object straight
-    // through — `{foo: 1}` became a "FlatPageMetadata". Require the identity
+    // The flat-passthrough branch used to cast any object straight
+    // through. `{foo: 1}` became a "FlatPageMetadata". Require the identity
     // core (pageId/page_id + url) before passing a legacy flat record along.
     const pageId = raw.pageId ?? raw.page_id;
     if (typeof pageId !== "string" || typeof raw.url !== "string") {

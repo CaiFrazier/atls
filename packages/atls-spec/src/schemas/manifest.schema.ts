@@ -105,7 +105,7 @@ export const AtlasManifestV1Schema = z
     datasetId: z.string().optional(),
     crawlId: z.string().optional(),
     mode: z.enum(['raw', 'import', 'prerender', 'full']).optional(),
-    // BUG-0134: atlasVersion was a free string nothing validated. Historical
+    // atlasVersion was a free string nothing validated. Historical
     // emitted values: "1.0", "1.1" (RC2); "v1" appears in older validators.
     atlasVersion: z.string().regex(/^v?\d+(\.\d+)?$/, 'atlasVersion must look like "1.1" (or legacy "v1")'),
     formatVersion: z.string(),
@@ -126,7 +126,7 @@ export const AtlasManifestV1Schema = z
       .optional(),
 
     packs: z.array(z.record(z.unknown())).optional(),
-    // BUG-0125: these sub-objects were all z.record(z.unknown()) — the TS
+    // These sub-objects were all z.record(z.unknown()). The TS
     // AtlasManifest fully typed them but the Zod schema validated nothing.
     // Typed here mirroring the interface; .passthrough() keeps forward-compat.
     identity: z.object({
@@ -254,9 +254,9 @@ export const AtlasManifestV1Schema = z
         overrideUsed: z.boolean(),
       }).passthrough(),
     }).passthrough().optional(),
-    // BUG-0224/BUG-0245: camelCase coverage subtree (recased 2026-07-04) with
+    // CamelCase coverage subtree (recased 2026-07-04) with
     // the totals the SDK's strict validate requires. Archives written earlier
-    // carry snake keys — schema-level readers should dual-read.
+    // carry snake keys. Schema-level readers should dual-read.
     coverage: z.object({
       matrix: z.array(z.object({
         part: z.string(),
