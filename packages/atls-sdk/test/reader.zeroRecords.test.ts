@@ -15,7 +15,7 @@
  */
 
 /**
- * BUG-0123(c): zero-record datasets had no fixture coverage — a dataset that
+ * Zero-record datasets had no fixture coverage. A dataset that
  * is PRESENT (listed in manifest.parts, part file on disk) but genuinely
  * empty (e.g. a crawl that discovered no assets) exercises the streaming
  * path's blank-line handling rather than the presence early-return, and must

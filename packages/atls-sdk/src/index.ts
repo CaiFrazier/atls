@@ -305,10 +305,10 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
     const readerStats: AtlasReaderStats = { corruptedRecordCount: 0 };
     const manifest = await readManifest(zipHandle);
     enforceFormatVersionSupport(manifest);
-    // BUG-0134: the archive's declared SDK floor (capabilities.v1.json
+    // The archive's declared SDK floor (capabilities.v1.json
     // compatibility.minSdkVersion) was never consumed anywhere. Warn-only
-    // here — opening an old/foreign archive must not hard-fail on a metadata
-    // hint; callers wanting enforcement use assertCompatible() explicitly.
+    // here: opening an old or foreign archive must not hard-fail on a metadata
+    // hint. Callers wanting enforcement use assertCompatible() explicitly.
     try {
       const capabilities = await zipHandle.readJson("capabilities.v1.json");
       const compat = checkCompatible(capabilities);

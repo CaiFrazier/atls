@@ -806,7 +806,7 @@ export interface EdgeRecord {
 /**
  * AssetRecord - Media asset on a page
  */
-// BUG-0124: single source of truth — alias to the Zod-inferred type.
+// Single source of truth: alias to the Zod-inferred type.
 // RC2 camelCase cutover (2026-06-25): canonical keys are now `pageId`/`assetId`; the
 // guard flips to forbid the OLD snake `page_id`/`asset_id` so a regression is a compile error.
 export type AssetRecord = AssetRecordV1 & { page_id?: never; asset_id?: never };
@@ -847,7 +847,7 @@ export interface RecordMeta {
 /**
  * AccessibilityRecord - Native Cartographer accessibility extract
  *
- * BUG-0124 + BUG-0127: single source of truth — alias to the Zod-inferred type.
+ * Single source of truth: alias to the Zod-inferred type.
  * The `axe`/`formControls`/`focusOrder` shapes were ported into
  * AccessibilityDatasetRecordV1Schema (previously loose `z.record(JsonValue)`), so
  * this alias preserves full type detail instead of degrading consumers.
@@ -924,10 +924,10 @@ export interface AxeAccessibilityRecord {
 /**
  * ErrorRecord - Crawl error
  */
-// BUG-0124: single source of truth — pipeline_failures + pipeline_alerts share this
+// Single source of truth: pipeline_failures and pipeline_alerts share this
 // shape (PipelineAlertRecordV1Schema === PipelineFailureRecordV1Schema). Alias to the
 // Zod-inferred type so it can never drift from the schema. `details` is
-// Record<string,JsonValue> (no undefined) — build it via jsonSafe() at call sites.
+// Record<string,JsonValue> (no undefined). Build it via jsonSafe() at call sites.
 export type ErrorRecord = PipelineFailureRecordV1;
 
 // ============================================================================
@@ -955,7 +955,7 @@ export interface FrontierLedgerRecord {
 /**
  * SitemapRecord - Per-sitemap fetch/parse outcome for forensic sitemap discovery auditing.
  */
-// BUG-0124: single source of truth — alias to the Zod-inferred type so the schema
+// Single source of truth: alias to the Zod-inferred type so the schema
 // and this type can never drift, and Zod renames propagate to all consumers.
 export type SitemapRecord = SitemapDatasetRecordV1;
 
@@ -997,7 +997,7 @@ export type SitemapCoverage = 'absent' | 'failed' | 'partial' | 'complete';
  * 
  * @since Atlas 1.0
  */
-// BUG-0124 + BUG-0127: single source of truth — alias to the Zod-inferred type.
+// Single source of truth: alias to the Zod-inferred type.
 // rate_limit/challenge/resource_usage shapes were ported into EventRecordV1Schema.
 export type EventRecord = EventRecordV1;
 
@@ -1145,7 +1145,7 @@ export interface ComputedTextNodeRecord {
  */
 export type AccessibilityEngineMode = "cartographer" | "axe" | "hybrid";
 
-// BUG-0234: EngineConfig (the crawl engine's internal tuning surface — render,
+// EngineConfig (the crawl engine's internal tuning surface: render,
 // discovery, proxy/retry, CLI knobs) was moved out of this public package into
 // the cartographer engine repo, since it's not part of the Atlas archive
 // format and had no internal usage here. CrawlEvent's "crawl.started" variant
@@ -1687,11 +1687,11 @@ export interface AtlasManifest {
   };
   
   // Coverage matrix
-  // BUG-0224 (2026-07-04): recased camelCase — the last snake_case seam
+  // Recased to camelCase on 2026-07-04, the last snake_case seam
   // post-RC2. Archives written before this date carry the snake spellings
-  // (total_pages, row_count, …); readers should dual-read both.
-  // BUG-0245: totalEdges/totalAssets added (the SDK's strict validate always
-  // required them but the producer never emitted them).
+  // (total_pages, row_count, and similar); readers should dual-read both.
+  // totalEdges and totalAssets were added because the SDK's strict validate
+  // always required them, but the producer never emitted them.
   coverage?: {
     matrix: Array<{
       part: string;               // Dataset key (e.g. "navigation", "page_metadata", "security")

@@ -55,8 +55,8 @@ export const PageMetadataDatasetRecordV1Schema = z.object({
     descriptionLength: z.number().int().nonnegative().optional(),
     h1: z.string().optional(),
     canonicalTag: z.string().optional(),
-    // BUG-0140: the canonical tag's href resolved to an ABSOLUTE URL against
-    // the page's base URL — `canonicalTag` is the raw as-authored value (may
+    // The canonical tag's href resolved to an absolute URL against
+    // the page's base URL. `canonicalTag` is the raw as-authored value (may
     // be relative), `canonicalResolved` is what it actually points at.
     canonicalResolved: z.string().optional(),
     language: z.string().optional(),
@@ -88,7 +88,7 @@ export const PageMetadataDatasetRecordV1Schema = z.object({
     preconnect: z.array(z.string()).optional(),
     dnsPrefetch: z.array(z.string()).optional(),
   }).optional(),
-  // BUG-0143: screenshot/favicon blob refs were captured at write time
+  // Screenshot and favicon blob refs were captured at write time
   // (ArtifactWriter's internal pageRecord.media) but never persisted into the
   // archived page_metadata record, so reconstruction_index's join to them was
   // always reading a field that never existed. Additive, non-breaking.
@@ -129,8 +129,8 @@ const NavigationEdgeSchema = z.object({
   relTokens: z.array(z.string()).optional(),
   nofollow: z.boolean().optional(),
   isExternal: z.boolean().optional(),
-  // BUG-0126: shares EdgeRecordSchema's enums instead of accepting any string —
-  // the writer (extractors/navigation.ts, AssetProcessor.ts) emits only these
+  // Shares EdgeRecordSchema's enums instead of accepting any string.
+  // The writer (extractors/navigation.ts, AssetProcessor.ts) emits only these
   // values, verified against source before tightening.
   location: EdgeLocationEnum.optional(),
   linkType: LinkTypeEnum.optional(),
@@ -386,7 +386,7 @@ export const StructuredDataDatasetRecordV1Schema = z.object({
 export const TechnologyDatasetRecordV1Schema = z.object({
   pageId: z.string().uuid(),
   url: z.string().url(),
-  // BUG-0126: was z.array(z.record(JsonValue)) — accept-anything. The producer
+  // Was z.array(z.record(JsonValue)), which accepted anything. The producer
   // (extractors/wappalyzer.ts) always emits {name, categories, version?} plus
   // extras (confidence/website/icon), preserved via passthrough.
   detectedTechnologies: z.array(z.object({
@@ -517,7 +517,7 @@ export const PerformanceDatasetRecordV1Schema = z.object({
 });
 
 export const PipelineFailureRecordV1Schema = z.object({
-  // BUG-0131: optional — fetch/render-phase failures occur before a page UUID
+  // Optional. Fetch and render-phase failures occur before a page UUID
   // is assigned; write-phase failures carry it. Join by url; pageId when present.
   pageId: z.string().uuid().optional(),
   url: z.string(),
@@ -550,8 +550,8 @@ export const EventRecordV1Schema = z.object({
     queueDepth: z.number().int().nonnegative().optional(),
     concurrentRequests: z.number().int().nonnegative().optional(),
   }).strict().optional(),
-  // BUG-0127/0124: rich shapes ported from the EventRecord interface (were loose
-  // z.record(JsonValue) — which also caused recursive-reference generator warnings).
+  // Rich shapes ported from the EventRecord interface. They were loose
+  // z.record(JsonValue), which also caused recursive-reference generator warnings.
   rateLimit: z.object({
     host: z.string(),
     statusCode: z.number().int().optional(),
@@ -574,7 +574,7 @@ export const EventRecordV1Schema = z.object({
   }).optional(),
 });
 
-// ── Axe accessibility result (BUG-0127: rich types, was z.record(JsonValue)) ──
+// ── Axe accessibility result (rich types; previously z.record(JsonValue)) ──
 // Ported from the AxeAccessibilityRecord interface so the schema is the single
 // source of truth and consumers keep full type detail. Objects are non-strict so
 // axe-core's extra fields don't fail validation (writeAccessibility validates as a
@@ -808,7 +808,7 @@ export const ExtractionDatasetRecordV1Schema = z.object({
 });
 
 export const FrontierLedgerRecordV1Schema = z.object({
-  // BUG-0131: optional — discovery accounting is URL-keyed; a pageId exists
+  // Optional. Discovery accounting is URL-keyed; a pageId exists
   // only for URLs that were actually visited/captured.
   pageId: z.string().uuid().optional(),
   url: z.string(),
@@ -822,7 +822,7 @@ export const FrontierLedgerRecordV1Schema = z.object({
 });
 
 /**
- * Quarantine dataset (BUG-0128): records that failed write-time schema
+ * Quarantine dataset: records that failed write-time schema
  * validation, preserved verbatim for forensic analysis. Deliberately NOT
  * enforced at the producer's write gate — a quarantine record that itself
  * failed validation would have nowhere to go. `pageId` is a plain string

@@ -15,7 +15,7 @@
  */
 
 /**
- * SDK compatibility enforcement (BUG-0134).
+ * SDK compatibility enforcement.
  *
  * Archives declare `compatibility.minSdkVersion` in `capabilities.v1.json`
  * (see CompatibilitySchema in @caifrazier/atls-spec). Until this module, NOTHING ever
