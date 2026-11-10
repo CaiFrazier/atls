@@ -25,8 +25,8 @@ for await (const page of atlas.readers.pageMetadata()) {
   console.log(page.url);
 }
 
-for await (const edge of atlas.readers.navigation()) {
-  console.log(edge.sourceUrl, edge.targetUrl);
+for await (const navigation of atlas.readers.navigation()) {
+  for (const edge of navigation.edges) console.log(navigation.sourceUrl, edge.targetUrl);
 }
 ```
 

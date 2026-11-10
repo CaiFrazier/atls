@@ -37,8 +37,8 @@ _Verified against the dataset Zod schemas on 2026-11-10. Current schema tag: `20
 | `pipeline_failures` | ✓ | ✓ | ✓ | `pageId?` | Zod |
 | `pipeline_alerts` | ✓ | ✓ | ✓ | `pageId?` | Zod |
 | `quarantine` | ✓* | ✓* | ✓* | `quarantineId` | Zod |
-| `structured_data` | — | ✓ | ✓ | `pageId` | Zod |
-| `security` | — | ✓ | ✓ | `pageId` | Zod |
+| `structured_data` | ✓ | ✓ | ✓ | `pageId` | Zod |
+| `security` | ✓ | ✓ | ✓ | `pageId` | Zod |
 | `accessibility` | ✓ (base) | ✓ (+forms/focus) | ✓ (+wcag/axe) | `pageId` | Zod |
 | `performance` | — | ✓ | ✓ | `pageId` | Zod |
 | `render_state` | — | — | ✓ | `pageId` | Zod |
@@ -175,7 +175,7 @@ convention is not a schema constraint.
 ## structured_data
 
 Schema.org and social markup. Schema: `cartographer-datasets.schema.ts` (`StructuredDataDatasetRecordV1Schema`). Key: `pageId`.
-Present in prerender/full.
+Present in raw, prerender, and full.
 
 - `pageId` · `url` · `capturedAt`.
 - `jsonLd[]`: `{ id, type, payload, source, graphPointer?, diagnosticIds?, validationIssues[] }`.
@@ -214,7 +214,7 @@ Detected stack. Schema: `TechnologyDatasetRecordV1Schema` (the record itself is 
 ## security
 
 Transport and third-party posture. Schema: `SecurityDatasetRecordV1Schema`. Key:
-`pageId`. Present in prerender/full.
+`pageId`. Present in raw, prerender, and full.
 
 - `pageId` · `url` · `capturedAt`.
 - `mixedContent`: `hasIssues`, `resources[] {url, type, severity (active\|passive)}`.

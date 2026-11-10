@@ -18,15 +18,16 @@ The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/
 import { openAtlas } from "@caifrazier/atls-sdk";
 
 const atlas = await openAtlas("./crawl.atls");
+try {
+  console.log(atlas.manifest.atlasVersion);
+  console.log([...atlas.datasets]);
 
-console.log(atlas.manifest.atlasVersion);
-console.log([...atlas.datasets]);
-
-for await (const page of atlas.readers.pageMetadata()) {
-  console.log(page.url);
+  for await (const page of atlas.readers.pageMetadata()) {
+    console.log(page.url);
+  }
+} finally {
+  atlas.close();
 }
-
-atlas.close();
 ```
 
 `openAtlas` is strict by default. A record that is not valid JSON, or that fails the schema for `assets`, `responses`, or `resources`, throws `MalformedRecordError`. Pass `{ strict: false }` to skip those records and count them on `atlas.stats.corruptedRecordCount`.
@@ -44,13 +45,16 @@ Dataset readers include `pageMetadata()`, `navigation()`, `responses()`, `sitema
 import { openAtlas } from "@caifrazier/atls-sdk";
 
 const atlas = await openAtlas("./crawl.atls");
-for await (const response of atlas.readers.responses()) {
-  if (response.bodyBlobRef) {
-    const html = await atlas.getBlob(response.bodyBlobRef);
-    console.log(html.byteLength);
+try {
+  for await (const response of atlas.readers.responses()) {
+    if (response.bodyBlobRef) {
+      const html = await atlas.getBlob(response.bodyBlobRef);
+      console.log(html.byteLength);
+    }
   }
+} finally {
+  atlas.close();
 }
-atlas.close();
 ```
 
 ## Screenshot refs
