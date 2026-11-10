@@ -22,3 +22,18 @@
  * an older tag remains valid. Do not use this value to reject archives.
  */
 export const ATLAS_SCHEMA_VERSION = "2026-09-04" as const;
+
+/**
+ * Specification contract version documented by this edition (`manifest.specVersion`).
+ * Archives stamped 1.1.0 stay valid. See docs/versioning.md.
+ */
+export const ATLAS_SPEC_VERSION = "1.2.0" as const;
+
+/**
+ * Container version a spec 1.2 writer stamps in `manifest.formatVersion`.
+ * Readers accept every `1.x` container.
+ */
+export const ATLAS_FORMAT_VERSION = "1.2.0" as const;
+
+/** Public Atlas line a spec 1.2 writer stamps in `manifest.atlasVersion`. */
+export const ATLAS_VERSION = "1.2" as const;

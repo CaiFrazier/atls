@@ -68,10 +68,9 @@ for p in pages:
 
 Key points:
 
-- Use the **long** dataset directory names (`page_metadata`, `navigation`, …). See
-  [datasets.md](./datasets.md). The reference reader also accepts `pages`, `edges`, and
-  `failed_pages` as aliases and prefers the long directory when both exist. Producers of this
-  edition write the long names. Manifest keys stay the long names.
+- Use the **long** dataset directory names (`page_metadata`, `navigation`, …). Writers must use
+  those names. The reference reader also accepts `pages`, `edges`, and `failed_pages` as a
+  fallback and prefers the long directory when both exist. Manifest keys stay the long names.
 - Join across datasets on **`pageId`**, not `url`. See [identity-and-keys.md](./identity-and-keys.md).
 - Read **all** parts in a directory and concatenate. The reference reader accepts
   `*.jsonl.zst` and uncompressed `*.jsonl`.
@@ -85,8 +84,10 @@ def read_blob(z, blobRef):
     return subprocess.run(["zstd","-d","-","--stdout"], input=data, capture_output=True).stdout
 ```
 
-Validate that `blobRef` matches `sha256/<2>/<2>/<64hex>` before treating it as an internal path —
-see [storage-and-encoding.md](./storage-and-encoding.md).
+Resolve `sha256/<2>/<2>/<64 hex>` by reading `blobs/<ref>.zst`. Also accept a reference that
+already includes `blobs/` and `.zst`. Decompress, SHA-256 the uncompressed bytes, and compare
+to the hash in the path. A value that is not that shape may be a live URL. See
+[storage-and-encoding.md](./storage-and-encoding.md).
 
 ---
 

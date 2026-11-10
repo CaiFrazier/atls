@@ -26,6 +26,7 @@ let invalidArchive: FixtureArchive;
 let missingFormatVersionArchive: FixtureArchive;
 let nonCanonicalBlobRefArchive: FixtureArchive;
 let nonCanonicalAssetBlobRefArchive: FixtureArchive;
+let invalidAssetBlobRefArchive: FixtureArchive;
 let pageNullTitleArchive: FixtureArchive;
 let zeroMajorFormatVersionArchive: FixtureArchive;
 let brokenLinkArchive: FixtureArchive;
@@ -37,6 +38,7 @@ beforeAll(async () => {
   missingFormatVersionArchive = await createFixtureArchive({ omitFormatVersion: true });
   nonCanonicalBlobRefArchive = await createFixtureArchive({ nonCanonicalBlobRef: true });
   nonCanonicalAssetBlobRefArchive = await createFixtureArchive({ nonCanonicalAssetBlobRef: true });
+  invalidAssetBlobRefArchive = await createFixtureArchive({ invalidAssetBlobRef: true });
   pageNullTitleArchive = await createFixtureArchive({ pageNullTitle: true });
   zeroMajorFormatVersionArchive = await createFixtureArchive({ formatVersionValue: "0.9.0" });
   // The single page's own navigation edge self-links to pageUrl; a 404
@@ -51,6 +53,7 @@ afterAll(async () => {
   await missingFormatVersionArchive?.cleanup();
   await nonCanonicalBlobRefArchive?.cleanup();
   await nonCanonicalAssetBlobRefArchive?.cleanup();
+  await invalidAssetBlobRefArchive?.cleanup();
   await pageNullTitleArchive?.cleanup();
   await zeroMajorFormatVersionArchive?.cleanup();
   await brokenLinkArchive?.cleanup();
@@ -252,7 +255,7 @@ describe("SDK validate()", () => {
     expect(result.valid).toBe(false);
   });
 
-  test("strict mode enforces canonical blob ref format", async () => {
+  test("strict mode accepts the legacy blob ref spelling", async () => {
     const result = await validate(nonCanonicalBlobRefArchive.path, {
       strict: true,
       checkIntegrity: false,
@@ -260,13 +263,10 @@ describe("SDK validate()", () => {
     });
 
     const blobIssues = result.issues.filter((i) => i.code === "STRICT_BLOB_REF_NON_CANONICAL");
-    expect(blobIssues.length).toBeGreaterThan(0);
-    expect(result.valid).toBe(false);
+    expect(blobIssues).toEqual([]);
   });
 
-  test("strict mode enforces canonical blob ref on the nested asset resourceHint", async () => {
-    // Regression guard: the asset blob ref lives at resourceHint.bodyBlobRef, not at the
-    // top level. A top-level lookup silently validates nothing (the original bug).
+  test("strict mode accepts the legacy blob ref on the nested asset resourceHint", async () => {
     const result = await validate(nonCanonicalAssetBlobRefArchive.path, {
       strict: true,
       checkIntegrity: false,
@@ -276,7 +276,21 @@ describe("SDK validate()", () => {
     const assetBlobIssues = result.issues.filter(
       (i) => i.code === "STRICT_BLOB_REF_NON_CANONICAL" && i.dataset === "assets",
     );
+    expect(assetBlobIssues).toEqual([]);
+  });
+
+  test("strict mode rejects a blob ref that is neither spelling, including on the nested asset", async () => {
+    const result = await validate(invalidAssetBlobRefArchive.path, {
+      strict: true,
+      checkIntegrity: false,
+      checkBrokenLinks: false,
+    });
+
+    const assetBlobIssues = result.issues.filter(
+      (i) => i.code === "STRICT_BLOB_REF_NON_CANONICAL" && i.dataset === "assets",
+    );
     expect(assetBlobIssues.length).toBeGreaterThan(0);
+    expect(result.valid).toBe(false);
   });
 
   test("strict mode forbids null for non-nullable optional fields", async () => {

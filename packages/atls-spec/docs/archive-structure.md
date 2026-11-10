@@ -88,9 +88,10 @@ Full field references are in [root-files.md](./root-files.md).
 
 Each dataset directory uses a long name from `ATLAS_DATASET_KEYS` (`packages/atls-spec/src/datasetKeys.ts`).
 The reference reader also accepts `pages` for `page_metadata`, `edges` for `navigation`, and
-`failed_pages` for `pipeline_failures`, and prefers the long directory when both exist. Manifest
-keys stay the long names. The producer presence matrix is in [datasets.md](./datasets.md). It is
-not a schema constraint.
+`failed_pages` for `pipeline_failures`, and prefers the long directory when both exist. Those
+short names are a reader fallback only. Writers must use the long names. Manifest keys stay the
+long names. The producer presence matrix is in [datasets.md](./datasets.md). It is not a validity
+rule, except that the manifest must declare `page_metadata`.
 
 Each dataset directory contains one or more **part files**:
 
@@ -104,10 +105,12 @@ Each dataset directory contains one or more **part files**:
 - Each compressed part is Zstandard-compressed JSON Lines — one JSON record per line.
 - Read **all** parts in a directory and concatenate the records. Blank lines are skipped.
 
-`manifest.json` lists part paths under `parts` and may list digests under
-`datasets.<name>.integrity.checksums`. The byte range of those digests is not specified in this
-edition. Consult `manifest.datasets` for presence rather than assuming a directory exists. A
-producer may omit a directory that has no records.
+`manifest.json` lists part paths under `parts` and lists digests under `integrity.files` and
+`datasets.<name>.integrity.checksums`. Each digest is the SHA-256 of that part's stored ZIP
+payload. `integrity.contentSha256` rolls those checksums up in UTF-8 path order. See
+[storage-and-encoding.md](./storage-and-encoding.md). Consult `manifest.datasets` for presence
+rather than assuming a directory exists. A producer may omit a directory that has no records.
+The manifest must still declare `page_metadata`.
 
 ---
 
@@ -120,10 +123,10 @@ SHA-256:
 blobs/sha256/<first-2-hex>/<next-2-hex>/<full-64-hex>.zst
 ```
 
-For example `blobs/sha256/ab/cd/abcd…ef.zst`. Records reference a blob by a field such as
-`responses.bodyBlobRef`, whose value is the path tail `sha256/ab/cd/abcd…ef`. Identical content
-is stored once and referenced by many records. The reference reader does not recompute the digest.
-See [storage-and-encoding.md](./storage-and-encoding.md).
+For example `blobs/sha256/ab/cd/abcd…ef.zst`. The canonical record reference is the path tail
+`sha256/ab/cd/abcd…ef`. Readers also accept `blobs/sha256/ab/cd/abcd…ef.zst`. Verification
+decompresses the entry and checks SHA-256 against the hash in the path. See
+[storage-and-encoding.md](./storage-and-encoding.md).
 
 ---
 

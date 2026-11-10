@@ -151,12 +151,13 @@ Dataset names are canonicalized, so legacy aliases also resolve.
 
 ```ts
 interface ValidateOptions {
-  checkIntegrity?: boolean;   // default true — edges/assets reference valid pages
-  checkBrokenLinks?: boolean; // default true — internal edges to 4xx/5xx → warnings
-  checkManifest?: boolean;    // default true — manifest vs actual data
-  maxIssues?: number;         // default 1000 — stop collecting after N
-  errorsOnly?: boolean;       // default false — skip warnings
-  strict?: boolean;           // default false — enforce spec-level manifest requirements
+  checkIntegrity?: boolean;   // default true. Edges and assets reference real pages.
+  checkBrokenLinks?: boolean; // default true. Internal edges to 4xx/5xx are warnings.
+  checkManifest?: boolean;    // default true. Manifest counts versus records read.
+  maxIssues?: number;         // default 1000. Stop collecting after N issues.
+  errorsOnly?: boolean;       // default false. Skip warnings.
+  strict?: boolean;           // default false. Full manifest fields, blob-ref spelling, no nulls.
+  skipBlobVerification?: boolean; // default false. Skip decompress-and-hash of blobs.
 }
 
 interface ValidationResult {
@@ -184,11 +185,15 @@ const result = await validate("./crawl.atls", { strict: false });
 console.log(result.valid, result.stats.errorsFound, result.stats.warningsFound);
 ```
 
-> `validate()` schema-checks the datasets listed in
-> [schema-system.md](../../atls-spec/docs/schema-system.md). It does not open `quarantine`,
-> `reconstruction_index`, or `frontier_ledger`. `checkIntegrity` checks references, not digests.
-> `strict` here defaults to false. `openAtlas({ strict })` defaults to true and means something
-> else: throw on a malformed record.
+> `validate()` checks part checksums, `contentSha256`, and blob hashes, then schema-checks the
+> datasets listed in [schema-system.md](../../atls-spec/docs/schema-system.md). It ignores
+> `archiveSha256` and `auditHash`. `skipBlobVerification` skips blob hashes only. It does not
+> open `quarantine`, `reconstruction_index`, or `frontier_ledger`. `checkIntegrity` checks
+> references. `strict` here defaults to false. `openAtlas({ strict })` defaults to true and means
+> something else: throw on a malformed record.
+
+`normalizeUrl`, `urlKey`, `assetId`, and `contentSha256` are exported from this package. They
+implement spec 1.2. See [url-identity.md](../../atls-spec/docs/url-identity.md).
 
 ---
 
