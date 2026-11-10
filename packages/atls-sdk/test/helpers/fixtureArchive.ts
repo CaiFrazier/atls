@@ -58,14 +58,12 @@ export type FixtureOptions = {
    */
   emptyDatasets?: string[];
   /**
-   * BUG-0114: place part FILES under the newer-format alias folders
-   * (`pages/`, `edges/` — see NEWER_FORMAT_FOLDER_MAP in src/index.ts) while
-   * manifest `datasets`/`parts` KEYS stay canonical. This is the layout that
-   * forces the readers' resolveFolder() alias fallback — the code path behind
-   * the historical "0 records on newer archives" regression, which no fixture
-   * ever exercised.
+   * BUG-0114: place part FILES under the short alias folders
+   * (`pages/`, `edges/` — see DATASET_FOLDER_ALIASES in src/index.ts) while
+   * manifest `datasets`/`parts` KEYS stay the long names. This layout forces
+   * the readers' alias-folder fallback.
    */
-  newerFormatFolders?: boolean;
+  aliasFolders?: boolean;
   /**
    * Practitioner Update Phase 1 (describe.ts): write part files for a dataset
    * folder that the manifest never declares — exercises the `unexpected` state.
@@ -84,8 +82,8 @@ export type FixtureOptions = {
   includeSchemas?: boolean;
 };
 
-/** Mirror of NEWER_FORMAT_FOLDER_MAP in src/index.ts (canonical → alias). */
-const NEWER_FOLDER_ALIASES: Record<string, string> = {
+/** Mirror of DATASET_FOLDER_ALIASES in src/index.ts (canonical → alias). */
+const DATASET_FOLDER_ALIASES: Record<string, string> = {
   page_metadata: "pages",
   navigation: "edges",
   pipeline_failures: "failed_pages",
@@ -214,10 +212,10 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     bodyBlobRef: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
   };
 
-  // BUG-0114: with newerFormatFolders, the part FILES live under the alias
-  // folders while all manifest keys stay canonical — see FixtureOptions.
+  // BUG-0114: with aliasFolders, the part FILES live under the short alias
+  // folders while all manifest keys stay the long names — see FixtureOptions.
   const folderFor = (dataset: string): string =>
-    options.newerFormatFolders ? (NEWER_FOLDER_ALIASES[dataset] ?? dataset) : dataset;
+    options.aliasFolders ? (DATASET_FOLDER_ALIASES[dataset] ?? dataset) : dataset;
 
   // BUG-0123(c): emptied datasets keep their part file and manifest listing
   // but carry zero records.

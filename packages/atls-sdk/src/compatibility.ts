@@ -18,7 +18,7 @@
  * SDK compatibility enforcement (BUG-0134).
  *
  * Archives declare `compatibility.minSdkVersion` in `capabilities.v1.json`
- * (see CompatibilitySchema in @atls/spec). Until this module, NOTHING ever
+ * (see CompatibilitySchema in @caifrazier/atls-spec). Until this module, NOTHING ever
  * consumed that field — an archive requiring a newer SDK silently opened in
  * an older one.
  *
@@ -41,7 +41,7 @@ export class SdkCompatibilityError extends Error {
   constructor(minSdkVersion: string, sdkVersion: string) {
     super(
       `Archive requires SDK >= ${minSdkVersion}, but this SDK is ${sdkVersion}. ` +
-      `Upgrade @atls/sdk to read this archive.`
+      `Upgrade @caifrazier/atls-sdk to read this archive.`
     );
     this.name = "SdkCompatibilityError";
     this.minSdkVersion = minSdkVersion;

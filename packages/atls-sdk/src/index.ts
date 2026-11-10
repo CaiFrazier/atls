@@ -56,9 +56,10 @@ const LEGACY_DATASET_ALIASES = {
   failed_pages: "pipeline_failures",
 } as const;
 
-// Newer archives (schemaVersion >= 2025-10-22) use shorter folder names that
-// are the inverse of the above aliases.
-const NEWER_FORMAT_FOLDER_MAP: Record<string, string> = {
+// Short directory aliases the reader accepts in addition to the long
+// ATLAS_DATASET_KEYS names. The long directory is preferred when both exist.
+// Manifest keys stay the long names.
+const DATASET_FOLDER_ALIASES: Record<string, string> = {
   page_metadata: "pages",
   navigation: "edges",
   pipeline_failures: "failed_pages",
@@ -304,10 +305,9 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
       }
     }
 
-    // Inject canonical names as aliases when only the newer folder name is present
-    // (schemaVersion >= 2025-10-22 uses "pages" instead of "page_metadata", etc.)
-    for (const [canonical, newerName] of Object.entries(NEWER_FORMAT_FOLDER_MAP)) {
-      if (!datasets.has(canonical as DatasetName) && datasets.has(newerName as DatasetName)) {
+    // If parts were stored only under a short alias, still advertise the long name.
+    for (const [canonical, aliasName] of Object.entries(DATASET_FOLDER_ALIASES)) {
+      if (!datasets.has(canonical as DatasetName) && datasets.has(aliasName as DatasetName)) {
         datasets.add(canonical as DatasetName);
       }
     }
@@ -344,11 +344,11 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
     transform?: (value: unknown) => T
   ) => {
     const canonicalDatasetName = toCanonicalDatasetName(datasetName);
-    // For newer archives the folder may be the shorter alias (e.g. "pages" not "page_metadata")
+    // Prefer the long directory. Fall back to the short alias when that directory has no parts.
     const resolveFolder = (): DatasetName => {
       if (zipHandle.listPartFiles(canonicalDatasetName).length > 0) return canonicalDatasetName;
-      const newerFolder = NEWER_FORMAT_FOLDER_MAP[canonicalDatasetName];
-      if (newerFolder) return newerFolder as DatasetName;
+      const aliasFolder = DATASET_FOLDER_ALIASES[canonicalDatasetName];
+      if (aliasFolder) return aliasFolder as DatasetName;
       return canonicalDatasetName;
     };
     return async function* (): AsyncGenerator<T, void, unknown> {
@@ -534,10 +534,10 @@ export async function* select<T = any>(
       throw new AtlasUnknownDatasetError(String(dataset));
     }
 
-    // For newer archives the folder may be the shorter alias (e.g. "pages" not "page_metadata").
-    const newerFolder = NEWER_FORMAT_FOLDER_MAP[canonicalDataset];
+    // Prefer the long directory. Fall back to the short alias when it is the only folder present.
+    const aliasFolder = DATASET_FOLDER_ALIASES[canonicalDataset];
     const folderName =
-      newerFolder && zipHandle.listPartFiles(canonicalDataset).length === 0 ? newerFolder : canonicalDataset;
+      aliasFolder && zipHandle.listPartFiles(canonicalDataset).length === 0 ? aliasFolder : canonicalDataset;
 
     for await (const line of iterateDataset(atlsPath, folderName, { zipHandle })) {
       let record: T;

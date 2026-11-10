@@ -34,15 +34,15 @@ import {
 } from "./reader.js";
 import type { AtlasManifest, AtlasSummary } from "./types.js";
 
-// Folder aliasing mirrors index.ts (kept in sync by test): newer archives may
-// store canonical datasets under shorter folder names.
-const NEWER_FORMAT_FOLDER_MAP: Record<string, string> = {
+// Short directory aliases, same mapping as index.ts. The long name is preferred
+// when that directory has part files. Manifest keys stay the long names.
+const DATASET_FOLDER_ALIASES: Record<string, string> = {
   page_metadata: "pages",
   navigation: "edges",
   pipeline_failures: "failed_pages",
 };
-const NEWER_TO_CANONICAL: Record<string, string> = Object.fromEntries(
-  Object.entries(NEWER_FORMAT_FOLDER_MAP).map(([canonical, alias]) => [alias, canonical]),
+const ALIAS_TO_CANONICAL: Record<string, string> = Object.fromEntries(
+  Object.entries(DATASET_FOLDER_ALIASES).map(([canonical, alias]) => [alias, canonical]),
 );
 
 /**
@@ -68,7 +68,7 @@ export interface DatasetPartDescription {
 export interface DatasetDescription {
   /** Canonical dataset name (manifest key). */
   name: string;
-  /** Physical folder inside this archive (may be a newer-format alias). */
+  /** Physical folder inside this archive (long name, or a short alias). */
   folder: string;
   state: DatasetState;
   /** Whether the manifest coverage matrix expected this dataset; null when unstated. */
@@ -201,7 +201,7 @@ function manifestDatasetViews(manifest: AtlasManifest): Map<string, ManifestData
 
 function resolveDatasetFolder(handle: ZipHandle, canonicalName: string): string {
   if (handle.listPartFiles(canonicalName).length > 0) return canonicalName;
-  const alias = NEWER_FORMAT_FOLDER_MAP[canonicalName];
+  const alias = DATASET_FOLDER_ALIASES[canonicalName];
   if (alias && handle.listPartFiles(alias).length > 0) return alias;
   return canonicalName;
 }
@@ -263,7 +263,7 @@ function undeclaredFolders(handle: ZipHandle, declared: Set<string>): string[] {
     const slash = entry.indexOf("/");
     if (slash <= 0) continue;
     const folder = entry.slice(0, slash);
-    const canonical = NEWER_TO_CANONICAL[folder] ?? folder;
+    const canonical = ALIAS_TO_CANONICAL[folder] ?? folder;
     if (declared.has(folder) || declared.has(canonical)) continue;
     folders.add(canonical);
   }
@@ -310,13 +310,13 @@ export async function describeArchive(
     const declaredNames = new Set<string>();
     for (const view of views.values()) {
       declaredNames.add(view.name);
-      const alias = NEWER_FORMAT_FOLDER_MAP[view.name];
+      const alias = DATASET_FOLDER_ALIASES[view.name];
       if (alias) declaredNames.add(alias);
     }
     for (const folder of undeclaredFolders(handle, declaredNames)) {
       const partEntries = handle.listPartEntries(
-        NEWER_FORMAT_FOLDER_MAP[folder] && handle.listPartFiles(folder).length === 0
-          ? NEWER_FORMAT_FOLDER_MAP[folder]
+        DATASET_FOLDER_ALIASES[folder] && handle.listPartFiles(folder).length === 0
+          ? DATASET_FOLDER_ALIASES[folder]
           : folder,
       );
       datasets.push({

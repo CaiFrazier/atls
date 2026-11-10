@@ -48,15 +48,18 @@ The comprehensive, code-verified format spec lives in [`SPECIFICATION.md`](./SPE
 - [Identity & Keys](./docs/identity-and-keys.md) — `pageId` join model, per-dataset keys
 - [Versioning & Compatibility](./docs/versioning.md) — version axes, `specLevel`, compat rules
 - [Root Metadata Files](./docs/root-files.md) — manifest / summary / capabilities / provenance fields
-- [Dataset Reference](./docs/datasets.md) — all 19 datasets, every field, presence-by-mode
+- [Dataset Reference](./docs/datasets.md) — all 21 datasets, every field, presence-by-mode
 - [Schema System](./docs/schema-system.md) — Zod source, codegen, coverage gaps
-- [Reading Archives](./docs/reading-archives.md) — correct reading + the SDK caveat + workaround
+- [Reading Archives](./docs/reading-archives.md) — how to read an archive
+
+The current schema tag is `2026-09-04` (`ATLAS_SCHEMA_VERSION`). Decisions deferred from this
+edition are in [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md).
 
 ## Notes
 
 - For the formal contract, start at [`SPECIFICATION.md`](./SPECIFICATION.md).
-- Archived legacy docs are available at `legacy/v1/`.
+- The Zod schemas in `src/schemas/` are authoritative when prose disagrees.
 
 ---
 
-_Last verified against codebase: 2026-06-04 (package version `1.0.0-rc.1`)._
+_Last verified against the Zod schemas: 2026-11-10 (package version `1.0.0-rc.1`)._

@@ -3,7 +3,7 @@
 How Atlas schemas are defined, generated, and embedded in archives — and where coverage is
 incomplete.
 
-_Verified against `packages/atls-spec/src/schemas/` on 2026-06-04._
+_Verified against `packages/atls-spec/src/schemas/` on 2026-11-10. Current schema tag: `2026-09-04`._
 
 ---
 
@@ -31,47 +31,55 @@ The authoritative roster of which schemas the package publishes is the `schemaMa
 - Metadata/infrastructure schemas: `manifest.v1`, `capabilities.v1`, `provenance.v1`, `summary.v1`.
 - Per-dataset record schemas: `page_metadata.v1`, `navigation.v1`, `content.v1`, `assets.v1`,
   `structured_data.v1`, `technology.v1`, `render_state.v1`, `security.v1`, `performance.v1`,
-  `accessibility.v1`, `responses.v1`, `resources.v1`, `dom_snapshot.v1`, `acc_tree.v1`, `render.v1`,
-  `pipeline_failures.v1`, `pipeline_alerts.v1`, `events.v1`, `sitemaps.v1`, `frontier_ledger.v1`,
-  `reconstruction_index.v1`, `quarantine.v1`.
+  `accessibility.v1`, `responses.v1`, `resources.v1`, `pipeline_failures.v1`,
+  `pipeline_alerts.v1`, `events.v1`, `sitemaps.v1`, `sitemap_urls.v1`, `extraction.v1`,
+  `frontier_ledger.v1`, `reconstruction_index.v1`, `quarantine.v1`.
+- Schemas that are not dataset directories: `dom_snapshot.v1`, `acc_tree.v1`, `render.v1`.
 
-When an archive is sealed, the cartographer writer copies the relevant JSON Schemas into the
-archive's `schemas/` directory as `<dataset>.v1.schema.json`, and builds a combined field
-dictionary at `schema.json` (see [root-files.md](./root-files.md)).
+`audit_results` is exported from the package and is intentionally absent from `schemaMap`.
+
+A producer may copy generated JSON Schemas into the archive's `schemas/` directory. `schema.json`
+has no Zod schema here. See [root-files.md](./root-files.md).
 
 ---
 
-## Emitted vs. specified — the coverage gaps
+## Emitted vs. specified
 
-As of `schemaVersion 2026-07-01`, every dataset the writer emits — including the formerly
-unspecified `assets` and `quarantine` — has a published Zod schema in `generator.ts`'s `schemaMap`
-and a generated `*.v1.schema.json`:
+Every name in `ATLAS_DATASET_KEYS` has a Zod record schema, and `schemaMap` publishes a JSON
+Schema for it. `assets` is `AssetRecordSchema`. `quarantine` documents records that already failed
+validation; the schema is not a second write-time gate.
 
-- **`assets`** — `assets.v1.schema.json` is generated from `AssetRecordSchema`, and the SDK's
-  `validate()` runs every asset record through it (see [Validation behavior](#validation-behavior)).
-- **`quarantine`** — `quarantine.v1.schema.json` documents the failure-bin record shape written at
-  the validation gate. Because quarantine holds records that *failed* validation, `validate()`
-  counts it but does not re-assert field validity against it.
+### Schemas that are not dataset directories
 
-### Specified but not standalone datasets
+- **`dom_snapshot.v1`**, **`acc_tree.v1`**, and **`render.v1`** are in `schemaMap` and are not
+  entries in `ATLAS_DATASET_KEYS`. `render_state.domSnapshot`, `computedText`, and
+  `accessibilityTree` are free JSON objects (`z.record`). They are not instances of
+  `dom_snapshot.v1` or `acc_tree.v1`. `render.v1` is an older renderer-capture schema.
+- **`audit_results`** is exported from `@caifrazier/atls-spec` and is not in `schemaMap`. It is
+  not an archive dataset.
 
-Some schemas in `schemaMap` do **not** correspond to a top-level dataset directory:
-
-- **`dom_snapshot.v1`** and **`acc_tree.v1`** describe payloads embedded **inside** `render_state`
-  records (`domSnapshot`, `accessibilityTree`), not separate dataset folders.
-- **`render.v1`** is a legacy renderer-capture schema retained for compatibility.
-- **`audit_results.v1`** is intentionally **excluded** from Cartographer archives — it is owned by
-  the downstream Horizon analysis layer (see the note in `generator.ts`). It remains available in
-  `@caifrazier/atls-spec` for Horizon's use.
+See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
 ---
 
 ## Validation behavior
 
-The SDK's `validate()` checks each dataset's records against its Zod schema, including `assets`.
-`quarantine` is counted but not re-validated (it holds records that already failed validation).
-Referential integrity (edges/assets referencing valid pages) and blob-ref format checks are
-available as opt-in validation passes. See the [Atlas SDK reference](../../atls-sdk/README.md).
+On read, `openAtlas` schema-checks `assets`, `responses`, and `resources`. `validate()` then
+parses navigation, those three, and content, structured data, technology, render state,
+performance, security, responses, resources, sitemaps, sitemap URLs, extraction, events,
+accessibility, pipeline failures, and pipeline alerts.
+
+`validate()` does not open `quarantine`, `reconstruction_index`, or `frontier_ledger`. Quarantine
+records are retained because they already failed validation; the published schema documents that
+shape and the SDK does not re-validate it.
+
+`checkIntegrity` checks references (an edge or asset URL against `page_metadata`), not part
+digests, archive digests, or blob hashes. `strict` on `validate()` defaults to false and means
+"require the full manifest field set, canonical blob-ref shape, and the null-vs-omit rule."
+`strict` on `openAtlas` defaults to true and means "throw `MalformedRecordError` on bad JSON or
+on the three datasets checked at read time." The two flags share a name and do not share a meaning.
+
+See the [Atlas SDK reference](../../atls-sdk/docs/API.md).
 
 ---
 
@@ -80,9 +88,11 @@ available as opt-in validation passes. See the [Atlas SDK reference](../../atls-
 `@caifrazier/atls-spec` provides a shape adapter for consumers:
 
 - `src/pageMetadataMapping.ts` — `flattenPageMetadataRecord()` converts the nested on-disk
-  `page_metadata` record (`core.*`, `indexing.*`, `social.*`) into a flat consumer shape. It
-  detects whether a record is already flat and passes it through unchanged.
+  `page_metadata` record (`core.*`, `indexing.*`, `social.*`) into a flat consumer shape. The
+  SDK's `readers.pageMetadata()` returns that flat shape. `readers.dataset("page_metadata")` and
+  `select` return the nested record. `PageRecord` is an in-memory composite, not the on-disk
+  dataset. See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
 ---
 
-_Last verified against codebase: 2026-07-06._
+_Last verified against `schemaMap` and `@caifrazier/atls-sdk` `validate()`: 2026-11-10._

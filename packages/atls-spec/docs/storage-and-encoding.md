@@ -3,7 +3,7 @@
 How records and binary payloads are serialized, compressed, and addressed inside an `.atls`
 archive.
 
-_Verified against `packages/cartographer/src/io/atlas/` on 2026-06-04._
+_Field names below match the Zod schemas. Byte-level hash procedures are not specified in this edition. See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md)._
 
 ---
 
@@ -17,28 +17,25 @@ files and compressed with **Zstandard**:
 <dataset>/part-002.jsonl.zst
 ```
 
-- During the crawl, records are appended to plain `.jsonl` part files in the staging directory by
-  `PartStreamManager` (part filename pattern `part-NNN.jsonl`, `PartStreamManager.ts:195`).
-- Parts rotate at a record/size boundary, so one dataset can span many parts.
-- At finalization, each `.jsonl` part is compressed to `.jsonl.zst`
-  (`ArchiveCompiler`, `archiveCompiler.ts`).
-- The compressor prefers the system `zstd` CLI (streaming, level 3) and falls back to the
-  `@mongodb-js/zstd` binding when the CLI is unavailable.
+- Part files are JSON Lines, UTF-8, one JSON object per line. Blank lines are skipped by the
+  reference reader.
+- A dataset may span many parts. The reference reader lists every `*.jsonl` and `*.jsonl.zst`
+  under the dataset prefix and sorts by name. It does not require a 3-digit index, a particular
+  zstd level, or that the part be compressed.
+- Directory names are the long names in `ATLAS_DATASET_KEYS`. The reference reader also accepts
+  the short aliases `pages`, `edges`, and `failed_pages`.
 
-To read a dataset: list every `part-*.jsonl.zst` in the directory, `zstd -d` each one, and parse
-each line as JSON. See [reading-archives.md](./reading-archives.md) for code.
+To read a dataset: list the part files, decompress `.jsonl.zst` with a Zstandard decoder, and
+parse each non-blank line as JSON. See [reading-archives.md](./reading-archives.md).
 
 ---
 
 ## The ZIP layer: no double compression
 
-The `.atls` container is a ZIP built with `archiver` at **`zlib` level 0** (stored, not deflated)
-— `archiveCompiler.ts`. Because dataset parts, blobs, and provenance are already Zstandard-
-compressed, re-compressing them in the ZIP layer would waste CPU for no gain. The ZIP is therefore
-a thin, uncompressed container around pre-compressed entries.
-
-Implication for readers: unzip is cheap (no inflate), but you still need a Zstandard decoder to
-read the entries.
+The `.atls` container is a ZIP. A producer may store entries without deflate (method 0) because
+the payloads are already Zstandard-compressed. The reference reader accepts stored and deflated
+entries. Either way, `.jsonl.zst` and blob payloads still need a Zstandard decoder. The reference
+reader uses `fzstd`.
 
 ---
 
@@ -55,62 +52,59 @@ So most root files can be read directly from the ZIP without a Zstandard decoder
 
 ---
 
-## Blobs: content-addressed by SHA-256
+## Blobs
 
 Large or repeated binary payloads — raw response bodies, post-JS rendered HTML, screenshots,
-favicons, and (in full mode) sub-resource bodies — are stored once in a content-addressed store
-(`BlobStore`):
+favicons, and sub-resource bodies — are stored once:
 
 ```
-blobs/sha256/<aa>/<bb>/<full-hash>.zst
+blobs/sha256/<aa>/<bb>/<64 hex>.zst
 ```
 
-- The address is the **SHA-256 of the original (uncompressed) bytes**, hex-encoded
-  (`createHash("sha256")`, `BlobStore.ts`).
-- The path fans out by the first two and next two hex characters of the hash to keep directories
-  shallow, then stores the body Zstandard-compressed.
-- **Deduplication:** identical content hashes to the same path and is written once; many records
-  can reference the same blob. The store keeps an in-process LRU of known hashes (cap ~500k) to
-  skip re-writing within a single crawl. Dedup is per-archive — there is no cross-archive blob
-  sharing.
+- The directory name is the hex SHA-256 of the uncompressed bytes. The path fans out on the first
+  two and next two hex characters, then stores the body Zstandard-compressed.
+- The same bytes share one path inside a single archive.
+- The reference reader decompresses a blob and returns the bytes. It does not recompute the digest.
+  Strict `validate()` checks that a blob ref matches `sha256/<2>/<2>/<64 hex>` and does not hash
+  the bytes.
 
 ### Blob references
 
-Records point at blobs with a `*_blob_ref` string — for example `responses.bodyBlobRef`,
-`responses.renderedBodyBlobRef`, `reconstruction_index.sourceBodyBlobRef`,
-`*.faviconBlobRef`. The canonical form of a reference is the path tail:
+Records point at blobs with camelCase fields such as `responses.bodyBlobRef`,
+`responses.renderedBodyBlobRef`, `reconstruction_index.sourceBodyBlobRef`, and
+`page_metadata.media.favicon`. The canonical reference is the path tail:
 
 ```
-sha256/<aa>/<bb>/<full-hash>
+sha256/<aa>/<bb>/<64 hex>
 ```
 
-To resolve a reference, prepend `blobs/` and append `.zst`, read the ZIP entry, and `zstd -d` it.
+To resolve a canonical reference, prepend `blobs/` and append `.zst`, read the ZIP entry, and
+decompress it. The reference reader also accepts a `blobs/` prefix, a missing prefix, and an
+optional `.zst` suffix. A value that is not that shape may be a live URL rather than an in-archive
+blob.
 
-> Caveat: not every field that ends in `_blob_ref` is guaranteed to be an in-archive
-> `sha256/...` path in every archive. Validate that a reference matches the `sha256/<2>/<2>/<64hex>`
-> shape before resolving it as an internal blob; some legacy/edge records may carry a live URL.
+### Media bytes
 
-### Media transcoding
-
-- **Screenshots** are transcoded to the configured format (default WebP, quality 80) before
-  hashing/storing, and tiled when very tall (the `assets.tiles[]` field references the tiles).
-- **Favicons** are preserved as-is when already `.ico`/`.svg`, otherwise transcoded.
-- **Response bodies** are stored verbatim (no transcode), then Zstandard-compressed.
+Screenshot and favicon transcoding (format, quality, tiling) is producer policy. The schemas store
+refs and dimensions. They do not require a media type. Response bodies are the bytes the producer
+stored, then Zstandard-compressed when the part or blob is a `.zst` entry.
 
 ---
 
-## Hashing summary
+## Hash fields
 
-| Purpose | Algorithm | Where |
-|---|---|---|
-| Blob content address | SHA-256 of original bytes | `blobs/sha256/...` path |
-| Dataset part integrity | SHA-256 of compressed part | `manifest.datasets.<name>.integrity.checksums` |
-| Archive content hash | SHA-256 over sorted file hashes | `manifest.integrity.contentSha256` |
-| URL key | SHA-1 | `manifest.hashing.urlKeyAlgo` |
-| Schema hash | SHA-256 of schema JSON | `manifest.datasets.<name>.schemaHash` |
+These are the fields the schema defines. The byte ranges are not specified in this edition.
 
-`manifest.hashing` records the algorithms in use (`algorithm: "sha256"`, `urlKeyAlgo: "sha1"`).
+| Purpose | Where |
+|---|---|
+| Blob path | `blobs/sha256/<aa>/<bb>/<64 hex>.zst`. The reference reader also accepts a `blobs/` prefix, a missing prefix, and an optional `.zst` suffix. `validate({ strict: true })` checks the canonical pattern only. Neither recomputes the digest. |
+| Dataset part digests | `manifest.datasets.<name>.integrity.checksums`, with `integrity.algorithm` when that object is present. |
+| Archive digests | `manifest.integrity.contentSha256`, `manifest.integrity.archiveSha256`, `manifest.integrity.auditHash`. All optional. `integrity.files` maps a packaged path to a digest string. |
+| URL key algorithm name | `manifest.hashing.urlKeyAlgo` (required string). Current edition's documented value: `sha1`. |
+| Schema digest | `manifest.datasets.<name>.schemaHash` (optional string). |
+
+`manifest.hashing` also requires `algorithm`, `rawHtmlHash`, and `domHash` as strings.
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against the Zod schemas and the reference reader: 2026-11-10._

@@ -7,8 +7,9 @@ This product includes software developed by Cai Frazier.
 Dual-licensing of this repository
 ----------------------------------------------------------------------
 
-The SOFTWARE in this repository — the TypeScript source, the @atls/spec
-and @atls/sdk packages, validators, and supporting code — is licensed
+The SOFTWARE in this repository — the TypeScript source, the
+@caifrazier/atls-spec and @caifrazier/atls-sdk packages, validators, and
+supporting code — is licensed
 under the Apache License, Version 2.0 (see the LICENSE file).
 
 The Atlas format SPECIFICATION — the written specification text and the

@@ -1462,21 +1462,19 @@ export interface AtlasPack {
 export interface AtlasManifest {
   datasetId?: string;
   crawlId?: string;
-  atlasVersion: string; // "1.0"
-  formatVersion: string; // "1.0.0" - Explicit format version for compatibility checks
+  /** Render mode. Same enum as `crawlContext.mode`. */
+  mode?: RenderMode;
+  atlasVersion: string; // Current edition value: "1.1". Schema: /^v?\d+(\.\d+)?$/
+  formatVersion: string; // Current edition value: "1.1.0". Readers gate on major 1.
   specVersion?: string;
-  schemaVersion?: string;
+  schemaVersion?: string; // Current edition tag: ATLAS_SCHEMA_VERSION ("2026-09-04")
   incomplete?: boolean;
-  configSnapshot?: {
-    requested?: Record<string, unknown>;
-    effective?: Record<string, unknown>;
-  };
-  
+
   owner: {
-    name: string; // "Cai Frazier"
+    name: string; // Required string. The schema does not fix the value.
   };
-  
-  consumers: string[]; // ["Continuum SEO", "Horizon Accessibility"]
+
+  consumers: string[]; // Required string array. The schema has no default.
 
   /**
    * Provenance source information
@@ -1637,43 +1635,16 @@ export interface AtlasManifest {
     domHash: string; // "sha256 of document.documentElement.outerHTML"
   };
   
-  parts: {
-    navigation: string[]; // ["navigation/part-001.jsonl.zst", ...]
-    page_metadata: string[];
-    content: string[];
-    assets: string[];
-    structured_data: string[];
-    technology: string[];
-    security: string[];
-    accessibility: string[];
-    responses?: string[];
-    resources?: string[];
-    events?: string[];
-    pipeline_failures?: string[];
-    pipeline_alerts?: string[];
-    performance?: string[]; // prerender/full
-    render_state?: string[]; // full only
-    failed_pages?: string[]; // optional operational dataset
-  };
-  
-  schemas: {
-    navigation: string; // "schemas/navigation.v1.schema.json"
-    page_metadata: string;
-    content: string;
-    assets: string;
-    structured_data: string;
-    technology: string;
-    security: string;
-    accessibility: string;
-    responses?: string;
-    resources?: string;
-    events?: string;
-    pipeline_failures?: string;
-    pipeline_alerts?: string;
-    performance?: string; // prerender/full
-    render_state?: string; // full only
-    failed_pages?: string; // optional operational dataset
-  };
+  /**
+   * Dataset directory name → part paths. Keys are the long names in
+   * `ATLAS_DATASET_KEYS`. The schema is an open record, not a closed list.
+   */
+  parts: Record<string, string[]>;
+
+  /**
+   * Dataset directory name → schema reference. Same key space as `parts`.
+   */
+  schemas: Record<string, string>;
   
   datasets?: {
     // Optional: Maps dataset name to metadata
@@ -1732,7 +1703,13 @@ export interface AtlasManifest {
     incomplete: boolean;          // Crawl terminated early?
     truncatedParts?: string[];    // Parts that hit limits
   };
-  
+
+  /**
+   * Sitemap-discovery honesty flag (schema tag 2026-07-16 and later).
+   * A missing value means `absent`, never `complete`.
+   */
+  sitemapCoverage?: SitemapCoverage;
+
   configIncluded: boolean;
   redactionApplied: boolean;
   
@@ -1773,15 +1750,18 @@ export interface AtlasManifest {
   notes: string[];
   
   integrity: {
-    algorithm?: string; // "sha256"
-    content_sha256?: string; // Deterministic hash over sorted part hashes (not ZIP bytes)
-    archiveSha256?: string; // Legacy alias for content hash
+    algorithm?: string;
+    /** Optional archive digest. The bytes it covers are not specified in this edition. */
+    contentSha256?: string;
+    /** Optional second archive digest. How it differs from `contentSha256` is not specified. */
+    archiveSha256?: string;
+    /** Optional audit digest. The bytes it covers are not specified in this edition. */
+    auditHash?: string;
     files: Record<string, string>; // filename -> sha256
-    audit_hash?: string;           // SHA-256 of sorted concatenated part hashes (Merkle root)
   };
-  
+
   createdAt: string; // ISO timestamp
-  generator: string; // "cartographer-engine/1.0.0"
+  generator: string; // Required producer id. The schema does not constrain the spelling.
 }
 
 /**

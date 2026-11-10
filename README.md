@@ -2,7 +2,7 @@
 
 The **Atlas** archive format (`.atls`) — specification, JSON Schemas, TypeScript types, and a read-side SDK.
 
-An `.atls` file is a zip archive of compressed NDJSON datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format and provides the canonical reader.
+An `.atls` file is a zip archive of compressed JSON Lines datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format and provides the reference reader. The current schema tag is `2026-09-04`. The Zod schemas are authoritative when the prose disagrees; deferred format questions are in [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md).
 
 ## Packages
 
