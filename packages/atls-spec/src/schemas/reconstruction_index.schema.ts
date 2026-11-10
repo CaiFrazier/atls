@@ -24,6 +24,7 @@
  */
 
 import { z } from 'zod';
+import { ScreenshotReferenceSchema } from './runtime-core.schema.js';
 
 const SubresourceRefSchema = z.object({
   url: z.string().describe('Original absolute URL of the subresource'),
@@ -44,7 +45,9 @@ export const ReconstructionIndexRecordV1Schema = z.object({
 
   // ===== Page Metadata =====
   title: z.string().optional().describe('Page title'),
-  faviconBlobRef: z.string().optional().describe('Reference to favicon in blob storage'),
+  // String or tiled screenshot manifest. Do not collapse these to one shape.
+  faviconBlobRef: ScreenshotReferenceSchema.optional().describe('Reference to favicon in blob storage, or a tiled screenshot manifest'),
+  bodyBlobRef: ScreenshotReferenceSchema.optional().describe('Reference to a page body blob, or a tiled screenshot manifest'),
 
   // ===== Document Sources =====
   sourceBodyBlobRef: z.string().describe('Blob ref to original server HTML'),
@@ -61,7 +64,7 @@ export const ReconstructionIndexRecordV1Schema = z.object({
   internalLinks: z.array(InternalLinkSchema).describe('Internal navigation links from this page'),
 
   // ===== Screenshots =====
-  screenshotDesktopBlobRef: z.string().optional().describe('Desktop screenshot blob reference'),
+  screenshotDesktopBlobRef: ScreenshotReferenceSchema.optional().describe('Desktop screenshot blob reference: a plain string or a tiled manifest'),
   screenshotMobileBlobRef: z.string().optional().describe('Mobile screenshot blob reference'),
 });
 

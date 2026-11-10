@@ -1,68 +1,96 @@
 # @caifrazier/atls-spec
 
-Atlas specification package for Cartographer/Atlas archives.
+Specification package for the Atlas (`.atls`) archive format. It ships the Zod schemas, the generated JSON Schemas, the TypeScript types, and the spec 1.2 helpers for URL identity, blob refs, and archive digests.
 
-It provides:
+The schema tag is `2026-09-04`. The spec contract is `1.2.0`. Archives stamped 1.1 stay valid. This package covers 21 datasets.
 
-- TypeScript types
-- Zod schemas
-- JSON Schema generation artifacts
+Install `@caifrazier/atls-spec`. The name `@atls/spec` is not published on npm.
 
-## Package Role
+```bash
+npm install @caifrazier/atls-spec
+```
 
-- Shared contract used by `@cf/cartographer` and `@caifrazier/atls-sdk`
-- Canonical schema/type source for Atlas archive structures
+Requires Node.js 20 or newer. The package is ESM only.
 
-## Exports
+## Read the spec
 
-- Core types: `src/types.ts`
-- Record split exports: `src/types/records/`
-- Page-metadata flattening: `src/pageMetadataMapping.ts` (nested on-disk record → flat consumer shape)
-- Schema exports: `src/schemas/index.ts`
+The normative text is in this package:
 
-Schemas are authored in **Zod**; the JSON Schema artifacts are generated from those Zod
-definitions via `src/schemas/generator.ts` (`zod-to-json-schema`) as a build step — Zod is the
-source of truth, not the emitted `.schema.json` files.
+- [SPECIFICATION.md](./SPECIFICATION.md)
+- [docs/](./docs/)
 
-## Build
+The same text is on GitHub: [Atlas format specification](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md).
+
+When the prose and the Zod schemas disagree, the schemas win.
+
+## Use the types and helpers
+
+```ts
+import {
+  ATLAS_DATASET_KEYS,
+  ATLAS_SCHEMA_VERSION,
+  ATLAS_SPEC_VERSION,
+  ExtractionRecord,
+  PageMetadataDatasetRecordV1Schema,
+  SitemapUrlRecord,
+  assetId,
+  contentSha256,
+  normalizeUrl,
+  screenshotBlobRefs,
+  urlKey,
+} from "@caifrazier/atls-spec";
+
+console.log(ATLAS_SPEC_VERSION, ATLAS_SCHEMA_VERSION);
+console.log(ATLAS_DATASET_KEYS.page_metadata);
+
+const key = urlKey("https://example.com/about");
+const id = assetId("https://example.com/a.png");
+```
+
+Per-schema modules are available at `@caifrazier/atls-spec/schemas/<file>.js`. Generated JSON Schemas are at `@caifrazier/atls-spec/schemas/<name>.v1.schema.json`.
+
+`normalizeUrl` returns the spec 1.2 identity string, or `null` when the URL is unparseable or longer than 8192 code units. `urlKey` is SHA-256 of that string. `assetId` is UUID v5 of the normalized URL. `contentSha256` rolls part checksums up in UTF-8 path order.
+
+Screenshot refs stay one of two shapes: a plain string, or `{ tiles[].src, totalWidth, totalHeight }`. Those fields are `page_metadata.media.screenshots.desktop`, `page_metadata.media.screenshots.desktopFullPage`, `reconstruction_index.screenshotDesktopBlobRef`, `reconstruction_index.faviconBlobRef`, and `reconstruction_index.bodyBlobRef`. `screenshotBlobRefs()` lists tile `src` values that are blob refs and leaves the spelling unchanged.
+
+## Read and validate an archive
+
+Reading and validation live in [`@caifrazier/atls-sdk`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-sdk/README.md), which depends on this package:
+
+```ts
+import { openAtlas, validate } from "@caifrazier/atls-sdk";
+
+const atlas = await openAtlas("./crawl.atls");
+for await (const page of atlas.readers.pageMetadata()) {
+  console.log(page.url);
+}
+atlas.close();
+
+const result = await validate("./crawl.atls");
+console.log(result.valid, result.stats.errorsFound);
+```
+
+## Conformance suite
+
+The suite is in the [atls repository](https://github.com/CaiFrazier/atls/blob/main/conformance/README.md), not in this tarball. It has seven small archives plus URL and hash vectors. The reference check is `validate()` from `@caifrazier/atls-sdk`.
+
+```bash
+git clone https://github.com/CaiFrazier/atls.git
+cd atls
+pnpm install
+pnpm build
+pnpm test
+```
+
+`pnpm test` runs the spec tests and the SDK conformance test. To regenerate the archives after a spec change:
 
 ```bash
 pnpm --filter @caifrazier/atls-spec build
+node conformance/generate.mjs
 ```
 
-This compiles TypeScript and generates JSON schema artifacts via `dist/schemas/generator.js`.
+## License
 
-## Test
+Code in this package is Apache-2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).
 
-```bash
-pnpm --filter @caifrazier/atls-spec test
-```
-
-## The Atlas Format Specification
-
-The comprehensive, code-verified format spec lives in [`SPECIFICATION.md`](./SPECIFICATION.md)
-(the index) and [`docs/`](./docs/):
-
-- [Storage & Encoding](./docs/storage-and-encoding.md): JSONL, Zstandard, blob addressing, `contentSha256`
-- [Identity & Keys](./docs/identity-and-keys.md): `pageId` join model, per-dataset keys
-- [URL Identity](./docs/url-identity.md): `normalizeUrl`, `urlKey`, trailing slash, redirect rows
-- [Versioning & Compatibility](./docs/versioning.md): version axes, spec 1.2, 1.1 to 1.2
-- [Root Metadata Files](./docs/root-files.md): manifest / summary / capabilities / provenance fields
-- [Dataset Reference](./docs/datasets.md): all 21 datasets, every field, presence-by-mode
-- [Schema System](./docs/schema-system.md): Zod source, codegen, coverage gaps
-- [Reading Archives](./docs/reading-archives.md): how to read an archive
-- [Changelog](./CHANGELOG.md): spec 1.2
-
-The current schema tag is `2026-09-04` (`ATLAS_SCHEMA_VERSION`). The spec contract is `1.2.0`
-(`ATLAS_SPEC_VERSION`). Decisions for this edition are in
-[`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md). Conformance archives are in
-[`conformance/`](../../conformance/README.md).
-
-## Notes
-
-- For the formal contract, start at [`SPECIFICATION.md`](./SPECIFICATION.md).
-- The Zod schemas in `src/schemas/` are authoritative when prose disagrees.
-
----
-
-_Last verified against the Zod schemas: 2026-11-10 (package version `1.0.0-rc.1`)._
+The written specification and the JSON Schemas are also available under CC BY 4.0. See [LICENSE-SPEC.md](./LICENSE-SPEC.md).

@@ -1,0 +1,34 @@
+Atlas
+Copyright 2026 Cai Frazier
+
+This product includes software developed by Cai Frazier.
+
+----------------------------------------------------------------------
+Dual-licensing of this repository
+----------------------------------------------------------------------
+
+The SOFTWARE in this repository — the TypeScript source, the
+@caifrazier/atls-spec and @caifrazier/atls-sdk packages, validators, and
+supporting code — is licensed
+under the Apache License, Version 2.0 (see the LICENSE file).
+
+The Atlas format SPECIFICATION — the written specification text and the
+JSON Schema files describing the .atls format (including the schemas in
+packages/atls-spec under src/schemas and their generated output) — is
+ALSO made available under the Creative Commons Attribution 4.0
+International license (CC BY 4.0). See LICENSE-SPEC.md.
+
+This dual arrangement is intentional: anyone may read, write, and build
+tooling around the .atls format, while the reference implementation
+carries Apache-2.0's patent grant and attribution terms.
+
+----------------------------------------------------------------------
+Trademarks
+----------------------------------------------------------------------
+
+"Atlas", "Cartographer", "Continuum", and "Navigator", and associated
+logos, are trademarks of Cai Frazier. The licenses above grant rights to
+the copyrighted works only and do NOT grant permission to use these
+names or marks, except as required for reasonable and customary use in
+describing the origin of the work (e.g., "compatible with the Atlas
+format"). They do not imply endorsement.

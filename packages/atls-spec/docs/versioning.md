@@ -33,7 +33,7 @@ The current-edition column is what this specification documents for archives sta
    manifest**. It names the dataset-schema edition. The reference reader copies it onto
    `describeArchive().schemaVersion` and does not branch on it.
 
-2. **The `@caifrazier/atls-spec` package version** (`1.0.0-rc.1`, from `package.json`) is the npm
+2. **The `@caifrazier/atls-spec` package version** (`1.2.0`, from `package.json`) is the npm
    semver of the schema package. It is **not** written into archives.
 
 A reader must never use the spec package version to reason about an archive's layout — it isn't in
@@ -64,7 +64,7 @@ python3 -c "import zipfile,json; print(json.loads(zipfile.ZipFile('crawl.atls').
   a reader must treat a missing `sitemapCoverage` or `truncated` as *unknown*, never as
   `false` or `complete`.
 - **`2026-07-01`** (camelCase cutover): dataset record fields moved to camelCase. A few names
-  stayed snake_case; see [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+  stayed snake_case; see [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 ---
 

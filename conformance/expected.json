@@ -23,6 +23,13 @@
       "note": "bodyBlobRef is blobs/sha256/<2>/<2>/<hash>.zst. Readers accept that spelling. The blob hash still matches."
     },
     {
+      "file": "legacy-blob-ref-1.1.atls",
+      "valid": true,
+      "strictValid": true,
+      "errorCodes": [],
+      "note": "Spec 1.1. bodyBlobRef uses the legacy blobs/sha256/<2>/<2>/<hash>.zst spelling. getBlob() reads that ref. archiveSha256 and auditHash are present and ignored."
+    },
+    {
       "file": "corrupted-part-checksum.atls",
       "valid": false,
       "strictValid": false,

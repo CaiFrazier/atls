@@ -60,6 +60,37 @@ export function parseBlobRef(value: string): ParsedBlobRef | null {
   };
 }
 
+/**
+ * Blob-ref strings carried by a screenshot reference.
+ *
+ * A plain string is included when it is a blob ref. A tiled manifest contributes
+ * each `tiles[].src`, and a top-level `src`, when that string is a blob ref.
+ * The original spelling is preserved (`sha256/<2>/<2>/<hash>` or
+ * `blobs/sha256/<2>/<2>/<hash>.zst`). Live URLs and other strings are skipped.
+ */
+export function screenshotBlobRefs(value: unknown): string[] {
+  const refs: string[] = [];
+  const push = (candidate: unknown): void => {
+    if (typeof candidate !== "string") return;
+    if (parseBlobRef(candidate)) refs.push(candidate);
+  };
+  if (typeof value === "string") {
+    push(value);
+    return refs;
+  }
+  if (!value || typeof value !== "object") return refs;
+  const record = value as { src?: unknown; tiles?: unknown };
+  push(record.src);
+  if (Array.isArray(record.tiles)) {
+    for (const tile of record.tiles) {
+      if (tile && typeof tile === "object") {
+        push((tile as { src?: unknown }).src);
+      }
+    }
+  }
+  return refs;
+}
+
 /** Archive path for uncompressed bytes whose SHA-256 hex is `hash`. */
 export function blobArchivePath(hash: string): string {
   const parsed = parseBlobRef(`sha256/${hash.slice(0, 2)}/${hash.slice(2, 4)}/${hash}`);

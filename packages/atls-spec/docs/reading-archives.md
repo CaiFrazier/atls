@@ -105,7 +105,7 @@ for await (const page of atlas.readers.pageMetadata()) {
 atlas.close();
 ```
 
-Full API details can be found in the [Atlas SDK reference](../../atls-sdk/README.md).
+Full API details can be found in the [Atlas SDK reference](https://github.com/CaiFrazier/atls/blob/main/packages/atls-sdk/README.md).
 
 ---
 

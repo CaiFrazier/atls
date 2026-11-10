@@ -83,8 +83,10 @@ export type {
   DatasetName,
   EventRecord,
   PackView,
+  ExtractionRecord,
   ResourceRecordV1,
   ResponseRecordV1,
+  SitemapUrlRecord,
 } from "./types.js";
 export * from "./validate.js";
 export { buildCrossModeIndex } from "./crossMode.js";
@@ -141,12 +143,14 @@ export type {
 } from "./describe.js";
 export type { ParsedFormatVersion } from "./formatVersion.js";
 export {
+  ATLAS_DATASET_KEYS,
   normalizeUrl,
   urlKey,
   assetId,
   contentSha256,
   sha256Hex,
   parseBlobRef,
+  screenshotBlobRefs,
   MAX_URL_LENGTH,
   TRAILING_SLASH_POLICY,
   FILE_EXTENSIONS,
@@ -157,7 +161,16 @@ export {
   provenanceOutputHash,
   acceptedContentDigests,
 } from "@caifrazier/atls-spec";
-export type { ParsedBlobRef, ContentPathOrder, IntegrityEdition } from "@caifrazier/atls-spec";
+export type {
+  AtlasDatasetKey,
+  ContentPathOrder,
+  FlatPageMetadata,
+  IntegrityEdition,
+  ParsedBlobRef,
+  ScreenshotReference,
+  ScreenshotTile,
+} from "@caifrazier/atls-spec";
+export { normalizeBlobPath } from "./reader.js";
 export {
   SDK_VERSION,
   SdkCompatibilityError,

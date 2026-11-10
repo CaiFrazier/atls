@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { normalizeUrl, sha256Hex, urlKey, validate } from "../src/index.js";
+import { normalizeUrl, openAtlas, parseBlobRef, readBlob, sha256Hex, statBlob, urlKey, validate } from "../src/index.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..", "conformance");
 const expected = JSON.parse(readFileSync(join(root, "expected.json"), "utf8"));
@@ -36,6 +36,36 @@ describe("conformance archives", () => {
       expect(strict.valid, JSON.stringify(strict.issues, null, 2)).toBe(archive.strictValid);
     });
   }
+});
+
+describe("legacy blob ref on a 1.1 archive", () => {
+  test("getBlob, readBlob, and statBlob resolve the legacy spelling", async () => {
+    const path = join(root, "archives", "legacy-blob-ref-1.1.atls");
+    const atlas = await openAtlas(path);
+    try {
+      const responses: Array<{ bodyBlobRef?: string }> = [];
+      for await (const row of atlas.readers.responses()) {
+        responses.push(row as { bodyBlobRef?: string });
+      }
+      expect(responses).toHaveLength(1);
+      const ref = responses[0]?.bodyBlobRef;
+      expect(ref).toMatch(/^blobs\/sha256\/[a-f0-9]{2}\/[a-f0-9]{2}\/[a-f0-9]{64}\.zst$/);
+      const parsed = parseBlobRef(ref!);
+      expect(parsed).not.toBeNull();
+
+      const fromReader = await atlas.getBlob(ref!);
+      expect(fromReader.toString("utf8")).toBe("Hello, Atlas");
+
+      const fromCanonical = await readBlob(path, parsed!.canonical);
+      expect(fromCanonical.equals(fromReader)).toBe(true);
+
+      const stat = await statBlob(path, ref!);
+      expect(stat.exists).toBe(true);
+      expect(stat.path).toBe(parsed!.archivePath);
+    } finally {
+      atlas.close();
+    }
+  });
 });
 
 describe("conformance vectors", () => {

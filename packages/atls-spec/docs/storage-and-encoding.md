@@ -3,7 +3,7 @@
 How records and binary payloads are serialized, compressed, and addressed inside an `.atls`
 archive.
 
-_Field names below match the Zod schemas. Byte-level procedures are normative as of spec 1.2. Decisions that used to live only in the writer are recorded in [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md)._
+_Field names below match the Zod schemas. Byte-level procedures are normative as of spec 1.2. Decisions that used to live only in the writer are recorded in [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md)._
 
 ---
 
@@ -91,7 +91,13 @@ A missing `blobs/` prefix or a missing `.zst` suffix is the same reference when 
 shards match. A string that is not that shape may be a live URL. Do not treat it as a blob.
 
 Fields that carry references include `responses.bodyBlobRef`, `responses.renderedBodyBlobRef`,
-`reconstruction_index.sourceBodyBlobRef`, and `page_metadata.media.favicon`.
+`reconstruction_index.sourceBodyBlobRef`, `reconstruction_index.bodyBlobRef`,
+`reconstruction_index.faviconBlobRef`, `reconstruction_index.screenshotDesktopBlobRef`,
+and `page_metadata.media.favicon`. Screenshot refs at `page_metadata.media.screenshots.desktop`,
+`page_metadata.media.screenshots.desktopFullPage`, `reconstruction_index.screenshotDesktopBlobRef`,
+`reconstruction_index.faviconBlobRef`, and `reconstruction_index.bodyBlobRef` are either a plain
+string or `{ tiles[].src, totalWidth, totalHeight }`. When `tiles[].src` is a blob ref, readers
+resolve both spellings.
 
 ### Media bytes
 

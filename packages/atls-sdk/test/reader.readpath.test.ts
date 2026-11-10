@@ -128,7 +128,8 @@ describe("SDK read path (BUG-0110 / BUG-0111 / BUG-0073)", () => {
   test("BUG-0225: rejects a zstd blob that expands past the configured limit", async () => {
     const payload = Buffer.alloc(2 * 1024 * 1024, 0x42);
     const compressed = Buffer.from(await compress(payload));
-    const ref = `sha256/${"a".repeat(64)}`;
+    const hash = "a".repeat(64);
+    const ref = `sha256/aa/aa/${hash}`;
     const path = await buildZip([
       { name: "manifest.json", body: JSON.stringify({ formatVersion: "1.0.0" }) },
       { name: "summary.json", body: JSON.stringify({ stats: { totalPages: 0, totalErrors: 0 } }) },
