@@ -2,8 +2,9 @@
 
 Decision record for the Atlas edition at schema tag `2026-09-04`. Spec 1.2 is contract
 `1.2.0`. Spec 1.3 is contract `1.3.0` and does not mint a new schema tag. Each item below is
-either resolved in spec 1.2 or explicitly deferred to spec 2.0, except the spec 1.3 note at the
-end. The Zod schemas in `packages/atls-spec/src/schemas/` remain the record contract.
+either resolved in spec 1.2 or explicitly deferred to spec 2.0, except the spec 1.3 note and
+the spec 1.4 candidates at the end. The Zod schemas in `packages/atls-spec/src/schemas/` remain
+the record contract.
 
 ---
 
@@ -38,8 +39,11 @@ Blob integrity is per blob: decompress, hash, compare to the hash in the path.
 
 A 1.1 archive may have been rolled up with `localeCompare`. Readers of 1.1 archives accept
 UTF-8 byte order, `en-US` `localeCompare`, or `th` `localeCompare`. Readers of 1.2 archives
-accept byte order only. The algorithm, the `schemaHash` and provenance definitions, and the
-locale difference are in
+accept byte order only. `validate()` uses that same split, keyed by `atlasVersion`: 1.2 or
+later accepts byte order only, and a digest that matches only `en-US` or `th` `localeCompare`
+is `CONTENT_SHA256_LOCALE_ORDER`. A 1.2 or later archive must also omit `archiveSha256` and
+`auditHash` (`INTEGRITY_DEPRECATED_FIELD`). Readers still do not treat those fields as a ZIP
+hash. The algorithm, the `schemaHash` and provenance definitions, and the locale difference are in
 [storage-and-encoding.md](../packages/atls-spec/docs/storage-and-encoding.md).
 
 ---
@@ -83,7 +87,9 @@ scope. Spec 1.2 does not rename directories.
 | `datasetId` | 16 hex of the digest in [identity-and-keys.md](../packages/atls-spec/docs/identity-and-keys.md) | optional string |
 
 A 1.1 archive that used another version still validates. Readers do not recompute 1.1
-`assetId` values. Tightening the schemas to these versions is a spec 2.0 schema-tag change.
+`assetId` values. `validate()` does, when `atlasVersion` is 1.2 or later: `assetId` must be
+`assetId(assetUrl)`, the UUID v5 of `normalizeUrl(assetUrl)`. A mismatch is `ASSET_ID_MISMATCH`.
+Tightening the schemas to these versions is a spec 2.0 schema-tag change.
 
 ---
 
@@ -156,8 +162,14 @@ prefix, or a default consumer list.
 uncompressed `.jsonl` parts remain reader tolerance: a part checksum is always the SHA-256 of
 the stored ZIP payload after the ZIP method is undone, so a reader must not recompress to
 verify. Both the canonical blob reference and the legacy `blobs/.../<hash>.zst` spelling are
-legal. A missing schema file is not a `validate()` failure. `schemaHash`, when present, is the
-SHA-256 of that file's bytes.
+legal for readers. `getBlob`, `readBlob`, and `statBlob` still resolve the legacy spelling.
+`validate()` reports `LEGACY_BLOB_REF` when `atlasVersion` is 1.2 or later and a record uses
+that spelling, including `page_metadata.media.screenshots`, `reconstruction_index` screenshot,
+favicon, and body refs, tile `src` values, and `robots.bodyBlobRef`. A 1.1 archive still
+validates with the legacy spelling. On that same 1.2 or later stamp, `validate()` also rejects
+a trailing-slash declaration other than the single `urlNormalization.trailing_slash` value
+`append-unless-file` (`TRAILING_SLASH_DECLARATION`). A missing schema file is not a
+`validate()` failure. `schemaHash`, when present, is the SHA-256 of that file's bytes.
 
 ---
 
@@ -171,4 +183,25 @@ stays an open string, so `ROBOTS_DISALLOWED` and `ROBOTS_UNREACHABLE` do not wid
 1.2 reader parses strictly. `manifest.robotsPolicy` already existed. The 1.3 keys are added
 beside `respect` and `overridesUsed`, which stay valid. `capabilities.robots` is unchanged.
 New counters use null when unmeasured and 0 when measured and zero. `responses429` and
-`responses5xx` count page responses from the origin, not robots.txt fetches.
+`responses5xx` count page responses from the origin, not robots.txt fetches. The meanings of
+`robotsPolicy.mode`, `modeSource`, and `failClosed`, and of the applied-body digest, stay
+stable across 1.3.x. The applied-body digest is the `bodyBlobRef` hash when that ref stores
+the applied body. When `bodySource` is `lastGood`, that stored body is the last-good copy.
+`lastGoodBodySha256` is a last-good digest that is not the stored body. A null `bodyBlobRef`
+means no body was stored, independent of `fetchStatus`.
+
+---
+
+## 13. Spec 1.4 candidates
+
+**Status.** Deferred. Not part of spec 1.3.x.
+
+**Candidates.** Spec 1.3 keeps one robots row per origin, a string `matchedRobotsRule`, and the
+applied-body digest in the dataset chapter. The following are candidates for spec 1.4:
+
+- Multiple `robots` rows per origin, with a `fetchSeq`, and a skip-row reference to the robots
+  row the skip was judged against.
+- A structured matched rule `{ matchedGroup, directive, pattern, lineNumber }` in place of the
+  `frontier_ledger.matchedRobotsRule` string. Spec 1.3 recommends the string form
+  `<Directive>: <pattern>`, for example `Disallow: /cart`.
+- Keep `bodyBlobRef` whenever a rule is cited.

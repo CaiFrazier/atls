@@ -717,6 +717,111 @@ async function main() {
     page_metadata: [pageRecord()],
   }, null, null);
 
+  const deprecatedDigests = await sealed("1.2", {
+    page_metadata: [pageRecord()],
+    responses: [responseRecord(canonicalRef)],
+  }, canonicalRef, blob);
+
+  const sitemapRecord = {
+    sitemapId: "sitemap-1",
+    crawlId: "01936b6a-7c8e-7000-8000-000000000001",
+    url: "https://example.com/sitemap.xml",
+    fetchedAt: CAPTURED_AT,
+    httpStatus: 200,
+    contentType: "application/xml",
+    isIndex: false,
+    entriesFound: 1,
+    entriesEnqueued: 1,
+    parseWarning: false,
+    parseError: null,
+    depth: 0,
+    referencedBy: null,
+  };
+  const sitemapUrlRecord = {
+    crawlId: "01936b6a-7c8e-7000-8000-000000000001",
+    sourceSitemapUrl: "https://example.com/sitemap.xml",
+    loc: "https://example.com/",
+    normalizedUrl: "https://example.com/",
+    lastmod: null,
+    changefreq: null,
+    priority: null,
+    enqueued: true,
+  };
+  const localeOrder = await sealed("1.2", {
+    page_metadata: [pageRecord()],
+    sitemaps: [sitemapRecord],
+    sitemap_urls: [sitemapUrlRecord],
+  }, null, null);
+  const thaiDigest = contentSha256(localeOrder.files, "th");
+  const enUsDigest = contentSha256(localeOrder.files, "en-US");
+  if (thaiDigest === localeOrder.content || enUsDigest !== localeOrder.content) {
+    throw new Error("locale-order fixture must match th localeCompare and not UTF-8 or en-US order");
+  }
+  localeOrder.content = thaiDigest;
+
+  const rawAssetUrl = "https://example.com/a.png/";
+  const rawAssetId = uuidV5(rawAssetUrl);
+  if (rawAssetId === assetId(rawAssetUrl)) {
+    throw new Error("asset-id fixture must differ from UUID v5 of normalizeUrl(assetUrl)");
+  }
+  const badAssetId = await sealed("1.2", {
+    page_metadata: [pageRecord()],
+    assets: [{
+      pageId: PAGE_ID,
+      assetId: rawAssetId,
+      pageUrl: PAGE_URL,
+      assetUrl: rawAssetUrl,
+      type: "image",
+      hasAlt: false,
+      visible: true,
+      inViewport: false,
+      wasLazyLoaded: false,
+    }],
+  }, null, null);
+
+  const legacyPage = {
+    ...pageRecord(),
+    media: {
+      screenshots: {
+        desktop: legacyRef,
+        desktopFullPage: {
+          tiles: [{ src: legacyRef, height: 400, width: 800, y: 0 }],
+          totalWidth: 800,
+          totalHeight: 400,
+        },
+      },
+    },
+  };
+  const legacyRobots = robotsRow(null, {
+    robotsUrl: "https://example.com/robots.txt",
+    fetchStatus: "ok",
+    httpStatus: 200,
+    bodySource: "fresh",
+    bodyBlobRef: legacyRef,
+    bodyBytes: BODY_BYTES,
+    lastGoodBodySha256: null,
+  });
+  const legacyEverywhere = await sealed("1.2", {
+    page_metadata: [legacyPage],
+    responses: [responseRecord(legacyRef)],
+    reconstruction_index: [{
+      pageId: PAGE_ID,
+      url: PAGE_URL,
+      finalUrl: PAGE_URL,
+      screenshotDesktopBlobRef: legacyRef,
+      faviconBlobRef: legacyRef,
+      bodyBlobRef: legacyRef,
+      sourceBodyBlobRef: canonicalRef,
+      domSnapshotPresent: false,
+      stylesheets: [],
+      scripts: [],
+      fonts: [],
+      images: [],
+      internalLinks: [],
+    }],
+    robots: [legacyRobots],
+  }, legacyRef, blob);
+
   const flipped = (hex) => (hex.endsWith("0") ? `${hex.slice(0, -1)}1` : `${hex.slice(0, -1)}0`);
   const pagePart = "page_metadata/part-001.jsonl.zst";
   badChecksum.files = { ...badChecksum.files, [pagePart]: flipped(badChecksum.files[pagePart]) };
@@ -752,11 +857,16 @@ async function main() {
     ["end-reason-mismatch.atls", mismatch, {
       summaryExtra: { endReason: "pageCap", completionReason: "finished" },
     }],
+    ["writer-deprecated-digest-1.2.atls", deprecatedDigests, { deprecatedDigests: true }],
+    ["writer-locale-order-1.2.atls", localeOrder, {}],
+    ["writer-legacy-blob-ref-1.2.atls", legacyEverywhere, {}],
+    ["writer-trailing-slash-1.2.atls", valid12, { conflictingSlash: true }],
+    ["writer-asset-id-1.2.atls", badAssetId, {}],
   ];
 
   const expected = [];
   for (const [fileName, built, flags] of cases) {
-    const extraIntegrity = built.edition === "1.1"
+    const extraIntegrity = built.edition === "1.1" || flags.deprecatedDigests
       ? { archiveSha256: built.content, auditHash: built.content }
       : {};
     const spec = {
@@ -767,7 +877,7 @@ async function main() {
         content: built.content,
         datasets: built.datasets,
         extraIntegrity,
-        blobRefStyle: fileName.startsWith("legacy") ? "legacy" : "canonical",
+        blobRefStyle: fileName.startsWith("legacy") || fileName.includes("legacy-blob-ref") ? "legacy" : "canonical",
       }),
       summary: summary(flags.omitPage ? 0 : 1, flags.summaryExtra ?? {}),
       parts: built.parts,
@@ -775,6 +885,18 @@ async function main() {
     };
     if (flags.robotsPolicy) {
       spec.manifest.robotsPolicy = flags.robotsPolicy;
+    }
+    if (flags.conflictingSlash) {
+      spec.manifest.urlNormalization = {
+        trailing_slash: "append-unless-file",
+        remove_trailing_slash: false,
+        trailing_slash_policy: "append",
+      };
+      spec.manifest.crawlContext = {
+        mode: "raw",
+        urlNormalizationRules: ["remove-trailing-slash"],
+      };
+      spec.manifest.compareCompatibility = { removeTrailingSlash: true };
     }
     if (flags.omitPage) {
       delete spec.manifest.parts.page_metadata;
@@ -789,7 +911,7 @@ async function main() {
     archives: [
       { file: "minimal-valid-1.1.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.1. archiveSha256 and auditHash are present and ignored. contentSha256 uses the same byte order as en-US localeCompare for these lowercase paths." },
       { file: "minimal-valid-1.2.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.2. No archiveSha256 or auditHash. urlNormalization.trailing_slash is append-unless-file. Blob ref is the canonical spelling." },
-      { file: "legacy-blob-ref.atls", valid: true, strictValid: true, errorCodes: [], note: "bodyBlobRef is blobs/sha256/<2>/<2>/<hash>.zst. Readers accept that spelling. The blob hash still matches." },
+      { file: "legacy-blob-ref.atls", valid: false, strictValid: false, errorCodes: ["LEGACY_BLOB_REF"], note: "Spec 1.2. responses.bodyBlobRef uses the legacy blobs/sha256/<2>/<2>/<hash>.zst spelling. getBlob() still reads that ref. validate() reports LEGACY_BLOB_REF." },
       { file: "legacy-blob-ref-1.1.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.1. bodyBlobRef uses the legacy blobs/sha256/<2>/<2>/<hash>.zst spelling. getBlob() reads that ref. archiveSha256 and auditHash are present and ignored." },
       { file: "corrupted-part-checksum.atls", valid: false, strictValid: false, errorCodes: ["PART_CHECKSUM_MISMATCH"], note: "integrity.files for page_metadata/part-001.jsonl.zst does not match the stored part bytes. contentSha256 still matches the real checksums." },
       { file: "bad-content-sha256.atls", valid: false, strictValid: false, errorCodes: ["CONTENT_SHA256_MISMATCH"], note: "Part checksums match the stored bytes. contentSha256 does not match their UTF-8 path-order rollup." },
@@ -800,6 +922,11 @@ async function main() {
       { file: "robots-duplicate-origin.atls", valid: false, strictValid: false, errorCodes: ["ROBOTS_DUPLICATE_ORIGIN"], note: "Two robots rows share the origin of normalizeUrl(robotsUrl)." },
       { file: "robots-missing-blob.atls", valid: false, strictValid: false, errorCodes: ["BLOB_NOT_FOUND"], note: "robots.bodyBlobRef is the canonical spelling and does not resolve to a blob entry." },
       { file: "end-reason-mismatch.atls", valid: false, strictValid: false, errorCodes: ["END_REASON_MISMATCH"], note: "endReason pageCap is present with completionReason finished. The map requires capped." },
+      { file: "writer-deprecated-digest-1.2.atls", valid: false, strictValid: false, errorCodes: ["INTEGRITY_DEPRECATED_FIELD"], note: "Spec 1.2 stamp. integrity.archiveSha256 and integrity.auditHash are present. Readers still do not treat them as a ZIP hash." },
+      { file: "writer-locale-order-1.2.atls", valid: false, strictValid: false, errorCodes: ["CONTENT_SHA256_LOCALE_ORDER"], note: "Spec 1.2 stamp. contentSha256 matches th localeCompare order of sitemap_urls and sitemaps, and not UTF-8 byte order. en-US localeCompare matches byte order for these paths." },
+      { file: "writer-legacy-blob-ref-1.2.atls", valid: false, strictValid: false, errorCodes: ["DATASET_SCHEMA_VIOLATION", "LEGACY_BLOB_REF", "LEGACY_BLOB_REF", "LEGACY_BLOB_REF", "LEGACY_BLOB_REF", "LEGACY_BLOB_REF", "LEGACY_BLOB_REF", "LEGACY_BLOB_REF"], note: "Spec 1.2 stamp. Legacy blob refs on page screenshots, a tile src, responses.bodyBlobRef, reconstruction_index screenshot, favicon, and body refs, and robots.bodyBlobRef. The robots schema also rejects the non-canonical spelling. getBlob() still resolves the legacy spelling." },
+      { file: "writer-trailing-slash-1.2.atls", valid: false, strictValid: false, errorCodes: ["TRAILING_SLASH_DECLARATION"], note: "Spec 1.2 stamp. urlNormalization.trailing_slash is append-unless-file, and the manifest also declares remove_trailing_slash, trailing_slash_policy, urlNormalizationRules, and compareCompatibility.removeTrailingSlash." },
+      { file: "writer-asset-id-1.2.atls", valid: false, strictValid: false, errorCodes: ["ASSET_ID_MISMATCH"], note: "Spec 1.2 stamp. assetId is the UUID v5 of the raw asset URL, not of normalizeUrl(assetUrl)." },
     ],
   };
   await writeFile(join(root, "expected.json"), `${JSON.stringify(verdicts, null, 2)}\n`);

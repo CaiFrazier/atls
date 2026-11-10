@@ -10,7 +10,7 @@ npm install @caifrazier/atls-sdk
 
 Requires Node.js 20 or newer. The package is ESM only. It depends on `@caifrazier/atls-spec` at the same version.
 
-The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Archives stamped 1.1 and 1.2 stay valid.
+The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Package version: `1.3.1`, not published to npm. Archives stamped 1.1 and 1.2 stay readable. `validate()` enforces the 1.2 writer rules when `atlasVersion` is 1.2 or later.
 
 ## Read an archive
 
@@ -81,7 +81,7 @@ for (const issue of result.issues) {
 }
 ```
 
-`validate()` checks part checksums, `integrity.contentSha256`, and blob hashes. `skipBlobVerification: true` skips blob hashes only. `archiveSha256` and `auditHash` are ignored.
+`validate()` checks part checksums, `integrity.contentSha256`, and blob hashes. `skipBlobVerification: true` skips blob hashes only. When `atlasVersion` is 1.2 or later it also rejects `archiveSha256` and `auditHash` (`INTEGRITY_DEPRECATED_FIELD`), a `contentSha256` that matches only `en-US` or `th` `localeCompare` order (`CONTENT_SHA256_LOCALE_ORDER`), the legacy blob spelling (`LEGACY_BLOB_REF`), extra or conflicting trailing-slash declarations (`TRAILING_SLASH_DECLARATION`), and an `assetId` that is not `assetId(assetUrl)` (`ASSET_ID_MISMATCH`). Archives stamped 1.1 or earlier keep the previous checks. `getBlob`, `readBlob`, and `statBlob` still resolve the legacy spelling.
 
 `validate({ strict: true })` also requires manifest fields and accepts either blob-ref spelling. That `strict` flag is not the same as `openAtlas({ strict })`.
 

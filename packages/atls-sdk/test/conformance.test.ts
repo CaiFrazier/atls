@@ -39,6 +39,58 @@ describe("conformance archives", () => {
   }
 });
 
+describe("1.2 writer rules", () => {
+  test("each failing archive names its violation", async () => {
+    const cases: Array<[string, string, string]> = [
+      ["writer-deprecated-digest-1.2.atls", "INTEGRITY_DEPRECATED_FIELD", "integrity.archiveSha256"],
+      ["writer-locale-order-1.2.atls", "CONTENT_SHA256_LOCALE_ORDER", "th localeCompare"],
+      ["legacy-blob-ref.atls", "LEGACY_BLOB_REF", "legacy blob ref spelling"],
+      ["writer-trailing-slash-1.2.atls", "TRAILING_SLASH_DECLARATION", "append-unless-file"],
+      ["writer-asset-id-1.2.atls", "ASSET_ID_MISMATCH", "normalizeUrl"],
+    ];
+    for (const [file, code, phrase] of cases) {
+      const result = await validate(join(root, "archives", file));
+      const messages = result.issues.filter((issue) => issue.code === code).map((issue) => issue.message);
+      expect(messages.length, file).toBeGreaterThan(0);
+      expect(messages.join("\n"), file).toContain(phrase);
+    }
+  });
+
+  test("legacy spellings on screenshots, tiles, reconstruction, and robots are flagged", async () => {
+    const result = await validate(join(root, "archives", "writer-legacy-blob-ref-1.2.atls"));
+    const messages = result.issues.filter((issue) => issue.code === "LEGACY_BLOB_REF").map((issue) => issue.message);
+    expect(messages.some((message) => message.includes("page_metadata.media.screenshots.desktop"))).toBe(true);
+    expect(messages.some((message) => message.includes("tiles[0].src"))).toBe(true);
+    expect(messages.some((message) => message.includes("responses.bodyBlobRef"))).toBe(true);
+    expect(messages.some((message) => message.includes("reconstruction_index.screenshotDesktopBlobRef"))).toBe(true);
+    expect(messages.some((message) => message.includes("reconstruction_index.faviconBlobRef"))).toBe(true);
+    expect(messages.some((message) => message.includes("reconstruction_index.bodyBlobRef"))).toBe(true);
+    expect(messages.some((message) => message.includes("robots.bodyBlobRef"))).toBe(true);
+  });
+
+  test("getBlob still reads a 1.2 legacy ref that validate rejects", async () => {
+    const path = join(root, "archives", "legacy-blob-ref.atls");
+    const verdict = await validate(path);
+    expect(verdict.valid).toBe(false);
+    expect(verdict.issues.some((issue) => issue.code === "LEGACY_BLOB_REF")).toBe(true);
+
+    const atlas = await openAtlas(path);
+    try {
+      const responses: Array<{ bodyBlobRef?: string }> = [];
+      for await (const row of atlas.readers.responses()) {
+        responses.push(row as { bodyBlobRef?: string });
+      }
+      const ref = responses[0]?.bodyBlobRef;
+      expect(ref).toMatch(/^blobs\/sha256\/[a-f0-9]{2}\/[a-f0-9]{2}\/[a-f0-9]{64}\.zst$/);
+      expect((await atlas.getBlob(ref!)).toString("utf8")).toBe("Hello, Atlas");
+      expect((await readBlob(path, ref!)).toString("utf8")).toBe("Hello, Atlas");
+      expect((await statBlob(path, ref!)).exists).toBe(true);
+    } finally {
+      atlas.close();
+    }
+  });
+});
+
 describe("legacy blob ref on a 1.1 archive", () => {
   test("getBlob, readBlob, and statBlob resolve the legacy spelling", async () => {
     const path = join(root, "archives", "legacy-blob-ref-1.1.atls");

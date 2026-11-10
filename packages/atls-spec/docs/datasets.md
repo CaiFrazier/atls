@@ -433,8 +433,10 @@ discovery tracker is wired.
   value was added to a closed enum.
 - `skipSource` (optional): `page` \| `scout` \| `sitemap` \| `warmup`. Where the skip decision was
   made. A 1.2 row omits it.
-- `matchedRobotsRule` (optional string or null): the Disallow pattern that matched, or null when
-  no pattern was recorded.
+- `matchedRobotsRule` (optional string or null): the matched robots rule, or null when
+  no rule was recorded. The recommended string is `<Directive>: <pattern>`, for example
+  `Disallow: /cart`. The field stays a string in spec 1.3. A structured object is a spec 1.4
+  candidate, not a 1.3 requirement.
 
 ---
 
@@ -442,6 +444,11 @@ discovery tracker is wired.
 
 One row per origin per crawl. Optional. Schema: `RobotsDatasetRecordV1Schema`. Key: `origin`.
 Spec 1.3. A 1.2 archive omits the dataset. A 1.2 reader ignores the directory.
+
+A writer that emits this dataset must settle each origin's robots outcome, retries included,
+before it fetches that origin's first page. It must use that same copy for the rest of the
+crawl. The dataset has one row per origin, so a later robots.txt fetch does not add a second
+row in spec 1.3.
 
 `origin` is the serialized origin of `normalizeUrl(robotsUrl)`. It is `scheme://host[:non-default-port]`,
 lowercase, with the host in punycode. The default port for the scheme is omitted. Userinfo, path,
@@ -469,8 +476,17 @@ What the crawler did is recorded on `manifest.robotsPolicy` and on `blockedNoCop
   not the body stored in `bodyBlobRef`. It is a plain digest, not a blob ref, and it does not
   need to resolve in the archive. When `bodyBlobRef` stores the last-good body, this field is null.
 - `bodyBlobRef`: the canonical `sha256/<2>/<2>/<hash>` spelling, or null when no body is stored.
-  The legacy `blobs/.../<hash>.zst` spelling is rejected. A non-null ref must resolve.
-  `validate()` checks that. `bodyBytes` is the stored length, and 0 when no body is stored.
+  A null `bodyBlobRef` means no body was stored. That null is independent of `fetchStatus`:
+  an `ok` fetch can store nothing, and an `unavailable` or `unreachable` fetch can store a body.
+  The legacy `blobs/.../<hash>.zst` spelling is rejected by the schema. `validate()` also
+  reports that spelling on a 1.2 or later `atlasVersion`. Blob readers still resolve it.
+  A non-null ref must resolve. `validate()` checks that. `bodyBytes` is the stored length,
+  and 0 when no body is stored.
+- The applied-body digest is stable across 1.3.x. It is the hash in `bodyBlobRef` when that
+  ref stores the body the crawler applied. When `bodySource` is `lastGood`, `bodyBlobRef`
+  stores that last-good body and the applied-body digest is the `bodyBlobRef` hash.
+  `lastGoodBodySha256` is the digest of a last-good body that is not the body stored in
+  `bodyBlobRef`.
 - `truncated`: true when the server sent more than the cap.
 - `declaredCrawlDelaySec`: nullable number. `appliedIntervalMs`: the per-origin ceiling that was
   enforced, in milliseconds.

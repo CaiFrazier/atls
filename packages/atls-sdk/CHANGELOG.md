@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.1
+
+Not published. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
+
+- `validate()` enforces the spec 1.2 writer rules when `atlasVersion` is 1.2 or later. Archives stamped 1.1 or earlier keep the previous checks.
+- `INTEGRITY_DEPRECATED_FIELD`: `integrity.archiveSha256` or `integrity.auditHash` is present.
+- `CONTENT_SHA256_LOCALE_ORDER`: `integrity.contentSha256` matches `en-US` or `th` `localeCompare` path order and not UTF-8 byte order.
+- `LEGACY_BLOB_REF`: a record uses `blobs/sha256/<2>/<2>/<hash>.zst`. `getBlob`, `readBlob`, and `statBlob` still resolve that spelling.
+- `TRAILING_SLASH_DECLARATION`: more than one trailing-slash declaration, any declaration other than `urlNormalization.trailing_slash`, or a value that conflicts with `append-unless-file`.
+- `ASSET_ID_MISMATCH`: `assetId` is not `assetId(assetUrl)`, the UUID v5 of `normalizeUrl(assetUrl)`.
+
 ## 1.3.0
 
 Not published. The npm version matches spec contract `1.3.0`. The schema tag stays `2026-09-04`.

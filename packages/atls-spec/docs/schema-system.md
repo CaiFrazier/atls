@@ -75,16 +75,25 @@ unless `manifest.robotsPolicy.failClosed` is true, and it rejects two robots row
 origin. When `summary.crawlContext.endReason` and `completionReason` are both present, it checks
 the spec 1.3 map. A summary that omits `endReason` is not checked.
 
-`validate()` does not open `quarantine`, `reconstruction_index`, or `frontier_ledger`. Quarantine
-records are retained because they already failed validation; the published schema documents that
-shape and the SDK does not re-validate it.
+`validate()` does not schema-check `quarantine`, `reconstruction_index`, or `frontier_ledger`.
+Quarantine records are retained because they already failed validation; the published schema
+documents that shape and the SDK does not re-validate it. When `atlasVersion` is 1.2 or later,
+`validate()` does read `reconstruction_index` to reject the legacy blob spelling on screenshot,
+favicon, and body refs, including tile `src` values.
 
 `checkIntegrity` checks references (an edge or asset URL against `page_metadata`). Separately,
 `validate()` checks part checksums, `contentSha256`, and blob hashes. `skipBlobVerification`
-skips only the blob hash and blob-reference existence checks. `archiveSha256` and `auditHash`
-are ignored. `strict` on `validate()` defaults to false and means "require the full manifest
-field set, a blob ref that is either the canonical spelling or the legacy `blobs/.../<hash>.zst`
-spelling, and the null-vs-omit rule."
+skips only the blob hash and blob-reference existence checks. It does not skip the 1.2 writer
+rules below. When `atlasVersion` is 1.2 or later, `validate()` reports
+`INTEGRITY_DEPRECATED_FIELD` if `archiveSha256` or `auditHash` is present,
+`CONTENT_SHA256_LOCALE_ORDER` if `contentSha256` matches only `en-US` or `th` `localeCompare`
+path order, `LEGACY_BLOB_REF` for the legacy blob spelling, `TRAILING_SLASH_DECLARATION` for an
+extra or conflicting trailing-slash declaration, and `ASSET_ID_MISMATCH` when `assetId` is not
+the UUID v5 of `normalizeUrl(assetUrl)`. A 1.1 or earlier stamp keeps the previous checks:
+`archiveSha256` and `auditHash` are ignored, locale digests are accepted, and the legacy blob
+spelling is accepted. `strict` on `validate()` defaults to false and means "require the full
+manifest field set, a blob ref that is either the canonical spelling or the legacy
+`blobs/.../<hash>.zst` spelling, and the null-vs-omit rule."
 `strict` on `openAtlas` defaults to true and means "throw `MalformedRecordError` on bad JSON or
 on the three datasets checked at read time." The two flags share a name and do not share a meaning.
 

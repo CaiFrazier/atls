@@ -205,6 +205,11 @@ The fields are recorded facts. The spec does not require a crawler to run in len
 a missing object does not mean lenient. `capabilities.robots` (`respectsRobotsTxt`,
 `overrideUsed`) is a separate object and stays unchanged.
 
+The meanings of `mode`, `modeSource`, and `failClosed` stay stable across 1.3.x. A later 1.3
+patch does not rename them, does not add a mode, and does not change when `failClosed` allows
+`robots.blockedNoCopy`. The applied-body digest is defined with the `robots` dataset and is
+stable across 1.3.x as well.
+
 | Field | Type |
 |---|---|
 | `respect` | boolean. Required on a pre-1.3 object. Optional beside a complete spec 1.3 object. |

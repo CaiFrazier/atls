@@ -1,8 +1,8 @@
 # Releasing
 
-`@caifrazier/atls-spec` and `@caifrazier/atls-sdk` publish together at the same version. Spec 1.3 is package version `1.3.0`. Do not publish one package ahead of the other. Publish the spec package first. The SDK depends on that exact spec version. Spec 1.3.0 is specified here and is not published by the spec 1.3 change.
+`@caifrazier/atls-spec` and `@caifrazier/atls-sdk` publish together at the same version. The package version is `1.3.1`. The spec contract stays `1.3.0`. Do not publish one package ahead of the other. Publish the spec package first. The SDK depends on that exact spec version. Package 1.3.1 is not published by this change.
 
-`.npmrc` sets `link-workspace-packages=true` so a local install uses this repo's spec package before `1.3.0` exists on the registry. `npm pack` still records the dependency as `1.3.0`.
+`.npmrc` sets `link-workspace-packages=true` so a local install uses this repo's spec package before `1.3.1` exists on the registry. `npm pack` still records the dependency as `1.3.1`.
 
 Nothing in this repository publishes on its own. A tag push runs `.github/workflows/publish.yml`. A laptop publish is the fallback when Actions cannot run.
 

@@ -87,8 +87,10 @@ Readers must also accept the legacy spelling:
 blobs/sha256/<aa>/<bb>/<64 hex>.zst
 ```
 
-`robots.bodyBlobRef` is the exception. It accepts only the canonical spelling. A legacy spelling
-on that field fails schema validation.
+`getBlob`, `readBlob`, and `statBlob` resolve that spelling. `validate()` reports
+`LEGACY_BLOB_REF` when a record uses it and `atlasVersion` is 1.2 or later. A 1.1 archive still
+validates. `robots.bodyBlobRef` is also rejected by its schema when the spelling is not
+canonical. A legacy spelling on that field fails schema validation.
 
 A missing `blobs/` prefix or a missing `.zst` suffix is the same reference when the hash and the
 shards match. A string that is not that shape may be a live URL. Do not treat it as a blob.
@@ -189,12 +191,18 @@ under `en-US`.
 
 Reader guidance: a spec 1.2 archive must match UTF-8 byte order. A spec 1.1 archive (and any 1.x
 archive whose minor version is below 2) is valid when `contentSha256` matches UTF-8 byte order,
-`en-US` `localeCompare` order, or `th` `localeCompare` order. The reference `validate()` accepts
-those three for 1.1 and only byte order for 1.2.
+`en-US` `localeCompare` order, or `th` `localeCompare` order. The reference `validate()` keys
+this on `atlasVersion`. A stamp of 1.2 or later accepts byte order only. A digest that matches
+`en-US` or `th` `localeCompare` and not byte order is `CONTENT_SHA256_LOCALE_ORDER`. A stamp of
+1.1 or earlier still accepts all three orders.
 
 ### Deprecated digest names
 
-`archiveSha256` and `auditHash` are deprecated. Writers should not emit them. Readers ignore them.
+`archiveSha256` and `auditHash` are deprecated. Writers should not emit them. Readers ignore them
+and do not treat them as a hash of the ZIP. `validate()` reports `INTEGRITY_DEPRECATED_FIELD`
+when either field is present on an archive whose `atlasVersion` is 1.2 or later. A 1.1 archive
+may still carry them.
+
 In the only writer helper that set them, both were copies of `contentSha256`. They do not cover
 the ZIP file and they do not cover an audit subset. Elsewhere the name `archiveSha256` means the
 SHA-256 of a whole downloaded file. That is a different input. Do not read

@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
@@ -63,6 +66,38 @@ function robotsRow(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+describe("spec 1.3 robots producer text", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+  const datasets = readFileSync(join(root, "packages/atls-spec/docs/datasets.md"), "utf8");
+  const questions = readFileSync(join(root, "docs/OPEN_QUESTIONS.md"), "utf8");
+
+  test("a robots writer settles the origin before the first page", () => {
+    expect(datasets).toContain("before it fetches that origin's first page");
+    expect(datasets).toContain("retries included");
+    expect(datasets).toContain("one row per origin");
+  });
+
+  test("matchedRobotsRule recommends Directive: pattern", () => {
+    expect(datasets).toContain("Disallow: /cart");
+    expect(datasets).toContain("<Directive>: <pattern>");
+  });
+
+  test("mode, modeSource, failClosed, and the applied-body digest stay stable", () => {
+    const versioning = readFileSync(join(root, "packages/atls-spec/docs/versioning.md"), "utf8");
+    expect(versioning).toContain("stay stable across 1.3.x");
+    expect(versioning).toContain("does not depend on `fetchStatus`");
+    expect(datasets).toContain("independent of `fetchStatus`");
+    expect(datasets).toContain("applied-body digest");
+  });
+
+  test("1.4 candidates stay out of the 1.3 contract", () => {
+    expect(questions).toContain("## 13. Spec 1.4 candidates");
+    expect(questions).toContain("fetchSeq");
+    expect(questions).toContain("matchedGroup, directive, pattern, lineNumber");
+    expect(questions).toContain("Keep `bodyBlobRef` whenever a rule is cited");
+  });
+});
 
 describe("spec 1.3 versions", () => {
   test("the package stamps 1.3 and keeps the schema tag", () => {

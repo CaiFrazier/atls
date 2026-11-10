@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1
+
+Not published. The package version is `1.3.1`. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
+
+- A writer that emits the `robots` dataset must settle each origin's robots outcome, retries included, before fetching that origin's first page, and must use that copy for the rest of the crawl. The dataset has one row per origin.
+- `frontier_ledger.matchedRobotsRule` stays a string. The recommended form is `<Directive>: <pattern>`, for example `Disallow: /cart`.
+- The meanings of `robotsPolicy.mode`, `modeSource`, and `failClosed`, and of the applied-body digest, stay stable across 1.3.x. The applied-body digest is the `bodyBlobRef` hash when that ref stores the applied body. When `bodySource` is `lastGood`, that stored body is the last-good copy. `lastGoodBodySha256` is a last-good digest that is not the stored body. A null `bodyBlobRef` means no body was stored, independent of `fetchStatus`.
+- `validate()` enforces the spec 1.2 writer rules when `atlasVersion` is 1.2 or later. Archives stamped 1.1 or earlier stay on the previous checks.
+
 ## 1.3.0
 
 Not published. The package version matches spec contract `1.3.0`. The schema tag stays `2026-09-04`. Archives stamped 1.1 and 1.2 stay valid. Every new field and the `robots` dataset are optional. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field.

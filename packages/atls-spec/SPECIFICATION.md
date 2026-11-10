@@ -5,9 +5,9 @@ repository is the Zod schemas in `@caifrazier/atls-spec` (`packages/atls-spec/sr
 file is the index; each chapter is a focused document under [`docs/`](./docs/). **When this prose
 and the Zod schemas differ, the schemas are authoritative.**
 
-_Spec package version: `1.3.0`. Current schema tag: `2026-09-04`._
+_Spec package version: `1.3.1`. Spec contract: `1.3.0`. Current schema tag: `2026-09-04`._
 
-Spec 1.3 is an additive minor. New fields and the `robots` dataset are optional, so archives stamped 1.1 and 1.2 stay valid. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field. The schema tag does not change. On a robots row, `responses429` and `responses5xx` count the page responses received from that origin during the crawl. They do not count fetches of robots.txt. Null means the count was not measured. 0 means it was measured and was zero.
+Spec 1.3 is an additive minor. New fields and the `robots` dataset are optional, so archives stamped 1.1 and 1.2 stay valid. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field. The schema tag does not change. On a robots row, `responses429` and `responses5xx` count the page responses received from that origin during the crawl. They do not count fetches of robots.txt. Null means the count was not measured. 0 means it was measured and was zero. Package `1.3.1` does not change the contract. It states that a robots writer settles each origin, retries included, before that origin's first page, and that `robotsPolicy.mode`, `modeSource`, `failClosed`, and the applied-body digest stay stable across 1.3.x. It is not published to npm.
 
 The current schema tag is the constant `ATLAS_SCHEMA_VERSION` in `src/edition.ts`. It is the tag
 this edition documents. `AtlasManifestV1Schema` still accepts any `schemaVersion` string.

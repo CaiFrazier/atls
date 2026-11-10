@@ -187,10 +187,16 @@ console.log(result.valid, result.stats.errorsFound, result.stats.warningsFound);
 ```
 
 > `validate()` checks part checksums, `contentSha256`, and blob hashes, then schema-checks the
-> datasets listed in [schema-system.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/schema-system.md). It ignores
-> `archiveSha256` and `auditHash`. `skipBlobVerification` skips blob hashes only. It does not
-> open `quarantine`, `reconstruction_index`, or `frontier_ledger`. It does check `robots`: the
-> schema, canonical `bodyBlobRef` resolution (unless `skipBlobVerification`), `blockedNoCopy`
+> datasets listed in [schema-system.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/schema-system.md).
+> When `atlasVersion` is 1.2 or later it reports `INTEGRITY_DEPRECATED_FIELD` if `archiveSha256` or
+> `auditHash` is present, `CONTENT_SHA256_LOCALE_ORDER` if `contentSha256` matches only locale path
+> order, `LEGACY_BLOB_REF` for `blobs/sha256/<2>/<2>/<hash>.zst` in a record, `TRAILING_SLASH_DECLARATION`
+> for an extra or conflicting trailing-slash declaration, and `ASSET_ID_MISMATCH` when `assetId` is not
+> the UUID v5 of `normalizeUrl(assetUrl)`. A 1.1 or earlier stamp keeps the previous checks.
+> `getBlob`, `readBlob`, and `statBlob` still resolve the legacy spelling. `skipBlobVerification` skips
+> blob hashes only. It does not schema-check `quarantine`, `reconstruction_index`, or `frontier_ledger`.
+> On a 1.2 or later stamp it does read `reconstruction_index` for the legacy spelling. It does check
+> `robots`: the schema, canonical `bodyBlobRef` resolution (unless `skipBlobVerification`), `blockedNoCopy`
 > against `manifest.robotsPolicy.failClosed`, and one row per origin. When
 > `summary.crawlContext.endReason` is present it must map onto `completionReason`.
 > `checkIntegrity` checks references. `strict` here defaults to false. `openAtlas({ strict })`
