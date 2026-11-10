@@ -14,7 +14,7 @@ _Verified against the dataset Zod schemas on 2026-11-10. Current schema tag: `20
   exceptions the schemas still spell in snake_case (notably `page_metadata.capture_degraded` and
   `page_metadata.degraded_reason`). Spec 1.2 does not rename keys. Spec 2.0 is the camelCase
   target, and 1.x readers keep accepting the snake_case keys. See
-  [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+  [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 - **Join key:** every page-scoped record carries `pageId`. Where the schema uses
   `z.string().uuid()`, any UUID version matches. Spec 1.2 writers use the versions in
   [identity-and-keys.md](./identity-and-keys.md).
@@ -74,8 +74,8 @@ On-page SEO signals. Schema: `PageMetadataDatasetRecordV1Schema`. Key: `pageId` 
 - `resourceHints` (object, optional): `preload`, `prefetch`, `preconnect`, `dnsPrefetch` — each an
   array of URL strings.
 - `media` (object, optional): `screenshots` (`desktop`, `mobile`, `desktopFullPage`,
-  `mobileFullPage` — each a blob-path string or a tiled-capture object with `src`, `tiles`,
-  `totalHeight`, `totalWidth`) and `favicon` (blob path).
+  `mobileFullPage`, each a plain string or a tiled object `{ tiles[].src, totalWidth, totalHeight }`)
+  and `favicon` (blob path). A tile `src` that is a blob ref may use either spelling.
 - `capture_degraded` (optional boolean) and `degraded_reason` (optional string). These two names
   are snake_case on this otherwise camelCase record.
 - `limits` (object, optional): `requestsCapped`, `maxRequestsPerPage`, `bytesCapped`,
@@ -285,7 +285,7 @@ not enforce that.
 
 `dom_snapshot.v1`, `acc_tree.v1`, and `render.v1` are published schemas and are not dataset
 directories. See [schema-system.md](./schema-system.md) and
-[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+[OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 ---
 
@@ -406,8 +406,12 @@ Per-page replay index, built at finalization. Schema: `reconstruction_index.sche
 `pageId`.
 
 - `pageId` · `url` · `finalUrl` · `title`.
-- Blob refs: `faviconBlobRef`, `sourceBodyBlobRef`, `renderedBodyBlobRef` (full),
+- Blob refs: `faviconBlobRef`, `bodyBlobRef`, `sourceBodyBlobRef`, `renderedBodyBlobRef` (full),
   `screenshotDesktopBlobRef`, `screenshotMobileBlobRef`.
+- `screenshotDesktopBlobRef`, `faviconBlobRef`, and `bodyBlobRef` keep both screenshot ref shapes:
+  a plain string, or `{ tiles[].src, totalWidth, totalHeight }`. The same two shapes stay at
+  `page_metadata.media.screenshots.desktop` and `desktopFullPage`. A tile `src` that is a blob ref
+  uses `sha256/<2>/<2>/<hash>` or `blobs/sha256/<2>/<2>/<hash>.zst`.
 - `domSnapshotPresent` (boolean).
 - `stylesheets[]` / `scripts[]` / `fonts[]` / `images[]` — each `{ url, blobRef }`.
 - `internalLinks[]`: `{ url, anchorText, targetPageId }`.

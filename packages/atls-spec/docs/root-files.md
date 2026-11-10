@@ -9,7 +9,7 @@ Current schema tag: `2026-09-04`.
 
 Casing is mixed. Top-level manifest keys are camelCase. Some nested blocks keep snake_case inner
 keys, and `identity` accepts both spellings of two fields. The lists below are the schema's names.
-Why that mix should change is [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md), not a license
+Why that mix should change is [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md), not a license
 to invent a third spelling.
 
 `AtlasManifestV1Schema` is `.passthrough()` at the top, so a parse keeps unknown top-level keys.
@@ -265,7 +265,7 @@ Inner keys are camelCase. Required when the object is present, except the two ma
 
 The reference reader still reads a legacy `row_count` on a matrix entry when `rowCount` is
 absent. That is reader tolerance, not a second current spelling. See
-[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+[OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 ### `storage`
 
@@ -341,7 +341,7 @@ There is no Zod schema for this file. `openAtlas` does not read it. Producers ma
 `summary.json` plus a top-level `aggregates` block. `AtlasSummarySchema` would strip `aggregates`
 if that object were parsed as `summary.json`. Do not treat a missing `summary.v2.json` as an
 invalid archive. The byte layout of `aggregates` is not part of this edition's schema; see
-[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+[OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 ---
 

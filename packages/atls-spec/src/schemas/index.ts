@@ -95,7 +95,9 @@ export {
   AssetRecordSchema,
   ErrorRecordSchema,
   ResponseRecordSchema,
-  DOMSnapshotRecordSchema
+  DOMSnapshotRecordSchema,
+  ScreenshotTileSchema,
+  ScreenshotReferenceSchema,
 } from './runtime-core.schema.js';
 export type { AssetRecordV1 } from './runtime-core.schema.js';
 

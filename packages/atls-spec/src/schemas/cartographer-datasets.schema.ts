@@ -21,21 +21,9 @@
 import { z } from "zod";
 import { EventType } from "../types.js";
 import { JsonValueSchema } from "./json-value.schema.js";
-import { EdgeLocationEnum, LinkTypeEnum, ScreenshotTileSchema } from "./runtime-core.schema.js";
+import { EdgeLocationEnum, LinkTypeEnum, ScreenshotReferenceSchema } from "./runtime-core.schema.js";
 
 const StringMapSchema = z.record(z.string(), z.union([z.string(), z.null()]));
-
-// BUG-0143: mirrors ScreenshotReference (types.ts) — a screenshot blob ref is
-// either a plain blob-path string, or a tiled-capture manifest object.
-const ScreenshotReferenceSchema = z.union([
-  z.string(),
-  z.object({
-    src: z.string().optional(),
-    tiles: z.array(ScreenshotTileSchema).optional(),
-    totalHeight: z.number().optional(),
-    totalWidth: z.number().optional(),
-  }),
-]);
 
 /**
  * Field-level provenance tier.  See {@link FieldOriginTier} in types.ts.

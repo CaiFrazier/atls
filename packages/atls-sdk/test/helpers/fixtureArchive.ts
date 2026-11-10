@@ -26,6 +26,8 @@ export type FixtureArchive = {
   cleanup: () => Promise<void>;
   pageUrl: string;
   blobRef: string;
+  /** Legacy spelling of `blobRef`: `blobs/sha256/<2>/<2>/<hash>.zst`. */
+  legacyBlobRef: string;
   blobBody: Buffer;
 };
 
@@ -82,6 +84,18 @@ export type FixtureOptions = {
    * readSchema().
    */
   includeSchemas?: boolean;
+  /**
+   * Attach screenshot refs after the fixture blob id is known.
+   * `canonical` is `sha256/<2>/<2>/<hash>`. `legacy` is `blobs/.../<hash>.zst`.
+   */
+  decoratePage?: (
+    page: { [key: string]: any },
+    refs: { canonical: string; legacy: string; pageId: string; pageUrl: string },
+  ) => void;
+  /** Extra datasets written next to the default four. Keys are directory names. */
+  extraDatasets?: (
+    refs: { canonical: string; legacy: string; pageId: string; pageUrl: string },
+  ) => Record<string, unknown[]>;
 };
 
 /** Mirror of DATASET_FOLDER_ALIASES in src/index.ts (canonical → alias). */
@@ -169,6 +183,14 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     capturedAt: now,
   };
 
+  const blobPointers = {
+    canonical: blobRef,
+    legacy: `blobs/${blobRef}.zst`,
+    pageId,
+    pageUrl,
+  };
+  options.decoratePage?.(pageMetadataRecord, blobPointers);
+
   const navigationRecord = {
     pageId: pageId,
     sourceUrl: options.edgeSourceUrl ?? pageUrl,
@@ -244,6 +266,13 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     responses: [responsesPart],
   };
 
+  const extraRecords = options.extraDatasets?.(blobPointers) ?? {};
+  for (const [dataset, records] of Object.entries(extraRecords)) {
+    partBuffers[dataset] = [
+      await buildJsonlPart(records, `${dataset}/${dataset}_part_00.jsonl.zst`),
+    ];
+  }
+
   // Inject an additional corrupt part if requested
   if (options.corruptLines) {
     const { dataset, lines } = options.corruptLines;
@@ -297,7 +326,28 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
       hash_sha256: responsesPart.hash,
       schema_uri: "schemas/responses.v1.schema.json",
     },
-  };
+  } as Record<string, {
+    name: string;
+    version: string;
+    recordCount: number;
+    bytes_compressed: number;
+    hash_sha256: string;
+    schema_uri: string;
+  }>;
+
+  for (const [dataset, parts] of Object.entries(partBuffers)) {
+    if (datasets[dataset]) continue;
+    const part = parts[0];
+    if (!part) continue;
+    datasets[dataset] = {
+      name: dataset,
+      version: "v1",
+      recordCount: part.recordCount,
+      bytes_compressed: part.bytesCompressed,
+      hash_sha256: part.hash,
+      schema_uri: `schemas/${dataset}.v1.schema.json`,
+    };
+  }
 
   const formatVersionEntry = options.omitFormatVersion
     ? {}
@@ -425,6 +475,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     path: archivePath,
     pageUrl,
     blobRef,
+    legacyBlobRef: blobPointers.legacy,
     blobBody,
     cleanup: async () => {
       await fs.rm(archivePath, { force: true });

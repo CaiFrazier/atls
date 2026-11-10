@@ -2,7 +2,7 @@
 
 How records identify themselves and how to join across datasets. Identifier versions below are
 what spec 1.2 writers emit. The Zod schemas still accept other UUID versions so spec 1.1 archives
-validate. See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+validate. See [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 _Verified against the Zod schemas on 2026-11-10._
 

@@ -2,6 +2,22 @@
 
 ## 1.2.0
 
+Published to npm as `@caifrazier/atls-spec@1.2.0`. This replaces `1.0.0-rc.1` (2026-07-04). The package version matches the spec contract. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.
+
+Install `@caifrazier/atls-spec`. `@atls/spec` is not published. The reader package is `@caifrazier/atls-sdk`. `@atls/sdk` is not published. Change those imports before you depend on the registry instead of a local checkout.
+
+### Package surface since 1.0.0-rc.1
+
+- `ATLAS_DATASET_KEYS` and `AtlasDatasetKey`.
+- `ExtractionRecord` and `SitemapUrlRecord`.
+- `normalizeUrl`, `urlKey`, `assetId`, `contentSha256`, `parseBlobRef`, and `screenshotBlobRefs`.
+- `ATLAS_SCHEMA_VERSION` (`2026-09-04`), `ATLAS_SPEC_VERSION` (`1.2.0`), `ATLAS_FORMAT_VERSION`, and `ATLAS_VERSION`.
+- Structured-data audit types, redirect rows on `responses` (`isRedirect`, `location`, `redirectType`, no body), and the shared dataset registry.
+- Screenshot refs stay a plain string or `{ tiles[].src, totalWidth, totalHeight }` at `page_metadata.media.screenshots.desktop`, `desktopFullPage`, `reconstruction_index.screenshotDesktopBlobRef`, `faviconBlobRef`, and `bodyBlobRef`.
+- Blob refs accept `sha256/<2>/<2>/<hash>` and `blobs/sha256/<2>/<2>/<hash>.zst`.
+
+### Format
+
 Spec 1.2 makes archive integrity, blob identity, URL identity, and record ids normative. The schema tag stays `2026-09-04`. Record field names do not change. Archives stamped 1.1 stay valid.
 
 ### Integrity

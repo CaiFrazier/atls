@@ -58,7 +58,7 @@ validation; the schema is not a second write-time gate.
 - **`audit_results`** is exported from `@caifrazier/atls-spec` and is not in `schemaMap`. It is
   not an archive dataset.
 
-See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+See [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 ---
 
@@ -82,7 +82,7 @@ spelling, and the null-vs-omit rule."
 `strict` on `openAtlas` defaults to true and means "throw `MalformedRecordError` on bad JSON or
 on the three datasets checked at read time." The two flags share a name and do not share a meaning.
 
-See the [Atlas SDK reference](../../atls-sdk/docs/API.md).
+See the [Atlas SDK reference](https://github.com/CaiFrazier/atls/blob/main/packages/atls-sdk/docs/API.md).
 
 ---
 
@@ -94,7 +94,7 @@ See the [Atlas SDK reference](../../atls-sdk/docs/API.md).
   `page_metadata` record (`core.*`, `indexing.*`, `social.*`) into a flat consumer shape. The
   SDK's `readers.pageMetadata()` returns that flat shape. `readers.dataset("page_metadata")` and
   `select` return the nested record. `PageRecord` is an in-memory composite, not the on-disk
-  dataset. See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+  dataset. See [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 
 ---
 

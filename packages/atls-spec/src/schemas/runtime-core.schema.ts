@@ -91,6 +91,21 @@ export const ScreenshotTileSchema = z.object({
 });
 
 /**
+ * A screenshot ref is either a plain string or a tiled manifest
+ * `{ tiles[].src, totalWidth, totalHeight }`. Both shapes stay valid.
+ * `src` on a tile may be a blob ref in either spelling.
+ */
+export const ScreenshotReferenceSchema = z.union([
+  z.string(),
+  z.object({
+    src: z.string().optional(),
+    tiles: z.array(ScreenshotTileSchema).optional(),
+    totalHeight: z.number().optional(),
+    totalWidth: z.number().optional(),
+  }),
+]);
+
+/**
  * Runtime validation schema for the in-memory composite PageRecord.
  *
  * This validates the ~20 core required fields of the flat PageRecord type built

@@ -1,6 +1,6 @@
 # atls
 
-The **Atlas** archive format (`.atls`) — specification, JSON Schemas, TypeScript types, and a read-side SDK.
+The **Atlas** archive format (`.atls`): specification, JSON Schemas, TypeScript types, and a read-side SDK.
 
 An `.atls` file is a zip archive of compressed JSON Lines datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format (spec 1.2, schema tag `2026-09-04`) and provides the reference reader. The Zod schemas are authoritative when the prose disagrees. Decisions for this edition are in [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md). Conformance archives are in [`conformance/`](conformance/README.md).
 
@@ -23,17 +23,21 @@ pnpm test       # runs the full test suite
 
 Requires Node ≥ 20 and pnpm ≥ 9.
 
+## Publish
+
+Both packages release together. See [RELEASING.md](./RELEASING.md). A tag `v1.2.0` runs the provenance workflow. That workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance.
+
 ## License
 
-Dual-licensed, by design — anyone can read, write, and build tooling around the
+Dual-licensed, by design. Anyone can read, write, and build tooling around the
 `.atls` format:
 
-- **Code** (`@caifrazier/atls-spec`, `@caifrazier/atls-sdk`, and all source) — **Apache License 2.0**
+- **Code** (`@caifrazier/atls-spec`, `@caifrazier/atls-sdk`, and all source): **Apache License 2.0**
   ([`LICENSE`](./LICENSE)).
-- **The Atlas specification & JSON Schemas** — additionally **CC BY 4.0**
+- **The Atlas specification and JSON Schemas** are additionally **CC BY 4.0**
   ([`LICENSE-SPEC.md`](./LICENSE-SPEC.md)).
 
-Trademarks ("Atlas", etc.) are not licensed by either grant — see
+Trademarks ("Atlas", etc.) are not licensed by either grant. See
 [`NOTICE`](./NOTICE). Contributions are accepted under the
 [Developer Certificate of Origin](./CONTRIBUTING.md).
 

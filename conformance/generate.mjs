@@ -441,6 +441,10 @@ async function main() {
     page_metadata: [pageRecord()],
     responses: [responseRecord(legacyRef)],
   }, legacyRef, blob);
+  const legacy11 = await sealed("1.1", {
+    page_metadata: [pageRecord()],
+    responses: [responseRecord(legacyRef)],
+  }, legacyRef, blob);
   const badChecksum = await sealed("1.2", {
     page_metadata: [pageRecord()],
     responses: [responseRecord(canonicalRef)],
@@ -466,6 +470,7 @@ async function main() {
     ["minimal-valid-1.1.atls", valid11, {}],
     ["minimal-valid-1.2.atls", valid12, {}],
     ["legacy-blob-ref.atls", legacy, {}],
+    ["legacy-blob-ref-1.1.atls", legacy11, {}],
     ["corrupted-part-checksum.atls", badChecksum, {}],
     ["bad-content-sha256.atls", badDigest, {}],
     ["corrupted-blob.atls", corruptBlob, {}],
@@ -505,6 +510,7 @@ async function main() {
       { file: "minimal-valid-1.1.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.1. archiveSha256 and auditHash are present and ignored. contentSha256 uses the same byte order as en-US localeCompare for these lowercase paths." },
       { file: "minimal-valid-1.2.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.2. No archiveSha256 or auditHash. urlNormalization.trailing_slash is append-unless-file. Blob ref is the canonical spelling." },
       { file: "legacy-blob-ref.atls", valid: true, strictValid: true, errorCodes: [], note: "bodyBlobRef is blobs/sha256/<2>/<2>/<hash>.zst. Readers accept that spelling. The blob hash still matches." },
+      { file: "legacy-blob-ref-1.1.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.1. bodyBlobRef uses the legacy blobs/sha256/<2>/<2>/<hash>.zst spelling. getBlob() reads that ref. archiveSha256 and auditHash are present and ignored." },
       { file: "corrupted-part-checksum.atls", valid: false, strictValid: false, errorCodes: ["PART_CHECKSUM_MISMATCH"], note: "integrity.files for page_metadata/part-001.jsonl.zst does not match the stored part bytes. contentSha256 still matches the real checksums." },
       { file: "bad-content-sha256.atls", valid: false, strictValid: false, errorCodes: ["CONTENT_SHA256_MISMATCH"], note: "Part checksums match the stored bytes. contentSha256 does not match their UTF-8 path-order rollup." },
       { file: "corrupted-blob.atls", valid: false, strictValid: false, errorCodes: ["BLOB_HASH_MISMATCH"], note: "The blob frame decompresses, and SHA-256 of those bytes is not the hash in the path." },

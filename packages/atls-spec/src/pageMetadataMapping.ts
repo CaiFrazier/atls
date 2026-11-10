@@ -87,6 +87,7 @@
  */
 
 import type { PageMetadataDatasetRecordV1 } from "./schemas/cartographer-datasets.schema.js";
+import type { ScreenshotReference } from "./types.js";
 
 /**
  * Flat representation of a page_metadata record, as returned to SDK consumers.
@@ -138,6 +139,17 @@ export interface FlatPageMetadata {
     prefetch?: string[];
     preconnect?: string[];
     dnsPrefetch?: string[];
+  };
+
+  // ── Media (top-level pass-through). Screenshot refs stay a string or a tiled manifest.
+  media?: {
+    screenshots?: {
+      desktop?: ScreenshotReference;
+      mobile?: ScreenshotReference;
+      desktopFullPage?: ScreenshotReference;
+      mobileFullPage?: ScreenshotReference;
+    };
+    favicon?: string;
   };
 
   // ── Capture quality (top-level pass-through from storage) ──

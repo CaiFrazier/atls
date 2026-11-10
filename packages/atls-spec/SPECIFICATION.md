@@ -5,7 +5,7 @@ repository is the Zod schemas in `@caifrazier/atls-spec` (`packages/atls-spec/sr
 file is the index; each chapter is a focused document under [`docs/`](./docs/). **When this prose
 and the Zod schemas differ, the schemas are authoritative.**
 
-_Spec package version: `1.0.0-rc.1` · Current schema tag: `2026-09-04`._
+_Spec package version: `1.2.0`. Current schema tag: `2026-09-04`._
 
 The current schema tag is the constant `ATLAS_SCHEMA_VERSION` in `src/edition.ts`. It is the tag
 this edition documents. `AtlasManifestV1Schema` still accepts any `schemaVersion` string.
@@ -38,9 +38,9 @@ which datasets exist, how they join, and how the bytes are laid out — the chap
 | [Schema System](./docs/schema-system.md) | Zod source of truth, JSON Schema codegen, which schemas are datasets, normalization adapters. |
 | [Reading Archives](./docs/reading-archives.md) | How to read an archive with or without the SDK. |
 
-Decisions for this edition are recorded in [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md).
+Decisions for this edition are recorded in [`docs/OPEN_QUESTIONS.md`](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md).
 The changelog is [CHANGELOG.md](./CHANGELOG.md). Conformance archives and vectors are in
-[`conformance/`](../../conformance/README.md).
+[`conformance/`](https://github.com/CaiFrazier/atls/blob/main/conformance/README.md).
 
 ---
 
@@ -84,10 +84,10 @@ are not a second definition.
 
 ## Related docs
 
-- Open questions and the spec 1.2 decisions: [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md)
+- Open questions and the spec 1.2 decisions: [`docs/OPEN_QUESTIONS.md`](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_QUESTIONS.md)
 - Changelog: [CHANGELOG.md](./CHANGELOG.md)
-- Conformance suite: [`conformance/README.md`](../../conformance/README.md)
-- Atlas SDK (the reference reader): [`packages/atls-sdk/README.md`](../atls-sdk/README.md)
+- Conformance suite: [`conformance/README.md`](https://github.com/CaiFrazier/atls/blob/main/conformance/README.md)
+- Atlas SDK (the reference reader): [`packages/atls-sdk/README.md`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-sdk/README.md)
 
 ---
 
