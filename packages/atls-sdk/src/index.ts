@@ -34,6 +34,7 @@ import type {
   ResourceRecordV1,
   SitemapUrlRecord,
   ExtractionRecord,
+  RobotsRecord,
 } from "./types.js";
 import {
   parseAssetRecord,
@@ -86,6 +87,7 @@ export type {
   ExtractionRecord,
   ResourceRecordV1,
   ResponseRecordV1,
+  RobotsRecord,
   SitemapUrlRecord,
 } from "./types.js";
 export * from "./validate.js";
@@ -148,6 +150,8 @@ export {
   urlKey,
   assetId,
   contentSha256,
+  serializedOrigin,
+  completionReasonForEndReason,
   sha256Hex,
   parseBlobRef,
   screenshotBlobRefs,
@@ -276,6 +280,8 @@ export interface AtlasReader {
     sitemapUrls: () => AsyncIterable<SitemapUrlRecord>;
     /** B1: custom extraction-rule results (present only when the crawl ran with rules). */
     extraction: () => AsyncIterable<ExtractionRecord>;
+    /** Spec 1.3: one robots.txt row per origin. Absent when the crawl did not record the dataset. */
+    robots: () => AsyncIterable<RobotsRecord>;
     dataset: <T = any>(name: DatasetName) => AsyncIterable<T>;
   };
 }
@@ -484,6 +490,7 @@ export async function openAtlas(atlsPath: string, options?: OpenAtlasOptions): P
         resources: makeIterator<ResourceRecordV1>("resources"),
         sitemapUrls: makeIterator<SitemapUrlRecord>("sitemap_urls"),
         extraction: makeIterator<ExtractionRecord>("extraction"),
+        robots: makeIterator<RobotsRecord>("robots"),
         dataset<T = any>(name: DatasetName) {
           return makeIterator<T>(toCanonicalDatasetName(name))();
         }

@@ -169,7 +169,7 @@ describe("diffManifests", () => {
     const names = diff.datasets.map((d) => d.dataset);
     // One shared registry: the default is exactly ATLAS_DATASET_KEYS, in its order.
     expect(names).toEqual(Object.keys(ATLAS_DATASET_KEYS));
-    for (const extension of ["sitemaps", "sitemap_urls", "extraction", "quarantine", "reconstruction_index", "frontier_ledger"]) {
+    for (const extension of ["sitemaps", "sitemap_urls", "extraction", "quarantine", "reconstruction_index", "frontier_ledger", "robots"]) {
       expect(names).toContain(extension);
     }
     expect(names).toContain("navigation");
@@ -187,7 +187,7 @@ describe("diffManifests", () => {
     expect(names).toContain("events");
     expect(names).toContain("pipeline_failures");
     expect(names).toContain("pipeline_alerts");
-    expect(names).toHaveLength(21);
+    expect(names).toHaveLength(22);
   });
 
   test("BUG-0094(e) (fixed): presentA/presentB distinguish absent from present-with-zero-count", () => {

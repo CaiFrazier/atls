@@ -20,7 +20,7 @@
  * Core types for Atlas archive specification.
  * Used by both the Cartographer engine and Atlas SDK.
  */
-import type { DOMSnapshotRecordV1, ResponseRecordV1, SitemapDatasetRecordV1, SitemapUrlDatasetRecordV1, ExtractionDatasetRecordV1, PipelineFailureRecordV1, AccessibilityDatasetRecordV1, EventRecordV1, AssetRecordV1, SecurityFormV1 } from "./schemas/index.js";
+import type { DOMSnapshotRecordV1, ResponseRecordV1, SitemapDatasetRecordV1, SitemapUrlDatasetRecordV1, ExtractionDatasetRecordV1, PipelineFailureRecordV1, AccessibilityDatasetRecordV1, EventRecordV1, AssetRecordV1, SecurityFormV1, RobotsDatasetRecordV1 } from "./schemas/index.js";
 
 /** B2 (W7 2a) — per-form submission-security facts. See SecurityFormV1Schema. */
 export type SecurityFormRecord = SecurityFormV1;
@@ -945,7 +945,15 @@ export interface FrontierLedgerRecord {
   url: string;
   normalizedUrl: string;
   status: "discovered" | "queued" | "visited" | "skipped";
+  /**
+   * Open string. Spec 1.3 writers use `ROBOTS_DISALLOWED` and
+   * `ROBOTS_UNREACHABLE`. The schema does not enum this field.
+   */
   skipReason?: string;
+  /** `page`, `scout`, `sitemap`, or `warmup`. Optional. */
+  skipSource?: "page" | "scout" | "sitemap" | "warmup";
+  /** Matched Disallow pattern, or null when none was recorded. Optional. */
+  matchedRobotsRule?: string | null;
   depth?: number;
   discoveredFrom?: string;
   discoveredAt?: string;    // ISO timestamp
@@ -971,6 +979,14 @@ export type SitemapUrlRecord = SitemapUrlDatasetRecordV1;
  * ExtractionDatasetRecordV1Schema for the honesty semantics of `status`.
  */
 export type ExtractionRecord = ExtractionDatasetRecordV1;
+
+/**
+ * RobotsRecord (spec 1.3). One row per origin per crawl. See
+ * RobotsDatasetRecordV1Schema. `responses429` and `responses5xx` count the
+ * page responses received from that origin during the crawl. They do not
+ * count fetches of robots.txt.
+ */
+export type RobotsRecord = RobotsDatasetRecordV1;
 
 /**
  * SitemapCoverage (B4) - Crawl-level honesty classification of sitemap discovery,
@@ -1464,8 +1480,8 @@ export interface AtlasManifest {
   crawlId?: string;
   /** Render mode. Same enum as `crawlContext.mode`. */
   mode?: RenderMode;
-  atlasVersion: string; // Current edition value: "1.1". Schema: /^v?\d+(\.\d+)?$/
-  formatVersion: string; // Current edition value: "1.1.0". Readers gate on major 1.
+  atlasVersion: string; // Current edition value: "1.3". "1.1" and "1.2" remain valid. Schema: /^v?\d+(\.\d+)?$/
+  formatVersion: string; // Current edition value: "1.3.0". Readers gate on major 1.
   specVersion?: string;
   schemaVersion?: string; // Current edition tag: ATLAS_SCHEMA_VERSION ("2026-09-04")
   incomplete?: boolean;
@@ -1617,12 +1633,33 @@ export interface AtlasManifest {
     redactPii: boolean;            // Redact obvious PII fields (default false)
   };
 
-  // Robots.txt policy
-  robotsPolicy?: {
-    respect: boolean;              // Respect robots.txt (default true)
-    overridesUsed: boolean;        // If true, robots.txt was overridden
-    overrideReason?: string;       // Reason for override (if overridesUsed)
-  };
+  /**
+   * Robots policy. Pre-1.3 objects have `respect` and `overridesUsed`.
+   * Spec 1.3 objects have `mode`, `modeSource`, `failClosed`, `retryAttempts`,
+   * and `keepLastGood`, and may keep the older booleans so a 1.2 reader still
+   * parses the object. See RobotsPolicySchema.
+   */
+  robotsPolicy?:
+    | {
+        respect: boolean;
+        overridesUsed: boolean;
+        overrideReason?: string;
+        mode?: "lenient" | "strict";
+        modeSource?: "default" | "config" | "flag";
+        failClosed?: boolean;
+        retryAttempts?: number;
+        keepLastGood?: boolean;
+      }
+    | {
+        respect?: boolean;
+        overridesUsed?: boolean;
+        overrideReason?: string;
+        mode: "lenient" | "strict";
+        modeSource: "default" | "config" | "flag";
+        failClosed: boolean;
+        retryAttempts: number;
+        keepLastGood: boolean;
+      };
 
   // compareCompatibility is z.record(unknown) (free-form) in the schema — the field name is
   // camelCase but inner keys (comparable_to/diff_*) are data and stay snake.
@@ -1798,6 +1835,18 @@ export interface AtlasSummary {
   crawlContext: {
     specLevel: number; // 1 = Raw, 2 = Prerender, 3 = Full
     completionReason: "finished" | "capped" | "error_budget" | "schema_budget_exhausted" | "manual";
+    /**
+     * Spec 1.3. Optional. When present, it maps onto `completionReason`:
+     * complete to finished, pageCap and timeBudget to capped, circuitOpen to
+     * error_budget, schemaBudget to schema_budget_exhausted, manualStop and
+     * aborted to manual.
+     */
+    endReason?: "complete" | "pageCap" | "timeBudget" | "circuitOpen" | "schemaBudget" | "manualStop" | "aborted";
+    /**
+     * Spec 1.3 counter. Null means not measured. A present record maps a
+     * reason to a nonnegative integer, and 0 is a measured zero.
+     */
+    skippedByReason?: Record<string, number> | null;
     frontierEmptyAtStop?: boolean;
     stopConditionsTriggered?: string[];
     completionInputs?: {

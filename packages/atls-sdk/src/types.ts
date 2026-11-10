@@ -36,6 +36,7 @@ import type {
   ResourceRecordV1,
   SitemapUrlRecord, // B4: per-URL sitemap entries
   ExtractionRecord, // B1: custom extraction-rule results
+  RobotsRecord, // Spec 1.3: one robots.txt row per origin
 } from '@caifrazier/atls-spec';
 
 // Re-export for convenience
@@ -54,6 +55,7 @@ export type {
   ResourceRecordV1,
   SitemapUrlRecord, // B4: per-URL sitemap entries
   ExtractionRecord, // B1: custom extraction-rule results
+  RobotsRecord, // Spec 1.3: one robots.txt row per origin
 };
 
 /**

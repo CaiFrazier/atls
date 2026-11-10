@@ -20,6 +20,7 @@
 
 import { z } from "zod";
 import { EventType } from "../types.js";
+import { FRONTIER_SKIP_SOURCES } from "../spec13.js";
 import { JsonValueSchema } from "./json-value.schema.js";
 import { EdgeLocationEnum, LinkTypeEnum, ScreenshotReferenceSchema } from "./runtime-core.schema.js";
 
@@ -814,7 +815,24 @@ export const FrontierLedgerRecordV1Schema = z.object({
   url: z.string(),
   normalizedUrl: z.string(),
   status: z.enum(["discovered", "queued", "visited", "skipped"]),
+  /**
+   * Open string, not an enum. Spec 1.3 writers use `ROBOTS_DISALLOWED` when a
+   * robots Disallow rule skipped the URL, and `ROBOTS_UNREACHABLE` when the
+   * URL was skipped because robots.txt for the origin was unreachable. Other
+   * strings remain valid, including reasons already stored in 1.2 archives.
+   * A 1.2 reader that parses this field as a string accepts the new values.
+   */
   skipReason: z.string().optional(),
+  /**
+   * Where the skip decision was made: `page`, `scout`, `sitemap`, or `warmup`.
+   * Optional. A 1.2 row omits it.
+   */
+  skipSource: z.enum(FRONTIER_SKIP_SOURCES).optional(),
+  /**
+   * The Disallow pattern that matched, or null when no pattern was recorded.
+   * Optional so a 1.2 row that omits it still validates.
+   */
+  matchedRobotsRule: z.string().nullable().optional(),
   depth: z.number().int().nonnegative().optional(),
   discoveredFrom: z.string().optional(),
   discoveredAt: z.string().datetime().optional(),

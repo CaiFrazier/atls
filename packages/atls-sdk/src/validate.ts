@@ -19,6 +19,7 @@ import { AtlasResourceLimitError, decompressZstdBuffer, openZipHandle } from "./
 import type { AtlasReadLimits, ZipHandle } from "./reader.js";
 import {
   acceptedContentDigests,
+  completionReasonForEndReason,
   integrityEdition,
   isDatasetPartPath,
   parseBlobRef,
@@ -50,6 +51,7 @@ import {
   PipelineAlertRecordV1Schema,
   PageMetadataDatasetRecordV1Schema,
   AssetRecordSchema,
+  RobotsDatasetRecordV1Schema,
 } from "@caifrazier/atls-spec";
 
 /**
@@ -105,6 +107,7 @@ export interface ValidationResult {
     accessibilityChecked: number;
     pipelineFailuresChecked: number;
     pipelineAlertsChecked: number;
+    robotsChecked: number;
     errorsFound: number;
     warningsFound: number;
   };
@@ -226,6 +229,7 @@ export async function validate(
     accessibilityChecked: 0,
     pipelineFailuresChecked: 0,
     pipelineAlertsChecked: 0,
+    robotsChecked: 0,
     errorsFound: 0,
     warningsFound: 0,
   };
@@ -260,6 +264,22 @@ export async function validate(
     // Phase 1: Check manifest schema
     if (checkManifest) {
       validateManifestSchema(atlas.manifest, addIssue, { strict });
+    }
+
+    // Spec 1.3: when both endReason and completionReason are present, they
+    // must follow the normative map. completionReason stays required. A 1.2
+    // summary that omits endReason is not checked.
+    const crawlContext = atlas.summary?.crawlContext as { endReason?: unknown; completionReason?: unknown } | undefined;
+    if (crawlContext && typeof crawlContext.endReason === "string" && typeof crawlContext.completionReason === "string") {
+      const expected = completionReasonForEndReason(crawlContext.endReason);
+      if (expected !== crawlContext.completionReason) {
+        addIssue({
+          severity: "error",
+          code: "END_REASON_MISMATCH",
+          message: `summary.crawlContext.endReason "${crawlContext.endReason}" maps to completionReason "${expected ?? "unknown"}", got "${crawlContext.completionReason}"`,
+          details: { endReason: crawlContext.endReason, completionReason: crawlContext.completionReason, expected },
+        });
+      }
     }
 
     // Phase 1b: part checksums, contentSha256, and blob hashes.
@@ -471,6 +491,64 @@ export async function validate(
           code: "DATASET_UNREADABLE",
           message: `${name} dataset is present but could not be read (likely truncated or corrupt): ${err instanceof Error ? err.message : String(err)}`,
           dataset: name,
+        });
+      }
+    }
+
+    // Spec 1.3 robots dataset. bodyBlobRef resolution is the blob-ref walk
+    // below. blockedNoCopy may be true only when manifest.robotsPolicy.failClosed
+    // is true. One row per origin.
+    if (atlas.hasDataset("robots" as any) && issues.length < maxIssues) {
+      const seenOrigins = new Set<string>();
+      const failClosed = (atlas.manifest as { robotsPolicy?: { failClosed?: unknown } }).robotsPolicy?.failClosed === true;
+      try {
+        for await (const record of activeAtlas.readers.robots()) {
+          stats.robotsChecked++;
+          const parsed = RobotsDatasetRecordV1Schema.safeParse(record);
+          if (!parsed.success) {
+            const firstIssue = parsed.error.issues[0];
+            const path = firstIssue?.path?.length ? `/${firstIssue.path.join("/")}` : "/";
+            addIssue({
+              severity: "error",
+              code: "DATASET_SCHEMA_VIOLATION",
+              message: `robots record failed schema validation: ${path} ${firstIssue?.message ?? "unknown"}`,
+              dataset: "robots",
+              record,
+            });
+          } else {
+            if (!skipBlobVerification) {
+              collectBlobRefIssues(parsed.data, "robots", blobPaths, addIssue);
+            }
+            if (parsed.data.blockedNoCopy && !failClosed) {
+              addIssue({
+                severity: "error",
+                code: "ROBOTS_BLOCKED_NO_COPY",
+                message: "robots.blockedNoCopy is true only when manifest.robotsPolicy.failClosed is true",
+                dataset: "robots",
+                record,
+                details: { origin: parsed.data.origin },
+              });
+            }
+            if (seenOrigins.has(parsed.data.origin)) {
+              addIssue({
+                severity: "error",
+                code: "ROBOTS_DUPLICATE_ORIGIN",
+                message: `robots has more than one row for origin ${parsed.data.origin}`,
+                dataset: "robots",
+                record,
+                details: { origin: parsed.data.origin },
+              });
+            }
+            seenOrigins.add(parsed.data.origin);
+          }
+          if (issues.length >= maxIssues) break;
+        }
+      } catch (err) {
+        addIssue({
+          severity: "error",
+          code: "DATASET_UNREADABLE",
+          message: `robots dataset is present but could not be read (likely truncated or corrupt): ${err instanceof Error ? err.message : String(err)}`,
+          dataset: "robots",
         });
       }
     }
@@ -939,7 +1017,7 @@ async function verifyPartDigests(
       addIssue({
         severity: "error",
         code: "PART_CHECKSUM_MISSING",
-        message: "Spec 1.2 archive is missing integrity.files",
+        message: "Spec 1.2 or later archive is missing integrity.files",
       });
     }
   } else {
@@ -1009,7 +1087,7 @@ async function verifyPartDigests(
       addIssue({
         severity: "error",
         code: "CONTENT_SHA256_MISSING",
-        message: "Spec 1.2 archive is missing integrity.contentSha256",
+        message: "Spec 1.2 or later archive is missing integrity.contentSha256",
       });
     }
     return;

@@ -48,6 +48,7 @@ _Verified against the dataset Zod schemas on 2026-11-10. Current schema tag: `20
 | `extraction` | ✓* | ✓* | ✓* | `pageId`+`ruleId` | Zod |
 | `reconstruction_index` | ✓† | ✓† | ✓† | `pageId` | Zod |
 | `frontier_ledger` | opt | opt | opt | `url`, `pageId?` | Zod |
+| `robots` | opt | opt | opt | `origin` | Zod |
 
 `*` pruned/written only when records exist · `†` built at finalization under default replay tier.
 Every emitted dataset now has a published Zod schema in `@caifrazier/atls-spec` (see
@@ -426,6 +427,64 @@ discovery tracker is wired.
 
 - `url` · `normalizedUrl` · `status` (`discovered`\|`queued`\|`visited`\|`skipped`) · `hostGroup`.
 - `pageId` (optional UUID), `skipReason`, `depth`, `discoveredFrom`, `discoveredAt`.
+- `skipReason` is an open string, not an enum. Spec 1.3 writers use `ROBOTS_DISALLOWED` when a
+  robots Disallow rule skipped the URL, and `ROBOTS_UNREACHABLE` when the URL was skipped because
+  robots.txt for the origin was unreachable. Other strings remain valid. A 1.2 reader that
+  accepts any string accepts the new spellings. The schema was not widened into an enum, and no
+  value was added to a closed enum.
+- `skipSource` (optional): `page` \| `scout` \| `sitemap` \| `warmup`. Where the skip decision was
+  made. A 1.2 row omits it.
+- `matchedRobotsRule` (optional string or null): the Disallow pattern that matched, or null when
+  no pattern was recorded.
+
+---
+
+## robots
+
+One row per origin per crawl. Optional. Schema: `RobotsDatasetRecordV1Schema`. Key: `origin`.
+Spec 1.3. A 1.2 archive omits the dataset. A 1.2 reader ignores the directory.
+
+`origin` is the serialized origin of `normalizeUrl(robotsUrl)`. It is `scheme://host[:non-default-port]`,
+lowercase, with the host in punycode. The default port for the scheme is omitted. Userinfo, path,
+query, and fragment are omitted. An IPv6 host keeps the brackets the URL serializer uses. The
+field must equal `serializedOrigin(robotsUrl)`. That check is normative. The schema rejects a
+mismatch, and the conformance vectors in `conformance/vectors/spec-1.3.json` lock the cases.
+
+`fetchStatus` is a descriptive RFC 9309 outcome, not an access-policy requirement:
+
+- `ok`: the fetch returned an HTTP 2xx or 3xx.
+- `unavailable`: an HTTP 4xx.
+- `unreachable`: an HTTP 5xx, a network failure, or a timeout. `httpStatus` is null for a network
+  failure or a timeout.
+
+The schema does not require the crawler to allow or deny the origin because of `fetchStatus`.
+What the crawler did is recorded on `manifest.robotsPolicy` and on `blockedNoCopy`.
+
+- `robotsUrl`, `userAgentToken` (the product token the crawler matched with).
+- `matchedGroup`: the user-agent group that applied, for example `*`, or null when there is no file.
+- `httpStatus`: integer or null.
+- `fetchedAt` (ISO 8601), `attempts` (nonnegative integer).
+- `bodySource`: `fresh` \| `lastGood` \| `none`.
+- `lastGoodFetchedAt`: nullable. Set when `bodySource` is `lastGood`, and null otherwise.
+- `lastGoodBodySha256`: nullable lowercase SHA-256 hex. The digest of a last-good body that is
+  not the body stored in `bodyBlobRef`. It is a plain digest, not a blob ref, and it does not
+  need to resolve in the archive. When `bodyBlobRef` stores the last-good body, this field is null.
+- `bodyBlobRef`: the canonical `sha256/<2>/<2>/<hash>` spelling, or null when no body is stored.
+  The legacy `blobs/.../<hash>.zst` spelling is rejected. A non-null ref must resolve.
+  `validate()` checks that. `bodyBytes` is the stored length, and 0 when no body is stored.
+- `truncated`: true when the server sent more than the cap.
+- `declaredCrawlDelaySec`: nullable number. `appliedIntervalMs`: the per-origin ceiling that was
+  enforced, in milliseconds.
+- `blockedNoCopy`: true only when the origin was blocked for being unreachable with no copy
+  (`fetchStatus` `unreachable`, `bodySource` `none`, no stored body and no last-good digest).
+  It can be true only when `manifest.robotsPolicy.failClosed` is true. `validate()` checks that
+  cross-field rule.
+- `responses429`, `responses5xx`: nullable nonnegative integers. These count page responses
+  received from that origin during the crawl. They do not count fetches of robots.txt. Null
+  means the crawler did not measure the count. 0 means it measured zero. New 1.3 counters use
+  null for unmeasured and 0 for measured zero.
+
+`validate()` also rejects two rows with the same `origin`.
 
 ---
 

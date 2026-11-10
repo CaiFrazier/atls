@@ -1,9 +1,9 @@
 # Open questions
 
-Decision record for the Atlas edition at schema tag `2026-09-04`, spec contract `1.2.0`. Each
-item is either resolved in spec 1.2 or explicitly deferred to spec 2.0. The Zod schemas in
-`packages/atls-spec/src/schemas/` remain the record contract. Spec 1.2 does not mint a new
-schema tag.
+Decision record for the Atlas edition at schema tag `2026-09-04`. Spec 1.2 is contract
+`1.2.0`. Spec 1.3 is contract `1.3.0` and does not mint a new schema tag. Each item below is
+either resolved in spec 1.2 or explicitly deferred to spec 2.0, except the spec 1.3 note at the
+end. The Zod schemas in `packages/atls-spec/src/schemas/` remain the record contract.
 
 ---
 
@@ -158,3 +158,17 @@ the stored ZIP payload after the ZIP method is undone, so a reader must not reco
 verify. Both the canonical blob reference and the legacy `blobs/.../<hash>.zst` spelling are
 legal. A missing schema file is not a `validate()` failure. `schemaHash`, when present, is the
 SHA-256 of that file's bytes.
+
+---
+
+## 12. Spec 1.3 is additive
+
+**Status.** Resolved in spec 1.3.
+
+**Decision.** The schema tag stays `2026-09-04`. New fields and the `robots` dataset are
+optional. A writer stamps 1.3 only when it emits a spec 1.3 field. `frontier_ledger.skipReason`
+stays an open string, so `ROBOTS_DISALLOWED` and `ROBOTS_UNREACHABLE` do not widen an enum a
+1.2 reader parses strictly. `manifest.robotsPolicy` already existed. The 1.3 keys are added
+beside `respect` and `overridesUsed`, which stay valid. `capabilities.robots` is unchanged.
+New counters use null when unmeasured and 0 when measured and zero. `responses429` and
+`responses5xx` count page responses from the origin, not robots.txt fetches.

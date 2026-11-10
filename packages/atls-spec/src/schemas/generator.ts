@@ -62,6 +62,7 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'sitemap_urls.v1', schema: schemas.SitemapUrlDatasetRecordV1Schema },
   { name: 'extraction.v1', schema: schemas.ExtractionDatasetRecordV1Schema },
   { name: 'frontier_ledger.v1', schema: schemas.FrontierLedgerRecordV1Schema },
+  { name: 'robots.v1', schema: schemas.RobotsDatasetRecordV1Schema },
   { name: 'reconstruction_index.v1', schema: schemas.ReconstructionIndexRecordV1Schema },
   // BUG-0128: quarantine records now have a published schema. It documents the
   // shape and ships in archives, but the producer deliberately does NOT enforce

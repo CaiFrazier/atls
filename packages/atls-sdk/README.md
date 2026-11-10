@@ -10,7 +10,7 @@ npm install @caifrazier/atls-sdk
 
 Requires Node.js 20 or newer. The package is ESM only. It depends on `@caifrazier/atls-spec` at the same version.
 
-The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.2.0`.
+The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Archives stamped 1.1 and 1.2 stay valid.
 
 ## Read an archive
 
@@ -31,7 +31,7 @@ atlas.close();
 
 `openAtlas` is strict by default. A record that is not valid JSON, or that fails the schema for `assets`, `responses`, or `resources`, throws `MalformedRecordError`. Pass `{ strict: false }` to skip those records and count them on `atlas.stats.corruptedRecordCount`.
 
-Dataset readers include `pageMetadata()`, `navigation()`, `responses()`, `sitemapUrls()` (`SitemapUrlRecord`), and `extraction()` (`ExtractionRecord`). `ATLAS_DATASET_KEYS` is the full registry of directory names.
+Dataset readers include `pageMetadata()`, `navigation()`, `responses()`, `sitemapUrls()` (`SitemapUrlRecord`), `extraction()` (`ExtractionRecord`), and `robots()` (`RobotsRecord`, spec 1.3, one row per origin). `ATLAS_DATASET_KEYS` is the full registry of directory names.
 
 ## Resolve a blob
 

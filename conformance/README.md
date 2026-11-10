@@ -1,6 +1,6 @@
 # Conformance
 
-Small archives and vectors for Atlas spec 1.2. Any implementation can run them. The reference reader is `validate()` from `@caifrazier/atls-sdk`.
+Small archives and vectors for Atlas spec 1.2 and spec 1.3. Any implementation can run them. The reference reader is `validate()` from `@caifrazier/atls-sdk`. Spec 1.3 archives are additive. A 1.2 reader still reads `minimal-valid-1.3.atls` when it ignores unknown fields and unknown datasets, and when `robotsPolicy` still carries `respect` and `overridesUsed`.
 
 Regenerate after a spec build:
 
@@ -25,6 +25,11 @@ Each file is a ZIP (`.atls`) using store mode (ZIP method 0). Part and blob payl
 | `archives/bad-content-sha256.atls` | no | no | `CONTENT_SHA256_MISMATCH` | Every part checksum matches the stored bytes. `contentSha256` does not match the UTF-8 path-order rollup. |
 | `archives/corrupted-blob.atls` | no | no | `BLOB_HASH_MISMATCH` | The blob frame decompresses. SHA-256 of those bytes is not the hash in the path. |
 | `archives/missing-required-dataset.atls` | no | no | `MANIFEST_MISSING_PARTS` | The manifest does not declare `page_metadata`. The `responses` part and its checksums are valid. This is not a failure of the presence-by-mode matrix. |
+| `archives/minimal-valid-1.3.atls` | yes | yes | none | A 1.3 archive. One robots row for each `fetchStatus` and each `bodySource`, including a punycode origin and a `blockedNoCopy` row whose `robotsPolicy.failClosed` is true. `endReason` `complete` maps to `completionReason` `finished`. `frontier_ledger.skipReason` uses `ROBOTS_DISALLOWED` and `ROBOTS_UNREACHABLE` as strings. `respect` and `overridesUsed` are present so a 1.2 reader can parse `robotsPolicy`. |
+| `archives/robots-blocked-no-copy.atls` | no | no | `ROBOTS_BLOCKED_NO_COPY` | `blockedNoCopy` is true and `manifest.robotsPolicy.failClosed` is false. |
+| `archives/robots-duplicate-origin.atls` | no | no | `ROBOTS_DUPLICATE_ORIGIN` | Two robots rows share one origin. |
+| `archives/robots-missing-blob.atls` | no | no | `BLOB_NOT_FOUND` | `robots.bodyBlobRef` is canonical and does not resolve. |
+| `archives/end-reason-mismatch.atls` | no | no | `END_REASON_MISMATCH` | `endReason` is `pageCap` and `completionReason` is `finished`. The map requires `capped`. |
 
 `page_metadata` is the one dataset the manifest must declare (`datasets.page_metadata` or a non-empty `parts.page_metadata`). It may contain zero records. Other datasets may be absent. The raw / prerender / full matrix is producer guidance, not a validity rule.
 
@@ -41,6 +46,8 @@ Each file is a ZIP (`.atls`) using store mode (ZIP method 0). Part and blob payl
 `skipBlobVerification: true` on the reference `validate()` skips step 6 only.
 
 ## Vectors
+
+`vectors/spec-1.3.json` holds origin cases (`robotsUrl`, `normalized`, `origin`), the `endReason` map, and the note that `skipReason` stays a string. `origin` must equal `serializedOrigin(robotsUrl)`.
 
 `vectors/url-and-hashes.json` holds:
 
