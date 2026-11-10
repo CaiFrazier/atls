@@ -73,9 +73,12 @@ accessibility, pipeline failures, and pipeline alerts.
 records are retained because they already failed validation; the published schema documents that
 shape and the SDK does not re-validate it.
 
-`checkIntegrity` checks references (an edge or asset URL against `page_metadata`), not part
-digests, archive digests, or blob hashes. `strict` on `validate()` defaults to false and means
-"require the full manifest field set, canonical blob-ref shape, and the null-vs-omit rule."
+`checkIntegrity` checks references (an edge or asset URL against `page_metadata`). Separately,
+`validate()` checks part checksums, `contentSha256`, and blob hashes. `skipBlobVerification`
+skips only the blob hash and blob-reference existence checks. `archiveSha256` and `auditHash`
+are ignored. `strict` on `validate()` defaults to false and means "require the full manifest
+field set, a blob ref that is either the canonical spelling or the legacy `blobs/.../<hash>.zst`
+spelling, and the null-vs-omit rule."
 `strict` on `openAtlas` defaults to true and means "throw `MalformedRecordError` on bad JSON or
 on the three datasets checked at read time." The two flags share a name and do not share a meaning.
 

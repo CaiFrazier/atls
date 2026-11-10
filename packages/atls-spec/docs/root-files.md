@@ -26,8 +26,8 @@ The archive index. Schema: `AtlasManifestV1Schema`.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `atlasVersion` | string matching `^v?\d+(\.\d+)?$` | Public Atlas line. Current edition value: `"1.1"`. |
-| `formatVersion` | string | Container version. Current edition value: `"1.1.0"`. |
+| `atlasVersion` | string matching `^v?\d+(\.\d+)?$` | Public Atlas line. Current edition value: `"1.2"`. `"1.1"` remains valid. |
+| `formatVersion` | string | Container version. Current edition value: `"1.2.0"`. Readers accept every major `1`. |
 | `owner` | object | `name` (string). Any name. Required. |
 | `consumers` | string[] | Consumer labels. No schema default. Required. |
 | `hashing` | object | See below. Required. |
@@ -47,7 +47,7 @@ The archive index. Schema: `AtlasManifestV1Schema`.
 | `datasetId` | string | Archive identity. The schema does not require 16 hex characters. |
 | `crawlId` | string | Crawl run id. The schema does not constrain the spelling. |
 | `mode` | `raw` \| `import` \| `prerender` \| `full` | Render mode of the crawl. |
-| `specVersion` | string | Spec contract. Current edition value: `"1.1.0"`. |
+| `specVersion` | string | Spec contract. Current edition value: `"1.2.0"`. `"1.1.0"` remains valid. |
 | `schemaVersion` | string | Date-stamped schema tag. Current edition value: `"2026-09-04"`. |
 | `incomplete` | boolean | `true` means the crawl did not seal cleanly. |
 | `source` | object | `sourceType`: `warc` \| `native`. Passthrough. |
@@ -65,7 +65,7 @@ The archive index. Schema: `AtlasManifestV1Schema`.
 | `privacyPolicy` | object | See below. |
 | `robotsPolicy` | object | See below. |
 | `compareCompatibility` | map | Free-form compare metadata. |
-| `crawlConfigHash` | string | Digest of the normalized config. The canonicalization is not specified in this edition. |
+| `crawlConfigHash` | string | SHA-256 of the fixed-key config object in [storage-and-encoding.md](./storage-and-encoding.md). Not part of `contentSha256`. |
 | `datasets` | map of string → dataset metadata | See below. |
 | `capabilities` | object | See below. |
 | `coverage` | object | See below. Inner keys are camelCase. |
@@ -123,13 +123,19 @@ Both spellings are in the schema for two fields. `publicSuffix` is camelCase onl
 | `lowercase_host` | boolean, optional |
 | `remove_default_port` | boolean, optional |
 | `strip_fragment` | boolean, optional |
-| `remove_trailing_slash` | boolean, optional |
+| `remove_trailing_slash` | boolean, optional. Informational. Readers do not use it for identity. |
+| `trailing_slash` | string, optional. The one slash declaration. Spec 1.2 writers set `append-unless-file`. |
 | `sort_query_params` | boolean, optional |
 | `querystring_policy` | string, optional |
 | `blocked_query_params` | string[], optional |
 
-The steps that produce a URL key are not specified in this edition. The manifest records the
-algorithm name on `hashing.urlKeyAlgo`.
+`trailing_slash` names the pathname rule. The normative algorithm is `normalizeUrl` in
+[url-identity.md](./url-identity.md). It runs even when this field is absent. `remove_trailing_slash`,
+a legacy `trailing_slash_policy` key, `crawlContext.urlNormalizationRules`, and compare-metadata
+`removeTrailingSlash` flags are informational. Readers ignore them for identity.
+
+The steps that produce a URL key are specified in [url-identity.md](./url-identity.md). Spec 1.2
+sets `hashing.urlKeyAlgo` to `sha256`.
 
 ### `crawlContext`
 
@@ -198,12 +204,12 @@ Required when the object is present: `device` (`desktop` \| `mobile`), `viewport
 | Field | Type |
 |---|---|
 | `algorithm` | string, required |
-| `urlKeyAlgo` | string, required |
+| `urlKeyAlgo` | string, required. `sha256` for spec 1.2. A 1.1 archive may say `sha1`. |
 | `rawHtmlHash` | string, required |
 | `domHash` | string, required |
 
-These are algorithm names and descriptions stored on the manifest. The URL-normalization function
-and the byte ranges of the body hashes are not specified in this edition.
+These name algorithms. `urlKey` itself is not stored. `rawHtmlHash` is SHA-256 of the raw HTTP
+body bytes. `domHash` is described in [storage-and-encoding.md](./storage-and-encoding.md).
 
 ### Dataset metadata (`datasets` values)
 
@@ -215,16 +221,16 @@ and the byte ranges of the body hashes are not specified in this edition.
 | `bytes` | non-negative integer, optional |
 | `schema` | string, optional |
 | `schemaVersion` | string, optional |
-| `schemaHash` | string, optional. JSON canonicalization is not specified in this edition. |
+| `schemaHash` | string, optional. SHA-256 of the raw bytes of the schema file this dataset names. Not part of `contentSha256`. |
 | `present` | boolean, optional |
 | `parts` | non-negative integer, optional. This is a count, not the top-level `parts` map. |
 | `sidecarUri` | string, optional |
 | `sidecarSha256` | string or null, optional |
 | `integrity` | object, optional |
 
-Dataset `integrity`: `algorithm` (string, required when the object is present) and `checksums`
-(map of part path → digest string, required when the object is present). The bytes that go into
-each checksum are not specified in this edition.
+Dataset `integrity`: `algorithm` (`sha256` when the object is present) and `checksums` (map of
+part path to the SHA-256 of that part's stored ZIP payload). The same digest is in
+`integrity.files`. See [storage-and-encoding.md](./storage-and-encoding.md).
 
 ### `capabilities`
 
@@ -278,14 +284,15 @@ absent. That is reader tolerance, not a second current spelling. See
 
 | Field | Type |
 |---|---|
-| `algorithm` | string, optional |
-| `contentSha256` | string, optional |
-| `archiveSha256` | string, optional |
-| `auditHash` | string, optional |
-| `files` | map of packaged path → digest string, required |
+| `algorithm` | string, optional. `sha256` when a spec 1.2 writer sets it. |
+| `contentSha256` | string, optional in the schema. Required on a spec 1.2 archive. SHA-256 of the concatenated part checksums in UTF-8 path order. |
+| `archiveSha256` | string, optional. Deprecated. Writers omit it. Readers ignore it. |
+| `auditHash` | string, optional. Deprecated. Writers omit it. Readers ignore it. |
+| `files` | map of packaged part path to the SHA-256 of that part's stored ZIP payload, required |
 
-`contentSha256`, `archiveSha256`, and `auditHash` are the schema's names. What each digest is
-computed over is not specified in this edition.
+`contentSha256` does not cover blobs, schema files, the manifest, the summary, or provenance.
+Blob integrity is per blob. The full procedure, including what a 1.1 reader accepts, is in
+[storage-and-encoding.md](./storage-and-encoding.md).
 
 ---
 
@@ -373,7 +380,7 @@ Schema: `ProvenanceRecordV1Schema`. `openAtlas` does not read this file.
 | `inputs[]` | `{ dataset, hashSha256 }` for each input dataset. |
 | `parameters` | Key/value parameters. |
 | `output.recordCount` | Records produced. |
-| `output.hashSha256` | Digest of the produced dataset. The byte range is not specified in this edition. |
+| `output.hashSha256` | SHA-256 of the uncompressed JSONL part checksums concatenated in part-index order. Not `contentSha256`. |
 
 ---
 

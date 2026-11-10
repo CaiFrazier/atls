@@ -1,0 +1,399 @@
+{
+  "specVersion": "1.2.0",
+  "description": "URL identity and digest vectors for Atlas spec 1.2. urlKey is SHA-256 of the normalized URL. Where 1.2 output differs from the 1.1 writer, differsFromWriter11 is true and reason says why. Every urlKey differs from writer11UrlKeySha1 because 1.1 used SHA-1 and did not store the key.",
+  "notIdentity": {
+    "parameterBlocklist": "Fetch-time removal of utm_source, ref, and the rest of the producer blocklist is crawl policy. normalizeUrl keeps those parameters.",
+    "wwwFolding": "Folding one leading www. onto a preferred host is crawl policy. normalizeUrl lowercases www and keeps it."
+  },
+  "urlNormalization": [
+    {
+      "input": "HTTP://Example.COM/About",
+      "normalized": "http://example.com/About/",
+      "urlKey": "4f9802c7f2aae5d9d855396fd2bcd4410b5d355aabaa0a495879221033f2f617",
+      "writer11Normalized": "http://example.com/About/",
+      "writer11UrlKeySha1": "00b4e5a59c5ab025f964a32b5926ee36877411e1",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com",
+      "normalized": "https://example.com/",
+      "urlKey": "0f115db062b7c0dd030b16878c99dea5c354b49dc37b38eb8846179c7783e9d7",
+      "writer11Normalized": "https://example.com/",
+      "writer11UrlKeySha1": "b559c7edd3fb67374c1a25e739cdd7edd1d79949",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/",
+      "normalized": "https://example.com/",
+      "urlKey": "0f115db062b7c0dd030b16878c99dea5c354b49dc37b38eb8846179c7783e9d7",
+      "writer11Normalized": "https://example.com/",
+      "writer11UrlKeySha1": "b559c7edd3fb67374c1a25e739cdd7edd1d79949",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/about",
+      "normalized": "https://example.com/about/",
+      "urlKey": "7fbfa9d3e27ed64e33caf9ff1873d48115212a38e5590b9a2704b43c084f09c0",
+      "writer11Normalized": "https://example.com/about/",
+      "writer11UrlKeySha1": "82756af2d6e74b5963d505aa78f95942d6b82e46",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/about/",
+      "normalized": "https://example.com/about/",
+      "urlKey": "7fbfa9d3e27ed64e33caf9ff1873d48115212a38e5590b9a2704b43c084f09c0",
+      "writer11Normalized": "https://example.com/about/",
+      "writer11UrlKeySha1": "82756af2d6e74b5963d505aa78f95942d6b82e46",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/about/index.html",
+      "normalized": "https://example.com/about/index.html",
+      "urlKey": "97930ee0c1964fb963895189dbd33ee8fb0d0193d465a9f90986d63a1fd68189",
+      "writer11Normalized": "https://example.com/about/index.html",
+      "writer11UrlKeySha1": "48094264a5b6eae69379fa967cabbf6096201914",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/file.html/",
+      "normalized": "https://example.com/file.html",
+      "urlKey": "2f22dc8bb113d2c1224c390c607499d787ba7be5da25b2cde2f78b1b915bc0b0",
+      "writer11Normalized": "https://example.com/file.html",
+      "writer11UrlKeySha1": "4cca6fe285c98f2daaba8ce51fca2b3f15ac0e21",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/.htaccess",
+      "normalized": "https://example.com/.htaccess",
+      "urlKey": "bf36e9398549e18c7460e08981dcd3c18588dbb7707d2b92462edc336316304e",
+      "writer11Normalized": "https://example.com/.htaccess/",
+      "writer11UrlKeySha1": "acfef77015d38716dd9c33cb99a02ec64a11e2d7",
+      "differsFromWriter11": true,
+      "reason": "1.2 treats the full last segment .htaccess as a file. 1.1 required the dot to be after the first character, so it added a trailing slash."
+    },
+    {
+      "input": "https://example.com/a/../b/./c",
+      "normalized": "https://example.com/b/c/",
+      "urlKey": "8b73b5b8dca389fc2a55384b26f2d48c916c07a4ccf39883c73fd3fe4947c05f",
+      "writer11Normalized": "https://example.com/b/c/",
+      "writer11UrlKeySha1": "5ff25ea42e97b474f8f95cd0747b88d26fc87a87",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/docs/#section",
+      "normalized": "https://example.com/docs/",
+      "urlKey": "f38e4743e1f1948dd90125df525c2b8c105aba8b17e209c6640b9267721ff539",
+      "writer11Normalized": "https://example.com/docs/",
+      "writer11UrlKeySha1": "1d79f76fd572ec906a0dd26b29b3ba200fc64eac",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/docs#section",
+      "normalized": "https://example.com/docs/",
+      "urlKey": "f38e4743e1f1948dd90125df525c2b8c105aba8b17e209c6640b9267721ff539",
+      "writer11Normalized": "https://example.com/docs/",
+      "writer11UrlKeySha1": "1d79f76fd572ec906a0dd26b29b3ba200fc64eac",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com:443/a",
+      "normalized": "https://example.com/a/",
+      "urlKey": "3cfe93300705bc1af9fc1cc18f2419119b6ab20a867a8bbd10da3a15eddc2382",
+      "writer11Normalized": "https://example.com/a/",
+      "writer11UrlKeySha1": "215950a8a24fd8d02c1afa43379400f574308fe6",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "http://example.com:80/a",
+      "normalized": "http://example.com/a/",
+      "urlKey": "bc56e4c63d9b0e2f277e2eb3c101638bd772ea45b518a06ed95aa15deb4ecef2",
+      "writer11Normalized": "http://example.com/a/",
+      "writer11UrlKeySha1": "b0713867e5d2acaa86f5a165a7e955b96ddfd6c5",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "http://example.com:8080/a",
+      "normalized": "http://example.com:8080/a/",
+      "urlKey": "6f03aaadd3692e30fc63887b5bc3ae1a40f2790d06f184d3bb00b5e159635ebd",
+      "writer11Normalized": "http://example.com:8080/a/",
+      "writer11UrlKeySha1": "03860f4503ad39c774349acdc19ec57c3154861f",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://user:pass@example.com/a",
+      "normalized": "https://example.com/a/",
+      "urlKey": "3cfe93300705bc1af9fc1cc18f2419119b6ab20a867a8bbd10da3a15eddc2382",
+      "writer11Normalized": "https://user:pass@example.com/a/",
+      "writer11UrlKeySha1": "29d05e712f6eb2d7289a45ba7c34d79cf3dba5da",
+      "differsFromWriter11": true,
+      "reason": "1.2 strips userinfo. 1.1 kept it."
+    },
+    {
+      "input": "https://example.com/a%2Fb",
+      "normalized": "https://example.com/a%2Fb/",
+      "urlKey": "b567163fc7733ced2303bbdc6cdaea25fa97250e53e7cbe503557e91c94bd786",
+      "writer11Normalized": "https://example.com/a%2Fb/",
+      "writer11UrlKeySha1": "d775e1a7abb28096f5feaeff9adb7a950810b24e",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/a%7E",
+      "normalized": "https://example.com/a%7E/",
+      "urlKey": "ca2cb8f10e0f57e336b03fbc276321edda03fffb366c04e8c4ad8350c79b298f",
+      "writer11Normalized": "https://example.com/a%7E/",
+      "writer11UrlKeySha1": "0088044c0be2018a9f282fe772e6e406e9944d61",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://münchen.example/Über",
+      "normalized": "https://xn--mnchen-3ya.example/%C3%9Cber/",
+      "urlKey": "7fd95d2d4049c63fbb9074d0997290426124f495dc2befda2ba3a4fb35ee4b54",
+      "writer11Normalized": "https://xn--mnchen-3ya.example/%C3%9Cber/",
+      "writer11UrlKeySha1": "e5822c6e6b5b6acfb6386dc8a6121319be689555",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/About?b=2&a=1&a=0",
+      "normalized": "https://example.com/About/?a=0&a=1&b=2",
+      "urlKey": "565475223a252a3e6907c038ecdd2af2e85c0fad96662af0a9831d1b6544b9aa",
+      "writer11Normalized": "https://example.com/About/?a=1&a=0&b=2",
+      "writer11UrlKeySha1": "f7f248b229ebc56c25db3f7733d465341749dfda",
+      "differsFromWriter11": true,
+      "reason": "1.2 sorts query pairs by name, then by value. 1.1 sorted by name only and kept the original order of duplicate names, so a=1 stayed before a=0."
+    },
+    {
+      "input": "https://example.com/path?utm_source=x&b=2&a=1",
+      "normalized": "https://example.com/path/?a=1&b=2&utm_source=x",
+      "urlKey": "bcd21b63b019c198790368659d17d87f894098dcdf65a6ba936788236a0aa1cf",
+      "writer11Normalized": "https://example.com/path/?a=1&b=2&utm_source=x",
+      "writer11UrlKeySha1": "822f5056da5d1da10f025b6b76488d806dbd1151",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/q?b=1&",
+      "normalized": "https://example.com/q/?b=1",
+      "urlKey": "84d1e62a0f6d3ebd96c8d8fc9fd9aa91646bf00196b7bfc88cc677aed3a52105",
+      "writer11Normalized": "https://example.com/q/?b=1",
+      "writer11UrlKeySha1": "a509743fdf8824b99a37bd0bc2a3cbaff86cd866",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://WWW.Example.com/a/",
+      "normalized": "https://www.example.com/a/",
+      "urlKey": "4c421c807a397501863f418d5ddbef90cc7929302f33e306f6aec3c24046f25f",
+      "writer11Normalized": "https://www.example.com/a/",
+      "writer11UrlKeySha1": "2627e0c855f03cbb4585c99ed20b321e5df1f723",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/archive.tar.gz",
+      "normalized": "https://example.com/archive.tar.gz",
+      "urlKey": "b1808393eab6862ff9a8086c73363ac050fea39ea2b187aaa87ec4d9ada4ec5e",
+      "writer11Normalized": "https://example.com/archive.tar.gz",
+      "writer11UrlKeySha1": "ccb1ea6fbaabb37f98d16b40ca7233a501fe0f45",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/archive.tar.gz/",
+      "normalized": "https://example.com/archive.tar.gz",
+      "urlKey": "b1808393eab6862ff9a8086c73363ac050fea39ea2b187aaa87ec4d9ada4ec5e",
+      "writer11Normalized": "https://example.com/archive.tar.gz",
+      "writer11UrlKeySha1": "ccb1ea6fbaabb37f98d16b40ca7233a501fe0f45",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "https://example.com/a?sp%20ace=b+c",
+      "normalized": "https://example.com/a/?sp+ace=b+c",
+      "urlKey": "91413066f51e91fc089fb0edaf23653fdfead925bb252a264d4debfb84ce7c66",
+      "writer11Normalized": "https://example.com/a/?sp+ace=b+c",
+      "writer11UrlKeySha1": "ca058e0b03f8dfb0fc4c0e7fae2baaf0a15262a4",
+      "differsFromWriter11": false,
+      "reason": null
+    },
+    {
+      "input": "not a url",
+      "normalized": null,
+      "urlKey": null,
+      "writer11Normalized": "not a url",
+      "writer11UrlKeySha1": "d7aad9a0157a961b97833ff47c0d06f7add5a336",
+      "differsFromWriter11": true,
+      "reason": "1.2 returns null for an unparseable URL and does not hash the raw string. 1.1 returned the raw string and used SHA-1 of that string as urlKey."
+    }
+  ],
+  "overlong": {
+    "limit": 8192,
+    "normalized": null,
+    "urlKey": null,
+    "writer11": "threw URL exceeds maximum length of 8192",
+    "reason": "1.2 returns null. The length is fixed. It is not read from the environment."
+  },
+  "hashes": {
+    "description": "Spec 1.2 digest rules. contentSha256 orders paths by UTF-8 bytes. The 1.1 writer used localeCompare. For the lowercase part paths that writer emits, en-US localeCompare matches UTF-8 byte order, so the published 1.1 vectors below are also the 1.2 digests. They differ for mixed-case paths and for locale th on sitemap_urls versus sitemaps.",
+    "sha256Empty": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sha256Hello": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+    "contentSha256": {
+      "empty": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "pageMetadataOnly": "14799be27b54261e38343a50b4e0c242f081cfc497f0e315b1ca0b8157bb4438",
+      "pageMetadataAndResponses": "46bf71cfb164f3f857ff1dd0980a85d76631a22dcad2f92b12819452cbba1ec2",
+      "sameAsWriter11ForTheseLowercasePaths": true
+    },
+    "pathOrder": {
+      "mixedCase": {
+        "utf8": "648c162914266d5db16db4b797e2bdc6afe56646ea6984085ccd705276d95be4",
+        "enUsLocaleCompare": "73013fe0f762d2cf632789bdc1564a4752655bb51f2000e7f9b1b100a08d5823",
+        "differ": true,
+        "utf8Order": [
+          "Responses/part-001.jsonl.zst",
+          "assets/part-001.jsonl.zst",
+          "page_metadata/part-001.jsonl.zst",
+          "page_metadata/part-002.jsonl.zst"
+        ],
+        "enUsOrder": [
+          "assets/part-001.jsonl.zst",
+          "page_metadata/part-001.jsonl.zst",
+          "page_metadata/part-002.jsonl.zst",
+          "Responses/part-001.jsonl.zst"
+        ],
+        "note": "1.1 en-US localeCompare orders Responses after assets because it folds case. UTF-8 byte order puts Responses first, because R (U+0052) is before a (U+0061). 1.1 writers emit lowercase paths, so this does not change those archives. A 1.1 reader still accepts either digest."
+      },
+      "thaiLocale": {
+        "paths": {
+          "sitemap_urls/part-001.jsonl.zst": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "sitemaps/part-001.jsonl.zst": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "utf8": "fa0dafbf43f1f551e536353e9d1a942a8e86e41a0b58dfeaf264ef217f6b862a",
+        "enUs": "fa0dafbf43f1f551e536353e9d1a942a8e86e41a0b58dfeaf264ef217f6b862a",
+        "th": "85bd847f072a1a7c2d0a0497416c0d823b478aeb77dccddadbb37bd0f51c47a2",
+        "utf8MatchesEnUs": true,
+        "thDiffers": true,
+        "note": "Locale th orders sitemaps/ before sitemap_urls/ because the underscore is not a primary difference. UTF-8 byte order and en-US order sitemap_urls/ first. Both names are registry datasets, so this is a realistic 1.1 versus 1.2 difference when the 1.1 process locale was th. A 1.1 reader accepts the byte-order digest, the en-US digest, and the th digest."
+      }
+    },
+    "provenanceOutputHash": {
+      "empty": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "partA": "0baa940d9c61ea6381b26aae7f5493520c11a288a62a5a88822e782dcc4172f9",
+      "partAThenPartB": "9e903cbe37920099b88fb8c6a15c8025d629476a238c994fb5dd3ca60b3002a9",
+      "partBThenPartA": "f9270cb218a3e9987aa6ed0db1abcf7e12a8099112b0462c1c61e63e19c619d0",
+      "note": "Uncompressed JSONL checksums in part-index order. Not contentSha256."
+    },
+    "datasetId": "765c90de198faa64",
+    "crawlConfigHash": "c574460f31f0ee80d0f66ad5dcc04c34fd60a44aac84deb85959583f49b18154",
+    "assetId": {
+      "normalizedPng": "c01a4429-4703-5b6a-8726-7982c1849d2a",
+      "normalizedPngWithSlash": "c01a4429-4703-5b6a-8726-7982c1849d2a",
+      "writer11RawWithSlash": "53ac7620-7fbf-573c-9b17-0d21a9ccb52a",
+      "note": "1.2 hashes the normalized URL. 1.1 hashed the raw URL, so a trailing slash changed the id."
+    },
+    "blobs": {
+      "helloAtlas": {
+        "utf8": "Hello, Atlas",
+        "sha256": "7145fc4f75d487a859dad3467b311f6e2c509219c805b05dc1463e8912a5fb3f",
+        "canonicalRef": "sha256/71/45/7145fc4f75d487a859dad3467b311f6e2c509219c805b05dc1463e8912a5fb3f",
+        "archivePath": "blobs/sha256/71/45/7145fc4f75d487a859dad3467b311f6e2c509219c805b05dc1463e8912a5fb3f.zst",
+        "note": "The compressed frame is not normative. Any Zstandard level is valid. Verify by decompressing, then hashing."
+      }
+    },
+    "fileExtensions": [
+      ".7z",
+      ".aac",
+      ".apng",
+      ".asp",
+      ".aspx",
+      ".atom",
+      ".avi",
+      ".avif",
+      ".bin",
+      ".bmp",
+      ".bz2",
+      ".cgi",
+      ".cjs",
+      ".css",
+      ".csv",
+      ".cur",
+      ".doc",
+      ".docx",
+      ".eot",
+      ".flac",
+      ".gif",
+      ".gz",
+      ".heic",
+      ".heif",
+      ".htaccess",
+      ".htpasswd",
+      ".htm",
+      ".html",
+      ".ico",
+      ".jpeg",
+      ".jpg",
+      ".js",
+      ".json",
+      ".m4a",
+      ".m4v",
+      ".map",
+      ".mjs",
+      ".mov",
+      ".mp3",
+      ".mp4",
+      ".oga",
+      ".ogg",
+      ".ogv",
+      ".otf",
+      ".pdf",
+      ".php",
+      ".phtml",
+      ".png",
+      ".ppt",
+      ".pptx",
+      ".rar",
+      ".rss",
+      ".rtf",
+      ".shtml",
+      ".svg",
+      ".svgz",
+      ".tar",
+      ".tar.bz2",
+      ".tar.gz",
+      ".tar.xz",
+      ".tgz",
+      ".tif",
+      ".tiff",
+      ".tsv",
+      ".ttf",
+      ".txt",
+      ".wasm",
+      ".wav",
+      ".webm",
+      ".webmanifest",
+      ".webp",
+      ".woff",
+      ".woff2",
+      ".xhtml",
+      ".xls",
+      ".xlsx",
+      ".xml",
+      ".xz",
+      ".zip"
+    ]
+  }
+}

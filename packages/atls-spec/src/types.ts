@@ -1527,7 +1527,14 @@ export interface AtlasManifest {
     lowercase_host?: boolean;
     remove_default_port?: boolean;
     strip_fragment?: boolean;
+    /** Informational. Identity uses `trailing_slash`, not this boolean. */
     remove_trailing_slash?: boolean;
+    /**
+     * Spec 1.2 trailing-slash declaration. Writers set `append-unless-file`.
+     * Readers do not derive URL identity from this string. The algorithm is
+     * normative on its own. Older slash fields are informational.
+     */
+    trailing_slash?: string;
     sort_query_params?: boolean;
     querystring_policy?: string;
     blocked_query_params?: string[];
@@ -1751,13 +1758,24 @@ export interface AtlasManifest {
   
   integrity: {
     algorithm?: string;
-    /** Optional archive digest. The bytes it covers are not specified in this edition. */
+    /**
+     * SHA-256, lowercase hex, of the concatenated lowercase-hex part checksums.
+     * Spec 1.2 orders paths by UTF-8 byte order. See storage-and-encoding.md.
+     * Does not cover blobs, schemas, the manifest, the summary, or provenance.
+     */
     contentSha256?: string;
-    /** Optional second archive digest. How it differs from `contentSha256` is not specified. */
+    /**
+     * @deprecated Spec 1.2 writers omit this. It was a copy of `contentSha256`
+     * in the only writer helper that set it. Readers ignore it.
+     */
     archiveSha256?: string;
-    /** Optional audit digest. The bytes it covers are not specified in this edition. */
+    /**
+     * @deprecated Spec 1.2 writers omit this. It was a copy of `contentSha256`
+     * in the only writer helper that set it. Readers ignore it.
+     */
     auditHash?: string;
-    files: Record<string, string>; // filename -> sha256
+    /** Relative part path to the SHA-256 of that part's stored ZIP payload. */
+    files: Record<string, string>;
   };
 
   createdAt: string; // ISO timestamp

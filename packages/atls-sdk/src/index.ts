@@ -141,6 +141,24 @@ export type {
 } from "./describe.js";
 export type { ParsedFormatVersion } from "./formatVersion.js";
 export {
+  normalizeUrl,
+  urlKey,
+  assetId,
+  contentSha256,
+  sha256Hex,
+  parseBlobRef,
+  MAX_URL_LENGTH,
+  TRAILING_SLASH_POLICY,
+  FILE_EXTENSIONS,
+  URL_NAMESPACE,
+  uuidV5,
+  datasetId,
+  crawlConfigHash,
+  provenanceOutputHash,
+  acceptedContentDigests,
+} from "@caifrazier/atls-spec";
+export type { ParsedBlobRef, ContentPathOrder, IntegrityEdition } from "@caifrazier/atls-spec";
+export {
   SDK_VERSION,
   SdkCompatibilityError,
   checkCompatible,

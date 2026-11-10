@@ -29,16 +29,18 @@ which datasets exist, how they join, and how the bytes are laid out — the chap
 | Chapter | Covers |
 |---|---|
 | [Archive Structure](./docs/archive-structure.md) | The ZIP layout: root files, directories, dataset part files, blobs. No `data/` wrapper. |
-| [Storage & Encoding](./docs/storage-and-encoding.md) | JSON Lines, Zstandard, the ZIP container, blob paths, and which hash fields exist. |
-| [Identity & Keys](./docs/identity-and-keys.md) | `pageId` / `crawlId` / `datasetId`, the join model, per-dataset keys. |
+| [Storage & Encoding](./docs/storage-and-encoding.md) | JSON Lines, Zstandard, part checksums, `contentSha256`, blob paths. |
+| [Identity & Keys](./docs/identity-and-keys.md) | `pageId`, `crawlId`, `datasetId`, `assetId`, `resId`, the join model. |
+| [URL Identity](./docs/url-identity.md) | `normalizeUrl`, `urlKey`, the trailing-slash field, redirect rows. |
 | [Versioning & Compatibility](./docs/versioning.md) | The version fields, the `schemaVersion` vs spec-package axes, `specLevel`, forward-compat rules. |
 | [Root Metadata Files](./docs/root-files.md) | Field reference for `manifest`, `summary`, `summary.v2`, `capabilities`, `provenance`, `schema.json`. |
 | [Dataset Reference](./docs/datasets.md) | Field reference for all 21 datasets, plus the producer presence-by-mode matrix. |
 | [Schema System](./docs/schema-system.md) | Zod source of truth, JSON Schema codegen, which schemas are datasets, normalization adapters. |
 | [Reading Archives](./docs/reading-archives.md) | How to read an archive with or without the SDK. |
 
-Decisions that this edition does not settle are listed in [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md)
-at the repository root. They are not format requirements.
+Decisions for this edition are recorded in [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md).
+The changelog is [CHANGELOG.md](./CHANGELOG.md). Conformance archives and vectors are in
+[`conformance/`](../../conformance/README.md).
 
 ---
 
@@ -46,7 +48,9 @@ at the repository root. They are not format requirements.
 
 | Concern | Location |
 |---|---|
-| Current schema tag | `src/edition.ts` (`ATLAS_SCHEMA_VERSION`) |
+| Current schema tag | `src/edition.ts` (`ATLAS_SCHEMA_VERSION`, `2026-09-04`) |
+| Spec contract | `src/edition.ts` (`ATLAS_SPEC_VERSION`, `1.2.0`) |
+| URL identity and digests | `src/urlIdentity.ts`, `src/integrity.ts`, `src/blobs.ts`, `src/ids.ts` |
 | Dataset directory names | `src/datasetKeys.ts` (`ATLAS_DATASET_KEYS`, 21 names) |
 | On-disk record and metadata schemas (Zod) | `src/schemas/` |
 | JSON Schema codegen | `src/schemas/generator.ts` (`schemaMap`) → `dist/schemas/*.schema.json` |
@@ -57,9 +61,9 @@ Schemas are authored in **Zod**. The JSON Schema files are generated from them a
 are not a second definition.
 
 `AtlasManifest` in `src/types.ts` is the SDK-facing manifest type. Its field names match
-`AtlasManifestV1Schema`, including `integrity.contentSha256`, `integrity.archiveSha256`, and
-`integrity.auditHash`. `z.infer<typeof AtlasManifestV1Schema>` (`AtlasManifestV1`) is the inferred
-schema type.
+`AtlasManifestV1Schema`, including `integrity.contentSha256`, the deprecated
+`integrity.archiveSha256` and `integrity.auditHash`, and `urlNormalization.trailing_slash`.
+`z.infer<typeof AtlasManifestV1Schema>` (`AtlasManifestV1`) is the inferred schema type.
 
 ---
 
@@ -69,8 +73,8 @@ schema type.
    `pipeline_failures/`, and the other names in `ATLAS_DATASET_KEYS`. Manifest keys use those same
    long names. The reference reader also accepts three short directory aliases — `pages/` for
    `page_metadata/`, `edges/` for `navigation/`, and `failed_pages/` for `pipeline_failures/` —
-   and prefers the long directory when both are present. Producers of this edition write the long
-   names.
+   and prefers the long directory when both are present. Producers write the long names. The short
+   names are a reader fallback only.
 2. **Join on `pageId`, not `url`.** See [Identity & Keys](./docs/identity-and-keys.md).
 3. **`schemaVersion` ≠ spec package version.** The archive carries a date-stamped
    `schemaVersion` (Current schema tag: `2026-09-04`); the npm package is `1.0.0-rc.1`. They are
@@ -80,7 +84,9 @@ schema type.
 
 ## Related docs
 
-- Open questions deferred from this edition: [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md)
+- Open questions and the spec 1.2 decisions: [`docs/OPEN_QUESTIONS.md`](../../docs/OPEN_QUESTIONS.md)
+- Changelog: [CHANGELOG.md](./CHANGELOG.md)
+- Conformance suite: [`conformance/README.md`](../../conformance/README.md)
 - Atlas SDK (the reference reader): [`packages/atls-sdk/README.md`](../atls-sdk/README.md)
 
 ---

@@ -1,0 +1,62 @@
+{
+  "description": "Expected validate() verdicts for conformance/archives. valid is the reference reader with default options. strictValid is validate({ strict: true }). Error codes are the only error codes default validation reports.",
+  "archives": [
+    {
+      "file": "minimal-valid-1.1.atls",
+      "valid": true,
+      "strictValid": true,
+      "errorCodes": [],
+      "note": "Spec 1.1. archiveSha256 and auditHash are present and ignored. contentSha256 uses the same byte order as en-US localeCompare for these lowercase paths."
+    },
+    {
+      "file": "minimal-valid-1.2.atls",
+      "valid": true,
+      "strictValid": true,
+      "errorCodes": [],
+      "note": "Spec 1.2. No archiveSha256 or auditHash. urlNormalization.trailing_slash is append-unless-file. Blob ref is the canonical spelling."
+    },
+    {
+      "file": "legacy-blob-ref.atls",
+      "valid": true,
+      "strictValid": true,
+      "errorCodes": [],
+      "note": "bodyBlobRef is blobs/sha256/<2>/<2>/<hash>.zst. Readers accept that spelling. The blob hash still matches."
+    },
+    {
+      "file": "corrupted-part-checksum.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "PART_CHECKSUM_MISMATCH"
+      ],
+      "note": "integrity.files for page_metadata/part-001.jsonl.zst does not match the stored part bytes. contentSha256 still matches the real checksums."
+    },
+    {
+      "file": "bad-content-sha256.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "CONTENT_SHA256_MISMATCH"
+      ],
+      "note": "Part checksums match the stored bytes. contentSha256 does not match their UTF-8 path-order rollup."
+    },
+    {
+      "file": "corrupted-blob.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "BLOB_HASH_MISMATCH"
+      ],
+      "note": "The blob frame decompresses, and SHA-256 of those bytes is not the hash in the path."
+    },
+    {
+      "file": "missing-required-dataset.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "MANIFEST_MISSING_PARTS"
+      ],
+      "note": "page_metadata is not declared. The responses part and its checksums are fine. The presence-by-mode matrix is not what fails this archive."
+    }
+  ]
+}

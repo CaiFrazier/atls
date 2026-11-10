@@ -163,6 +163,10 @@ export const AtlasManifestV1Schema = z
       remove_default_port: z.boolean().optional(),
       strip_fragment: z.boolean().optional(),
       remove_trailing_slash: z.boolean().optional(),
+      // Spec 1.2: the one trailing-slash declaration. Normative value is
+      // "append-unless-file". remove_trailing_slash and any
+      // trailing_slash_policy key are informational. See url-identity.md.
+      trailing_slash: z.string().optional(),
       sort_query_params: z.boolean().optional(),
       querystring_policy: z.string().optional(),
       blocked_query_params: z.array(z.string()).optional(),

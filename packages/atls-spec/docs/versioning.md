@@ -14,10 +14,10 @@ does not enum-lock it.
 
 | Field | Schema | Current edition value | Meaning |
 |---|---|---|---|
-| `atlasVersion` | required string matching `^v?\d+(\.\d+)?$` | `"1.1"` | Public Atlas product line. |
-| `formatVersion` | required string | `"1.1.0"` | Archive container version. The reference reader accepts any major `1` and refuses other majors. |
-| `specVersion` | optional string | `"1.1.0"` | Specification contract version. Strict validation is what requires it to be present. |
-| `schemaVersion` | optional string | `"2026-09-04"` | Date-stamped dataset-schema tag. Any string validates. |
+| `atlasVersion` | required string matching `^v?\d+(\.\d+)?$` | `"1.2"` | Public Atlas product line. `"1.1"` remains valid. |
+| `formatVersion` | required string | `"1.2.0"` | Archive container version. The reference reader accepts any major `1` and refuses other majors. |
+| `specVersion` | optional string | `"1.2.0"` | Specification contract version. Strict validation is what requires it to be present. |
+| `schemaVersion` | optional string | `"2026-09-04"` | Date-stamped dataset-schema tag. Any string validates. Spec 1.2 does not change this tag. |
 | `generator` | required string | _(producer-defined)_ | Producer id and version. The schema does not constrain the spelling. |
 
 The current-edition column is what this specification documents for archives stamped
@@ -105,10 +105,54 @@ schema sees the behavior above. The reference reader's `openAtlas` schema-checks
 `responses`, and `resources` on read; `validate()` parses a wider set and therefore strips or
 rejects according to each schema.
 
-Whether a future edition should preserve unknown keys everywhere, strip them, or reject them is
-an open question. This edition does not change the schemas.
+Spec 1.2 decides the interchange rule: a reader ignores unknown fields and does not treat an
+unknown key as a format error. The Zod schemas in this package may still be strict when a caller
+uses them as validation tooling. `RecordMetaSchema`, accessibility `landmarks`, and events
+`metrics` are `.strict()`, so `validate()` reports those unknown keys. That report is tooling.
+It is not a requirement that every reader reject the archive. A consumer that only `JSON.parse`s
+a line keeps every key. Spec 2.0 may preserve unknown keys on every schema parse. Spec 1.2 does
+not change the schemas.
 
 `generator` is a required string. This edition does not require a particular prefix.
+
+---
+
+## Spec 1.2
+
+`ATLAS_SPEC_VERSION` is `1.2.0`. `ATLAS_FORMAT_VERSION` is `1.2.0`. `ATLAS_VERSION` is `1.2`.
+`ATLAS_SCHEMA_VERSION` stays `2026-09-04`. The changelog is
+[CHANGELOG.md](../CHANGELOG.md).
+
+What 1.2 makes normative, without a new schema tag:
+
+- `contentSha256`, part checksums, and per-blob hashes
+- `normalizeUrl` and `urlKey` (SHA-256)
+- `urlNormalization.trailing_slash` = `append-unless-file`, with older slash fields informational
+- id conventions for new writers (`pageId`, `assetId`, `resId`, `crawlId`, `datasetId`)
+
+No record field is renamed. No directory is renamed. 1.x readers keep accepting the snake_case
+keys this schema tag already stores. Camel case for those keys is the spec 2.0 target.
+
+## 1.1 to 1.2
+
+1.1 archives remain valid. A reader accepts every `formatVersion` major 1.
+
+| Topic | 1.1 archive | 1.2 reader |
+|---|---|---|
+| `contentSha256` path order | `localeCompare` in the process locale | Accept byte order, `en-US` `localeCompare`, or `th` `localeCompare`. For lowercase `part-NNN` paths in `en-US`, the first two are the same digest. |
+| `contentSha256` on a 1.2 archive | | Byte order only. |
+| `archiveSha256`, `auditHash` | May be absent, or copies of `contentSha256` | Ignore. |
+| Blob reference | Canonical or `blobs/.../<hash>.zst` | Accept both. Verify by decompressing, then hashing. |
+| `urlKey` | SHA-1, not stored | SHA-256 of `normalizeUrl`. Nothing in the archive changes because the key was not stored. |
+| `assetId` | UUID v5 of the raw URL | UUID v5 of the normalized URL for ids minted by a 1.2 writer. Do not recompute 1.1 ids. |
+| Slash fields | Three contradictory declarations | Read `trailing_slash` as the declaration. Ignore the old fields. The algorithm does not depend on the field being present. |
+| Unknown fields | Kept, stripped, or rejected depending on the schema object | Readers ignore them. |
+| Short directories | Some archives use `pages`, `edges`, `failed_pages` | Reader fallback only. 1.2 writers use the long names. |
+| `schemaVersion` | `2026-09-04` or older | Still an open string. Do not reject an older tag. |
+
+A 1.2 writer stamps `atlasVersion` `1.2`, `formatVersion` `1.2.0`, `specVersion` `1.2.0`, omits
+`archiveSha256` and `auditHash`, sets `hashing.urlKeyAlgo` to `sha256`, and sets
+`urlNormalization.trailing_slash` to `append-unless-file`.
 
 ---
 
