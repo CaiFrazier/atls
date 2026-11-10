@@ -131,6 +131,8 @@ export function isDatasetPartPath(relativePath: string): boolean {
  *
  * `specVersion` wins, then `formatVersion`, then `atlasVersion`.
  * A 1.x version whose minor is below 2 uses the 1.1 acceptance rule.
+ * Minor 2 and later, including spec 1.3, use the byte-order rule. The
+ * returned label `"1.2"` names that rule, not the archive's minor version.
  * Anything that does not parse is treated as 1.1 so older archives stay valid.
  */
 export function integrityEdition(manifest: {

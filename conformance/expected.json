@@ -64,6 +64,49 @@
         "MANIFEST_MISSING_PARTS"
       ],
       "note": "page_metadata is not declared. The responses part and its checksums are fine. The presence-by-mode matrix is not what fails this archive."
+    },
+    {
+      "file": "minimal-valid-1.3.atls",
+      "valid": true,
+      "strictValid": true,
+      "errorCodes": [],
+      "note": "Spec 1.3. robots rows cover each fetchStatus and each bodySource, including a punycode origin and a blockedNoCopy row with robotsPolicy.failClosed true. endReason complete maps to completionReason finished. frontier_ledger skipReason values are strings. Legacy robotsPolicy.respect and overridesUsed are present so a 1.2 reader can parse that object."
+    },
+    {
+      "file": "robots-blocked-no-copy.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "ROBOTS_BLOCKED_NO_COPY"
+      ],
+      "note": "blockedNoCopy is true and manifest.robotsPolicy.failClosed is false."
+    },
+    {
+      "file": "robots-duplicate-origin.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "ROBOTS_DUPLICATE_ORIGIN"
+      ],
+      "note": "Two robots rows share the origin of normalizeUrl(robotsUrl)."
+    },
+    {
+      "file": "robots-missing-blob.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "BLOB_NOT_FOUND"
+      ],
+      "note": "robots.bodyBlobRef is the canonical spelling and does not resolve to a blob entry."
+    },
+    {
+      "file": "end-reason-mismatch.atls",
+      "valid": false,
+      "strictValid": false,
+      "errorCodes": [
+        "END_REASON_MISMATCH"
+      ],
+      "note": "endReason pageCap is present with completionReason finished. The map requires capped."
     }
   ]
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.3.0
+
+Not published. The package version matches spec contract `1.3.0`. The schema tag stays `2026-09-04`. Archives stamped 1.1 and 1.2 stay valid. Every new field and the `robots` dataset are optional. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field.
+
+### Format
+
+- Optional `robots` dataset, one row per origin. `origin` is the serialized origin of `normalizeUrl(robotsUrl)`. `responses429` and `responses5xx` count page responses from that origin, not robots.txt fetches. Null means not measured. 0 means measured and zero.
+- `manifest.robotsPolicy` gains optional `mode`, `modeSource`, `failClosed`, `retryAttempts`, and `keepLastGood`. The pre-1.3 keys `respect`, `overridesUsed`, and `overrideReason` stay. `capabilities.robots` is unchanged.
+- `frontier_ledger.skipReason` stays an open string. `ROBOTS_DISALLOWED` and `ROBOTS_UNREACHABLE` are spellings, not new enum values. Optional `skipSource` (`page`, `scout`, `sitemap`, `warmup`) and optional `matchedRobotsRule` (the matched Disallow pattern, or null).
+- `summary.crawlContext.endReason` is optional and maps onto the unchanged required `completionReason`. Optional `skippedByReason` uses null for unmeasured and 0 for measured zero.
+- `validate()` checks robots blob refs, `blockedNoCopy` against `robotsPolicy.failClosed`, one robots row per origin, and the `endReason` map when both fields are present.
+
 ## 1.2.0
 
 Published to npm as `@caifrazier/atls-spec@1.2.0`. This replaces `1.0.0-rc.1` (2026-07-04). The package version matches the spec contract. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.

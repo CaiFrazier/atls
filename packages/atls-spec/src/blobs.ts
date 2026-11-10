@@ -30,6 +30,19 @@ const BLOB_REF_RE =
   /^(?:blobs\/)?sha256\/([a-f0-9]{2})\/([a-f0-9]{2})\/([a-f0-9]{64})(?:\.zst)?$/;
 
 /**
+ * True when `value` is the canonical record spelling `sha256/<2>/<2>/<hash>`
+ * and the shard directories match the hash. The legacy
+ * `blobs/sha256/<2>/<2>/<hash>.zst` spelling is not canonical.
+ */
+export function isCanonicalBlobRef(value: string): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const parsed = parseBlobRef(value);
+  return parsed !== null && value === parsed.canonical;
+}
+
+/**
  * Parse a blob reference.
  *
  * Accepts the canonical spelling and the legacy `blobs/.../<hash>.zst`

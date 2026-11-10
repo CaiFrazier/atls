@@ -79,10 +79,11 @@ const TAG_DOCS = [
 ];
 
 describe("spec drift guard", () => {
-  test("spec 1.2 is the documented contract and 1.1 archives stay valid", () => {
-    expect(ATLAS_SPEC_VERSION).toBe("1.2.0");
+  test("spec 1.3 is the documented contract and 1.1 and 1.2 archives stay valid", () => {
+    expect(ATLAS_SPEC_VERSION).toBe("1.3.0");
     const versioning = readRepo("packages/atls-spec/docs/versioning.md");
     expect(versioning).toContain("1.1 to 1.2");
+    expect(versioning).toContain("1.2 to 1.3");
     expect(versioning).toContain(CURRENT_TAG_LINE);
   });
 
@@ -99,14 +100,14 @@ describe("spec drift guard", () => {
     }
   });
 
-  test("the dataset chapter lists exactly the registry, and the index counts 21", () => {
+  test("the dataset chapter lists exactly the registry, and the index counts 22", () => {
     const datasets = readRepo("packages/atls-spec/docs/datasets.md");
     const listed = [...datasets.matchAll(/^\| `([a-z0-9_]+)` \|/gm)].map((match) => match[1]);
     expect([...listed].sort()).toEqual([...Object.values(ATLAS_DATASET_KEYS)].sort());
 
     for (const path of ["packages/atls-spec/SPECIFICATION.md", "packages/atls-spec/README.md"]) {
       const text = readRepo(path);
-      expect(text, path).toContain("21 datasets");
+      expect(text, path).toContain("22 datasets");
       expect(text, path).not.toContain("19 datasets");
     }
   });

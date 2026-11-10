@@ -86,6 +86,7 @@ Each returns an `AsyncIterable` of records for one dataset.
 | `events()` | `EventRecord` | `events` |
 | `pipelineFailures()` | record | `pipeline_failures` |
 | `pipelineAlerts()` | record | `pipeline_alerts` |
+| `robots()` | `RobotsRecord` | `robots` (spec 1.3, one row per origin) |
 | `dataset<T>(name)` | `T` | any dataset by canonical key |
 
 **Deprecated aliases** (functional, for backward compatibility): `pages()` → `pageMetadata()`,
@@ -171,7 +172,7 @@ interface ValidationResult {
     contentChecked: number; structuredDataChecked: number; technologyChecked: number;
     renderStateChecked: number; performanceChecked: number; securityChecked: number;
     responsesChecked: number; resourcesChecked: number; sitemapsChecked: number;
-    sitemapUrlsChecked: number; extractionChecked: number;
+    sitemapUrlsChecked: number; extractionChecked: number; robotsChecked: number;
     eventsChecked: number; accessibilityChecked: number;
     pipelineFailuresChecked: number; pipelineAlertsChecked: number;
     errorsFound: number; warningsFound: number;
@@ -188,12 +189,16 @@ console.log(result.valid, result.stats.errorsFound, result.stats.warningsFound);
 > `validate()` checks part checksums, `contentSha256`, and blob hashes, then schema-checks the
 > datasets listed in [schema-system.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/schema-system.md). It ignores
 > `archiveSha256` and `auditHash`. `skipBlobVerification` skips blob hashes only. It does not
-> open `quarantine`, `reconstruction_index`, or `frontier_ledger`. `checkIntegrity` checks
-> references. `strict` here defaults to false. `openAtlas({ strict })` defaults to true and means
-> something else: throw on a malformed record.
+> open `quarantine`, `reconstruction_index`, or `frontier_ledger`. It does check `robots`: the
+> schema, canonical `bodyBlobRef` resolution (unless `skipBlobVerification`), `blockedNoCopy`
+> against `manifest.robotsPolicy.failClosed`, and one row per origin. When
+> `summary.crawlContext.endReason` is present it must map onto `completionReason`.
+> `checkIntegrity` checks references. `strict` here defaults to false. `openAtlas({ strict })`
+> defaults to true and means something else: throw on a malformed record.
 
-`normalizeUrl`, `urlKey`, `assetId`, and `contentSha256` are exported from this package. They
-implement spec 1.2. See [url-identity.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/url-identity.md).
+`normalizeUrl`, `urlKey`, `serializedOrigin`, `assetId`, and `contentSha256` are exported from
+this package. URL identity is spec 1.2. `serializedOrigin` is the spec 1.3 origin of that
+normalized URL. See [url-identity.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/url-identity.md).
 
 ---
 
@@ -209,7 +214,7 @@ a.close(); b.close();
 ```
 
 Exports the `ManifestDiff`, `DatasetDelta`, and `DiffManifestsOptions` types. The default dataset
-list is `ATLAS_DATASET_KEYS` (all 21 registry names).
+list is `ATLAS_DATASET_KEYS` (all 22 registry names).
 
 ---
 

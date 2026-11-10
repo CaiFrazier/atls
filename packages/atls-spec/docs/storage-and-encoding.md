@@ -87,10 +87,18 @@ Readers must also accept the legacy spelling:
 blobs/sha256/<aa>/<bb>/<64 hex>.zst
 ```
 
+`robots.bodyBlobRef` is the exception. It accepts only the canonical spelling. A legacy spelling
+on that field fails schema validation.
+
 A missing `blobs/` prefix or a missing `.zst` suffix is the same reference when the hash and the
 shards match. A string that is not that shape may be a live URL. Do not treat it as a blob.
 
+`robots.lastGoodBodySha256` is a lowercase SHA-256 hex digest, not a blob reference. It does not
+resolve in the archive. `robots.bodyBlobRef`, when set, is canonical only, and `validate()`
+checks that it resolves.
+
 Fields that carry references include `responses.bodyBlobRef`, `responses.renderedBodyBlobRef`,
+`robots.bodyBlobRef`,
 `reconstruction_index.sourceBodyBlobRef`, `reconstruction_index.bodyBlobRef`,
 `reconstruction_index.faviconBlobRef`, `reconstruction_index.screenshotDesktopBlobRef`,
 and `page_metadata.media.favicon`. Screenshot refs at `page_metadata.media.screenshots.desktop`,

@@ -26,8 +26,8 @@ The archive index. Schema: `AtlasManifestV1Schema`.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `atlasVersion` | string matching `^v?\d+(\.\d+)?$` | Public Atlas line. Current edition value: `"1.2"`. `"1.1"` remains valid. |
-| `formatVersion` | string | Container version. Current edition value: `"1.2.0"`. Readers accept every major `1`. |
+| `atlasVersion` | string matching `^v?\d+(\.\d+)?$` | Public Atlas line. Current edition value: `"1.3"`. `"1.1"` and `"1.2"` remain valid. Stamp `"1.3"` only when the archive emits a spec 1.3 field. |
+| `formatVersion` | string | Container version. Current edition value: `"1.3.0"`. Readers accept every major `1`. |
 | `owner` | object | `name` (string). Any name. Required. |
 | `consumers` | string[] | Consumer labels. No schema default. Required. |
 | `hashing` | object | See below. Required. |
@@ -47,7 +47,7 @@ The archive index. Schema: `AtlasManifestV1Schema`.
 | `datasetId` | string | Archive identity. The schema does not require 16 hex characters. |
 | `crawlId` | string | Crawl run id. The schema does not constrain the spelling. |
 | `mode` | `raw` \| `import` \| `prerender` \| `full` | Render mode of the crawl. |
-| `specVersion` | string | Spec contract. Current edition value: `"1.2.0"`. `"1.1.0"` remains valid. |
+| `specVersion` | string | Spec contract. Current edition value: `"1.3.0"`. `"1.1.0"` and `"1.2.0"` remain valid. |
 | `schemaVersion` | string | Date-stamped schema tag. Current edition value: `"2026-09-04"`. |
 | `incomplete` | boolean | `true` means the crawl did not seal cleanly. |
 | `source` | object | `sourceType`: `warc` \| `native`. Passthrough. |
@@ -193,11 +193,28 @@ Required when the object is present: `device` (`desktop` \| `mobile`), `viewport
 
 ### `robotsPolicy`
 
+The object is optional. Two complete shapes are valid. A pre-1.3 object has `respect` and
+`overridesUsed` and omits the spec 1.3 keys. A spec 1.3 object has `mode`, `modeSource`,
+`failClosed`, `retryAttempts`, and `keepLastGood` together. It may also keep `respect` and
+`overridesUsed`. A 1.2 reader strips unknown keys and still requires those two booleans, so a
+writer that wants that reader to accept the object keeps them.
+
+`mode` is `lenient` or `strict`. `modeSource` is `default`, `config`, or `flag`. Lenient mode
+and `failClosed: false` are what a producer records when the operator did not choose otherwise.
+The fields are recorded facts. The spec does not require a crawler to run in lenient mode, and
+a missing object does not mean lenient. `capabilities.robots` (`respectsRobotsTxt`,
+`overrideUsed`) is a separate object and stays unchanged.
+
 | Field | Type |
 |---|---|
-| `respect` | boolean, required |
-| `overridesUsed` | boolean, required |
+| `respect` | boolean. Required on a pre-1.3 object. Optional beside a complete spec 1.3 object. |
+| `overridesUsed` | boolean. Same rule as `respect`. |
 | `overrideReason` | string, optional |
+| `mode` | `lenient` \| `strict`. Spec 1.3. Present together with the other 1.3 keys. |
+| `modeSource` | `default` \| `config` \| `flag`. Spec 1.3. |
+| `failClosed` | boolean. Spec 1.3. `robots.blockedNoCopy` can be true only when this is true. |
+| `retryAttempts` | nonnegative integer. Spec 1.3. |
+| `keepLastGood` | boolean. Spec 1.3. |
 
 ### `hashing`
 
@@ -310,9 +327,19 @@ and `identity` itself is required.
 ### `crawlContext`
 
 Required: `specLevel`, `completionReason` (`finished` \| `capped` \| `error_budget` \|
-`schema_budget_exhausted` \| `manual`), `config`.
+`schema_budget_exhausted` \| `manual`), `config`. The `completionReason` enum does not grow
+in spec 1.3.
 
-- `frontierEmptyAtStop`, `stopConditionsTriggered` — optional.
+- `endReason` (optional, spec 1.3): `complete` \| `pageCap` \| `timeBudget` \| `circuitOpen` \|
+  `schemaBudget` \| `manualStop` \| `aborted`. When it is present, it maps onto
+  `completionReason`: `complete` to `finished`, `pageCap` and `timeBudget` to `capped`,
+  `circuitOpen` to `error_budget`, `schemaBudget` to `schema_budget_exhausted`, and
+  `manualStop` and `aborted` to `manual`. `validate()` checks that map. A 1.2 summary omits
+  `endReason` and is not checked.
+- `skippedByReason` (optional, spec 1.3): a record of reason to nonnegative integer, or null
+  when the tally was not measured. 0 is a measured zero. Omitting a key is not a zero. New
+  1.3 counters use null for unmeasured and 0 for measured zero.
+- `frontierEmptyAtStop`, `stopConditionsTriggered`: optional.
 - `completionInputs` — optional object: `errorBudgetExceeded`, `budgetStopReason`,
   `gracefulShutdown`, `maxPages`, `pageCount`, `queueHasPending`, `enqueuedCount`,
   `visitedCount`.

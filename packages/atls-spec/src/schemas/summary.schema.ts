@@ -19,6 +19,7 @@
  */
 
 import { z } from 'zod';
+import { completionReasonForEndReason } from '../spec13.js';
 
 const RenderModeEnum = z.enum(['raw', 'import', 'prerender', 'full']);
 const ParamPolicyEnum = z.enum(['sample', 'strip', 'keep']);
@@ -35,6 +36,21 @@ export const AtlasSummarySchema = z.object({
   crawlContext: z.object({
     specLevel: z.number().int().nonnegative(),
     completionReason: z.enum(['finished', 'capped', 'error_budget', 'schema_budget_exhausted', 'manual']),
+    /**
+     * Spec 1.3. Optional. When present, `validate()` and this schema require
+     * the normative mapping onto `completionReason`: complete to finished,
+     * pageCap and timeBudget to capped, circuitOpen to error_budget,
+     * schemaBudget to schema_budget_exhausted, manualStop and aborted to manual.
+     * `completionReason` stays required and its enum does not grow.
+     */
+    endReason: z.enum(['complete', 'pageCap', 'timeBudget', 'circuitOpen', 'schemaBudget', 'manualStop', 'aborted']).optional(),
+    /**
+     * Spec 1.3 counter. Null means the per-reason tally was not measured.
+     * A present record maps a reason string to a nonnegative integer. 0 is a
+     * measured zero. Omitting a key is not a zero. New 1.3 counters use null
+     * for unmeasured and 0 for measured zero.
+     */
+    skippedByReason: z.record(z.string().min(1), z.number().int().nonnegative()).nullable().optional(),
     frontierEmptyAtStop: z.boolean().optional(),
     stopConditionsTriggered: z.array(z.string()).optional(),
     completionInputs: z.object({
@@ -68,6 +84,16 @@ export const AtlasSummarySchema = z.object({
       renderTimeoutMs: z.number().nonnegative().optional(),
       networkIdleMs: z.number().nonnegative().optional(),
     }).optional(),
+  }).superRefine((value, ctx) => {
+    if (value.endReason === undefined) return;
+    const expected = completionReasonForEndReason(value.endReason);
+    if (expected !== value.completionReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['endReason'],
+        message: `endReason "${value.endReason}" maps to completionReason "${expected ?? "unknown"}", got "${value.completionReason}"`,
+      });
+    }
   }),
   stats: z.object({
     totalPages: z.number().int().nonnegative(),

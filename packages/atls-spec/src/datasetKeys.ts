@@ -23,8 +23,8 @@
  * and compared everywhere without a second hand-kept list drifting out of step.
  *
  * Fifteen of the names are the SDK's `CanonicalDatasetName` datasets. The other
- * six (sitemaps, sitemap_urls, extraction, quarantine, reconstruction_index,
- * frontier_ledger) are producer extensions that archives may also declare.
+ * seven (sitemaps, sitemap_urls, extraction, quarantine, reconstruction_index,
+ * frontier_ledger, robots) are producer extensions that archives may also declare.
  */
 export const ATLAS_DATASET_KEYS = {
   navigation: "navigation",
@@ -48,6 +48,7 @@ export const ATLAS_DATASET_KEYS = {
   quarantine: "quarantine",
   reconstruction_index: "reconstruction_index",
   frontier_ledger: "frontier_ledger",
+  robots: "robots",
 } as const;
 
 /** A dataset name from the Atlas dataset registry. */

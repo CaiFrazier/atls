@@ -25,15 +25,21 @@ export const ATLAS_SCHEMA_VERSION = "2026-09-04" as const;
 
 /**
  * Specification contract version documented by this edition (`manifest.specVersion`).
- * Archives stamped 1.1.0 stay valid. See docs/versioning.md.
+ * Archives stamped 1.1.0 and 1.2.0 stay valid. A writer stamps 1.3.0 only when
+ * the archive emits a spec 1.3 field. See docs/versioning.md.
  */
-export const ATLAS_SPEC_VERSION = "1.2.0" as const;
+export const ATLAS_SPEC_VERSION = "1.3.0" as const;
 
 /**
- * Container version a spec 1.2 writer stamps in `manifest.formatVersion`.
- * Readers accept every `1.x` container.
+ * Container version a spec 1.3 writer stamps in `manifest.formatVersion`.
+ * Readers accept every `1.x` container. A writer stamps 1.3.0 only when the
+ * archive emits a spec 1.3 field.
  */
-export const ATLAS_FORMAT_VERSION = "1.2.0" as const;
+export const ATLAS_FORMAT_VERSION = "1.3.0" as const;
 
-/** Public Atlas line a spec 1.2 writer stamps in `manifest.atlasVersion`. */
-export const ATLAS_VERSION = "1.2" as const;
+/**
+ * Public Atlas line a spec 1.3 writer stamps in `manifest.atlasVersion`.
+ * `"1.1"` and `"1.2"` remain valid. A writer stamps `"1.3"` only when the
+ * archive emits a spec 1.3 field.
+ */
+export const ATLAS_VERSION = "1.3" as const;
