@@ -224,6 +224,37 @@ export function normalizeUrl(input: string): string | null {
 }
 
 /**
+ * Serialized origin of `normalizeUrl(input)`.
+ *
+ * The result is `scheme://host[:non-default-port]`. The scheme and host are
+ * lowercase. An IDN host is punycode. The default port for the scheme is
+ * omitted. Userinfo, path, query, and fragment are omitted. An IPv6 host
+ * keeps the brackets the URL serializer uses.
+ *
+ * Returns null when `normalizeUrl` returns null, or when the URL is not
+ * `http` or `https`.
+ */
+export function serializedOrigin(input: string): string | null {
+  const normalized = normalizeUrl(input);
+  if (normalized === null) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(normalized);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return null;
+  }
+  if (!url.origin || url.origin === "null") {
+    return null;
+  }
+  return url.origin;
+}
+
+/**
  * `urlKey` for spec 1.2: lowercase SHA-256 hex of the normalized URL's UTF-8
  * bytes. Returns null when {@link normalizeUrl} returns null.
  *

@@ -87,13 +87,60 @@ export const PrivacyPolicySchema = z.object({
 });
 
 /**
- * Robots policy metadata
+ * Robots policy metadata.
+ *
+ * Spec 1.2 and earlier stored `respect`, `overridesUsed`, and optional
+ * `overrideReason`. Those keys stay valid. Spec 1.3 adds `mode`,
+ * `modeSource`, `failClosed`, `retryAttempts`, and `keepLastGood` on the
+ * same object. When any 1.3 key is present, all five are present. When none
+ * of them is present, `respect` and `overridesUsed` are required, which is
+ * the 1.2 shape.
+ *
+ * Lenient mode and `failClosed: false` are producer defaults when an operator
+ * does not choose otherwise. This schema records the facts the producer
+ * wrote. It does not require a crawler to use those defaults, and it does
+ * not fill them in when the keys are absent. `capabilities.robots`
+ * (`respectsRobotsTxt`, `overrideUsed`) is a separate object and is unchanged.
+ *
+ * A 1.2 reader strips unknown keys on this object and still requires
+ * `respect` and `overridesUsed`. A 1.3 writer that wants that reader to
+ * accept the object keeps those two booleans beside the 1.3 keys.
  */
-export const RobotsPolicySchema = z.object({
-  respect: z.boolean(),
-  overridesUsed: z.boolean(),
-  overrideReason: z.string().optional(),
-});
+const robotsPolicyV13Keys = ["mode", "modeSource", "failClosed", "retryAttempts", "keepLastGood"] as const;
+
+export const RobotsPolicySchema = z
+  .object({
+    respect: z.boolean().optional(),
+    overridesUsed: z.boolean().optional(),
+    overrideReason: z.string().optional(),
+    mode: z.enum(["lenient", "strict"]).optional(),
+    modeSource: z.enum(["default", "config", "flag"]).optional(),
+    failClosed: z.boolean().optional(),
+    retryAttempts: z.number().int().nonnegative().optional(),
+    keepLastGood: z.boolean().optional(),
+  })
+  .superRefine((value, ctx) => {
+    const anyV13 = robotsPolicyV13Keys.some((key) => value[key] !== undefined);
+    if (anyV13) {
+      for (const key of robotsPolicyV13Keys) {
+        if (value[key] === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: "Spec 1.3 robotsPolicy fields are recorded together",
+          });
+        }
+      }
+      return;
+    }
+    if (typeof value.respect !== "boolean" || typeof value.overridesUsed !== "boolean") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["respect"],
+        message: "robotsPolicy requires respect and overridesUsed, or the spec 1.3 fields mode, modeSource, failClosed, retryAttempts, and keepLastGood",
+      });
+    }
+  });
 
 /**
  * Atlas Manifest v1.0 Schema

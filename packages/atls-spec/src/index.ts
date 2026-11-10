@@ -29,8 +29,10 @@ export * from './types/records/index.js';
 export * from './pageMetadataMapping.js';
 // Export the dataset registry shared by producers and readers
 export * from './datasetKeys.js';
-// Documented current schema tag and spec 1.2 version constants
+// Documented current schema tag and spec version constants
 export * from './edition.js';
+// Spec 1.3 shared constants (endReason map, frontier skip vocabulary)
+export * from './spec13.js';
 // Normative integrity, blob, URL identity, and id algorithms (spec 1.2)
 export * from './integrity.js';
 export * from './blobs.js';

@@ -1,0 +1,85 @@
+{
+  "specVersion": "1.3.0",
+  "description": "Spec 1.3 vectors. origin is the serialized origin of normalizeUrl(robotsUrl): scheme://host[:non-default-port], lowercase, host in punycode. endReason maps onto the unchanged completionReason enum. skipReason stays an open string.",
+  "counters": "New 1.3 counters use null when the value was not measured and 0 when it was measured and was zero. responses429 and responses5xx count page responses from that origin during the crawl, not robots.txt fetches.",
+  "origin": [
+    {
+      "robotsUrl": "https://example.com/robots.txt",
+      "normalized": "https://example.com/robots.txt",
+      "origin": "https://example.com"
+    },
+    {
+      "robotsUrl": "HTTPS://Example.COM:443/robots.txt",
+      "normalized": "https://example.com/robots.txt",
+      "origin": "https://example.com"
+    },
+    {
+      "robotsUrl": "http://example.com:80/robots.txt",
+      "normalized": "http://example.com/robots.txt",
+      "origin": "http://example.com"
+    },
+    {
+      "robotsUrl": "http://example.com:8080/robots.txt",
+      "normalized": "http://example.com:8080/robots.txt",
+      "origin": "http://example.com:8080"
+    },
+    {
+      "robotsUrl": "https://api.example.com:8443/robots.txt",
+      "normalized": "https://api.example.com:8443/robots.txt",
+      "origin": "https://api.example.com:8443"
+    },
+    {
+      "robotsUrl": "https://user:pass@example.com/robots.txt",
+      "normalized": "https://example.com/robots.txt",
+      "origin": "https://example.com"
+    },
+    {
+      "robotsUrl": "https://münchen.example/robots.txt",
+      "normalized": "https://xn--mnchen-3ya.example/robots.txt",
+      "origin": "https://xn--mnchen-3ya.example"
+    },
+    {
+      "robotsUrl": "https://WWW.Example.com/robots.txt",
+      "normalized": "https://www.example.com/robots.txt",
+      "origin": "https://www.example.com"
+    },
+    {
+      "robotsUrl": "https://example.com/robots.txt?b=2&a=1",
+      "normalized": "https://example.com/robots.txt?a=1&b=2",
+      "origin": "https://example.com"
+    },
+    {
+      "robotsUrl": "http://[::1]:8080/robots.txt",
+      "normalized": "http://[::1]:8080/robots.txt",
+      "origin": "http://[::1]:8080"
+    },
+    {
+      "robotsUrl": "http://[::1]/robots.txt",
+      "normalized": "http://[::1]/robots.txt",
+      "origin": "http://[::1]"
+    },
+    {
+      "robotsUrl": "not a url",
+      "normalized": null,
+      "origin": null
+    }
+  ],
+  "endReasonMap": {
+    "complete": "finished",
+    "pageCap": "capped",
+    "timeBudget": "capped",
+    "circuitOpen": "error_budget",
+    "schemaBudget": "schema_budget_exhausted",
+    "manualStop": "manual",
+    "aborted": "manual"
+  },
+  "skipReason": {
+    "field": "skipReason",
+    "type": "string",
+    "values": [
+      "ROBOTS_DISALLOWED",
+      "ROBOTS_UNREACHABLE"
+    ],
+    "note": "frontier_ledger.skipReason is not an enum. These values are strings. A 1.2 reader that accepts any string accepts them. skipSource and matchedRobotsRule are new optional fields."
+  }
+}

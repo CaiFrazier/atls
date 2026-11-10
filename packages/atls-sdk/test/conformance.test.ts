@@ -18,11 +18,12 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
-import { normalizeUrl, openAtlas, parseBlobRef, readBlob, sha256Hex, statBlob, urlKey, validate } from "../src/index.js";
+import { normalizeUrl, openAtlas, parseBlobRef, readBlob, serializedOrigin, sha256Hex, statBlob, urlKey, validate } from "../src/index.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..", "conformance");
 const expected = JSON.parse(readFileSync(join(root, "expected.json"), "utf8"));
 const vectors = JSON.parse(readFileSync(join(root, "vectors/url-and-hashes.json"), "utf8"));
+const spec13 = JSON.parse(readFileSync(join(root, "vectors/spec-1.3.json"), "utf8"));
 
 describe("conformance archives", () => {
   for (const archive of expected.archives) {
@@ -62,6 +63,76 @@ describe("legacy blob ref on a 1.1 archive", () => {
       const stat = await statBlob(path, ref!);
       expect(stat.exists).toBe(true);
       expect(stat.path).toBe(parsed!.archivePath);
+    } finally {
+      atlas.close();
+    }
+  });
+});
+
+describe("spec 1.3 conformance", () => {
+  test("origin vectors match serializedOrigin", () => {
+    expect(spec13.specVersion).toBe("1.3.0");
+    for (const row of spec13.origin) {
+      expect(serializedOrigin(row.robotsUrl), row.robotsUrl).toBe(row.origin);
+    }
+  });
+
+  test("a 1.3 archive is readable, including robots rows", async () => {
+    const path = join(root, "archives", "minimal-valid-1.3.atls");
+    const atlas = await openAtlas(path);
+    try {
+      const pages = [];
+      for await (const page of atlas.readers.pageMetadata()) pages.push(page);
+      expect(pages).toHaveLength(1);
+
+      const robots = [];
+      for await (const row of atlas.readers.robots()) robots.push(row);
+      const statuses = new Set(robots.map((row) => row.fetchStatus));
+      const sources = new Set(robots.map((row) => row.bodySource));
+      expect(statuses).toEqual(new Set(["ok", "unavailable", "unreachable"]));
+      expect(sources).toEqual(new Set(["fresh", "lastGood", "none"]));
+      for (const row of robots) {
+        expect(row.origin).toBe(serializedOrigin(row.robotsUrl));
+      }
+      expect(robots.some((row) => row.blockedNoCopy)).toBe(true);
+      expect(atlas.manifest.robotsPolicy?.failClosed).toBe(true);
+      expect(atlas.summary.crawlContext.endReason).toBe("complete");
+      expect(atlas.summary.crawlContext.completionReason).toBe("finished");
+    } finally {
+      atlas.close();
+    }
+  });
+
+  test("a 1.2 reader reads a 1.3 archive", async () => {
+    const path = join(root, "archives", "minimal-valid-1.3.atls");
+    const atlas = await openAtlas(path);
+    try {
+      const pages = [];
+      for await (const page of atlas.readers.pageMetadata()) pages.push(page);
+      expect(pages).toHaveLength(1);
+
+      const policy = atlas.manifest.robotsPolicy as {
+        respect?: boolean;
+        overridesUsed?: boolean;
+        mode?: string;
+      };
+      expect(typeof policy.respect).toBe("boolean");
+      expect(typeof policy.overridesUsed).toBe("boolean");
+      const keptByReader12 = { respect: policy.respect, overridesUsed: policy.overridesUsed };
+      expect(keptByReader12).toEqual({ respect: true, overridesUsed: false });
+      expect(policy.mode).toBe("strict");
+
+      expect(atlas.summary.crawlContext.completionReason).toBe("finished");
+
+      const frontier = [];
+      for await (const row of atlas.readers.dataset<Record<string, unknown>>("frontier_ledger")) {
+        frontier.push(row);
+      }
+      const reasons = frontier.map((row) => row.skipReason).sort();
+      expect(reasons).toEqual(["ROBOTS_DISALLOWED", "ROBOTS_UNREACHABLE"]);
+      for (const row of frontier) {
+        expect(typeof row.skipReason).toBe("string");
+      }
     } finally {
       atlas.close();
     }

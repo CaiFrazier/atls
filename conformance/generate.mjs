@@ -15,8 +15,8 @@
  */
 
 /**
- * Rebuild conformance/archives and conformance/vectors from the spec 1.2
- * algorithms. Run after `pnpm --filter @caifrazier/atls-spec build`:
+ * Rebuild conformance/archives and conformance/vectors from the spec 1.2 and
+ * 1.3 algorithms. Run after `pnpm --filter @caifrazier/atls-spec build`:
  *
  *   node conformance/generate.mjs
  */
@@ -34,6 +34,7 @@ import {
   FILE_EXTENSIONS,
   normalizeUrl,
   provenanceOutputHash,
+  serializedOrigin,
   sha256Hex,
   urlKey,
   uuidV5,
@@ -233,7 +234,7 @@ async function jsonlPart(records) {
   return { compressed, sha256: sha256Hex(compressed) };
 }
 
-function summary(totalPages) {
+function summary(totalPages, crawlExtra = {}) {
   return {
     identity: {
       seedUrls: [PAGE_URL],
@@ -245,6 +246,7 @@ function summary(totalPages) {
       specLevel: 1,
       completionReason: "finished",
       config: { robotsRespect: true, followExternal: false },
+      ...crawlExtra,
     },
     stats: {
       totalPages,
@@ -272,19 +274,25 @@ function manifest(options) {
     datasets,
     extraIntegrity = {},
     blobRefStyle,
+    robotsPolicy,
   } = options;
-  const is12 = edition === "1.2";
+  const modern = edition === "1.2" || edition === "1.3";
+  const stamp = edition === "1.3"
+    ? { atlasVersion: "1.3", formatVersion: "1.3.0", specVersion: "1.3.0", generator: "atls-conformance/1.3.0" }
+    : edition === "1.2"
+      ? { atlasVersion: "1.2", formatVersion: "1.2.0", specVersion: "1.2.0", generator: "atls-conformance/1.2.0" }
+      : { atlasVersion: "1.1", formatVersion: "1.1.0", specVersion: "1.1.0", generator: "atls-conformance/1.1.0" };
   return {
-    atlasVersion: is12 ? "1.2" : "1.1",
-    formatVersion: is12 ? "1.2.0" : "1.1.0",
-    specVersion: is12 ? "1.2.0" : "1.1.0",
+    atlasVersion: stamp.atlasVersion,
+    formatVersion: stamp.formatVersion,
+    specVersion: stamp.specVersion,
     schemaVersion: "2026-09-04",
     crawlId: "01936b6a-7c8e-7000-8000-000000000001",
     mode: "raw",
     incomplete: false,
     owner: { name: "Example Producer" },
     consumers: ["conformance"],
-    generator: is12 ? "atls-conformance/1.2.0" : "atls-conformance/1.1.0",
+    generator: stamp.generator,
     createdAt: CAPTURED_AT,
     configIncluded: false,
     redactionApplied: false,
@@ -295,17 +303,18 @@ function manifest(options) {
     ],
     hashing: {
       algorithm: "sha256",
-      urlKeyAlgo: is12 ? "sha256" : "sha1",
+      urlKeyAlgo: modern ? "sha256" : "sha1",
       rawHtmlHash: "sha256 of the raw HTTP body bytes",
       domHash: "sha256 of the decoded HTML string in raw mode",
     },
-    urlNormalization: is12
+    urlNormalization: modern
       ? { trailing_slash: "append-unless-file" }
       : {
           remove_trailing_slash: false,
           trailing_slash_policy: "append",
         },
-    crawlContext: is12
+    ...(robotsPolicy ? { robotsPolicy } : {}),
+    crawlContext: modern
       ? { mode: "raw" }
       : { mode: "raw", urlNormalizationRules: ["remove-trailing-slash"] },
     parts,
@@ -371,6 +380,66 @@ async function helloBlob() {
   };
 }
 
+const BODY_BYTES = Buffer.byteLength("Hello, Atlas");
+const LAST_GOOD_AT = "2026-01-01T00:00:00.000Z";
+
+function robotsRow(blob, fields) {
+  const origin = serializedOrigin(fields.robotsUrl);
+  if (!origin) {
+    throw new Error(`robotsUrl has no origin: ${fields.robotsUrl}`);
+  }
+  return {
+    origin,
+    userAgentToken: "ExampleBot",
+    matchedGroup: "*",
+    fetchStatus: "ok",
+    httpStatus: 200,
+    fetchedAt: CAPTURED_AT,
+    attempts: 1,
+    bodySource: "fresh",
+    lastGoodFetchedAt: null,
+    lastGoodBodySha256: null,
+    bodyBlobRef: blob ? blob.canonical : null,
+    bodyBytes: blob ? BODY_BYTES : 0,
+    truncated: false,
+    declaredCrawlDelaySec: null,
+    appliedIntervalMs: 1000,
+    blockedNoCopy: false,
+    responses429: null,
+    responses5xx: null,
+    ...fields,
+    origin,
+  };
+}
+
+function originVectors() {
+  const cases = [
+    ["https://example.com/robots.txt", "https://example.com"],
+    ["HTTPS://Example.COM:443/robots.txt", "https://example.com"],
+    ["http://example.com:80/robots.txt", "http://example.com"],
+    ["http://example.com:8080/robots.txt", "http://example.com:8080"],
+    ["https://api.example.com:8443/robots.txt", "https://api.example.com:8443"],
+    ["https://user:pass@example.com/robots.txt", "https://example.com"],
+    ["https://münchen.example/robots.txt", "https://xn--mnchen-3ya.example"],
+    ["https://WWW.Example.com/robots.txt", "https://www.example.com"],
+    ["https://example.com/robots.txt?b=2&a=1", "https://example.com"],
+    ["http://[::1]:8080/robots.txt", "http://[::1]:8080"],
+    ["http://[::1]/robots.txt", "http://[::1]"],
+    ["not a url", null],
+  ];
+  return cases.map(([robotsUrl, expected]) => {
+    const origin = serializedOrigin(robotsUrl);
+    if (origin !== expected) {
+      throw new Error(`origin drift for ${robotsUrl}: got ${origin}, expected ${expected}`);
+    }
+    return {
+      robotsUrl,
+      normalized: normalizeUrl(robotsUrl),
+      origin,
+    };
+  });
+}
+
 async function main() {
   await mkdir(archivesDir, { recursive: true });
   await mkdir(vectorsDir, { recursive: true });
@@ -393,6 +462,29 @@ async function main() {
     hashes: hashVectors(),
   };
   await writeFile(join(vectorsDir, "url-and-hashes.json"), `${JSON.stringify(vectors, null, 2)}\n`);
+
+  const spec13Vectors = {
+    specVersion: "1.3.0",
+    description: "Spec 1.3 vectors. origin is the serialized origin of normalizeUrl(robotsUrl): scheme://host[:non-default-port], lowercase, host in punycode. endReason maps onto the unchanged completionReason enum. skipReason stays an open string.",
+    counters: "New 1.3 counters use null when the value was not measured and 0 when it was measured and was zero. responses429 and responses5xx count page responses from that origin during the crawl, not robots.txt fetches.",
+    origin: originVectors(),
+    endReasonMap: {
+      complete: "finished",
+      pageCap: "capped",
+      timeBudget: "capped",
+      circuitOpen: "error_budget",
+      schemaBudget: "schema_budget_exhausted",
+      manualStop: "manual",
+      aborted: "manual",
+    },
+    skipReason: {
+      field: "skipReason",
+      type: "string",
+      values: ["ROBOTS_DISALLOWED", "ROBOTS_UNREACHABLE"],
+      note: "frontier_ledger.skipReason is not an enum. These values are strings. A 1.2 reader that accepts any string accepts them. skipSource and matchedRobotsRule are new optional fields.",
+    },
+  };
+  await writeFile(join(vectorsDir, "spec-1.3.json"), `${JSON.stringify(spec13Vectors, null, 2)}\n`);
 
   const blob = await helloBlob();
   const wrongHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -461,6 +553,170 @@ async function main() {
     responses: [responseRecord(canonicalRef)],
   }, canonicalRef, blob);
 
+  const previousGoodDigest = sha256Hex("previous last-good body");
+  const robotsRows = [
+    robotsRow(blob, {
+      robotsUrl: "https://example.com/robots.txt",
+      fetchStatus: "ok",
+      httpStatus: 200,
+      bodySource: "fresh",
+      matchedGroup: "*",
+      declaredCrawlDelaySec: 10,
+      appliedIntervalMs: 10000,
+      attempts: 1,
+      truncated: false,
+      lastGoodBodySha256: previousGoodDigest,
+      responses429: null,
+      responses5xx: null,
+    }),
+    robotsRow(blob, {
+      robotsUrl: "https://cdn.example.com/robots.txt",
+      fetchStatus: "unavailable",
+      httpStatus: 404,
+      bodySource: "none",
+      matchedGroup: null,
+      bodyBlobRef: null,
+      bodyBytes: 0,
+      declaredCrawlDelaySec: null,
+      appliedIntervalMs: 0,
+      attempts: 1,
+      responses429: 0,
+      responses5xx: 0,
+    }),
+    robotsRow(blob, {
+      robotsUrl: "https://api.example.com:8443/robots.txt",
+      fetchStatus: "unreachable",
+      httpStatus: 503,
+      bodySource: "lastGood",
+      matchedGroup: "*",
+      lastGoodFetchedAt: LAST_GOOD_AT,
+      lastGoodBodySha256: null,
+      attempts: 3,
+      appliedIntervalMs: 500,
+      responses429: 0,
+      responses5xx: 2,
+    }),
+    robotsRow(blob, {
+      robotsUrl: "https://blocked.example.com/robots.txt",
+      fetchStatus: "unreachable",
+      httpStatus: null,
+      bodySource: "none",
+      matchedGroup: null,
+      bodyBlobRef: null,
+      bodyBytes: 0,
+      blockedNoCopy: true,
+      attempts: 2,
+      responses429: null,
+      responses5xx: null,
+    }),
+    robotsRow(blob, {
+      robotsUrl: "https://münchen.example/robots.txt",
+      fetchStatus: "ok",
+      httpStatus: 200,
+      bodySource: "fresh",
+      matchedGroup: "*",
+      lastGoodBodySha256: null,
+      responses429: 0,
+      responses5xx: 0,
+    }),
+  ];
+  const frontierRows = [
+    {
+      url: "https://example.com/private/",
+      normalizedUrl: "https://example.com/private/",
+      status: "skipped",
+      skipReason: "ROBOTS_DISALLOWED",
+      skipSource: "page",
+      matchedRobotsRule: "/private",
+      hostGroup: "example.com",
+    },
+    {
+      url: "https://blocked.example.com/",
+      normalizedUrl: "https://blocked.example.com/",
+      status: "skipped",
+      skipReason: "ROBOTS_UNREACHABLE",
+      skipSource: "warmup",
+      matchedRobotsRule: null,
+      hostGroup: "blocked.example.com",
+    },
+  ];
+  const valid13 = await sealed("1.3", {
+    page_metadata: [pageRecord()],
+    responses: [responseRecord(canonicalRef)],
+    robots: robotsRows,
+    frontier_ledger: frontierRows,
+  }, canonicalRef, blob);
+
+  const blockedPolicy = {
+    respect: true,
+    overridesUsed: false,
+    mode: "strict",
+    modeSource: "flag",
+    failClosed: false,
+    retryAttempts: 2,
+    keepLastGood: false,
+  };
+  const blockedRow = robotsRow(null, {
+    robotsUrl: "https://blocked.example.com/robots.txt",
+    fetchStatus: "unreachable",
+    httpStatus: null,
+    bodySource: "none",
+    matchedGroup: null,
+    bodyBlobRef: null,
+    bodyBytes: 0,
+    blockedNoCopy: true,
+    attempts: 2,
+  });
+  const blockedNoCopy = await sealed("1.3", {
+    page_metadata: [pageRecord()],
+    robots: [blockedRow],
+  }, null, null);
+
+  const duplicate = await sealed("1.3", {
+    page_metadata: [pageRecord()],
+    robots: [
+      robotsRow(null, {
+        robotsUrl: "https://example.com/robots.txt",
+        fetchStatus: "unavailable",
+        httpStatus: 404,
+        bodySource: "none",
+        matchedGroup: null,
+        bodyBlobRef: null,
+        bodyBytes: 0,
+      }),
+      robotsRow(null, {
+        robotsUrl: "HTTPS://Example.COM/robots.txt",
+        fetchStatus: "unavailable",
+        httpStatus: 403,
+        bodySource: "none",
+        matchedGroup: null,
+        bodyBlobRef: null,
+        bodyBytes: 0,
+      }),
+    ],
+  }, null, null);
+
+  const missingHash = `${"ab".repeat(2)}${"0".repeat(60)}`;
+  const missingRef = `sha256/${missingHash.slice(0, 2)}/${missingHash.slice(2, 4)}/${missingHash}`;
+  const missingBlob = await sealed("1.3", {
+    page_metadata: [pageRecord()],
+    robots: [
+      robotsRow(null, {
+        robotsUrl: "https://example.com/robots.txt",
+        fetchStatus: "ok",
+        httpStatus: 200,
+        bodySource: "fresh",
+        bodyBlobRef: missingRef,
+        bodyBytes: 0,
+        lastGoodBodySha256: null,
+      }),
+    ],
+  }, null, null);
+
+  const mismatch = await sealed("1.3", {
+    page_metadata: [pageRecord()],
+  }, null, null);
+
   const flipped = (hex) => (hex.endsWith("0") ? `${hex.slice(0, -1)}1` : `${hex.slice(0, -1)}0`);
   const pagePart = "page_metadata/part-001.jsonl.zst";
   badChecksum.files = { ...badChecksum.files, [pagePart]: flipped(badChecksum.files[pagePart]) };
@@ -475,6 +731,27 @@ async function main() {
     ["bad-content-sha256.atls", badDigest, {}],
     ["corrupted-blob.atls", corruptBlob, {}],
     ["missing-required-dataset.atls", missingPage, { omitPage: true }],
+    ["minimal-valid-1.3.atls", valid13, {
+      robotsPolicy: {
+        respect: true,
+        overridesUsed: false,
+        mode: "strict",
+        modeSource: "config",
+        failClosed: true,
+        retryAttempts: 2,
+        keepLastGood: true,
+      },
+      summaryExtra: {
+        endReason: "complete",
+        skippedByReason: { ROBOTS_DISALLOWED: 1, ROBOTS_UNREACHABLE: 0 },
+      },
+    }],
+    ["robots-blocked-no-copy.atls", blockedNoCopy, { robotsPolicy: blockedPolicy }],
+    ["robots-duplicate-origin.atls", duplicate, {}],
+    ["robots-missing-blob.atls", missingBlob, {}],
+    ["end-reason-mismatch.atls", mismatch, {
+      summaryExtra: { endReason: "pageCap", completionReason: "finished" },
+    }],
   ];
 
   const expected = [];
@@ -492,10 +769,13 @@ async function main() {
         extraIntegrity,
         blobRefStyle: fileName.startsWith("legacy") ? "legacy" : "canonical",
       }),
-      summary: summary(flags.omitPage ? 0 : 1),
+      summary: summary(flags.omitPage ? 0 : 1, flags.summaryExtra ?? {}),
       parts: built.parts,
       blob: built.blob,
     };
+    if (flags.robotsPolicy) {
+      spec.manifest.robotsPolicy = flags.robotsPolicy;
+    }
     if (flags.omitPage) {
       delete spec.manifest.parts.page_metadata;
       delete spec.manifest.datasets.page_metadata;
@@ -515,6 +795,11 @@ async function main() {
       { file: "bad-content-sha256.atls", valid: false, strictValid: false, errorCodes: ["CONTENT_SHA256_MISMATCH"], note: "Part checksums match the stored bytes. contentSha256 does not match their UTF-8 path-order rollup." },
       { file: "corrupted-blob.atls", valid: false, strictValid: false, errorCodes: ["BLOB_HASH_MISMATCH"], note: "The blob frame decompresses, and SHA-256 of those bytes is not the hash in the path." },
       { file: "missing-required-dataset.atls", valid: false, strictValid: false, errorCodes: ["MANIFEST_MISSING_PARTS"], note: "page_metadata is not declared. The responses part and its checksums are fine. The presence-by-mode matrix is not what fails this archive." },
+      { file: "minimal-valid-1.3.atls", valid: true, strictValid: true, errorCodes: [], note: "Spec 1.3. robots rows cover each fetchStatus and each bodySource, including a punycode origin and a blockedNoCopy row with robotsPolicy.failClosed true. endReason complete maps to completionReason finished. frontier_ledger skipReason values are strings. Legacy robotsPolicy.respect and overridesUsed are present so a 1.2 reader can parse that object." },
+      { file: "robots-blocked-no-copy.atls", valid: false, strictValid: false, errorCodes: ["ROBOTS_BLOCKED_NO_COPY"], note: "blockedNoCopy is true and manifest.robotsPolicy.failClosed is false." },
+      { file: "robots-duplicate-origin.atls", valid: false, strictValid: false, errorCodes: ["ROBOTS_DUPLICATE_ORIGIN"], note: "Two robots rows share the origin of normalizeUrl(robotsUrl)." },
+      { file: "robots-missing-blob.atls", valid: false, strictValid: false, errorCodes: ["BLOB_NOT_FOUND"], note: "robots.bodyBlobRef is the canonical spelling and does not resolve to a blob entry." },
+      { file: "end-reason-mismatch.atls", valid: false, strictValid: false, errorCodes: ["END_REASON_MISMATCH"], note: "endReason pageCap is present with completionReason finished. The map requires capped." },
     ],
   };
   await writeFile(join(root, "expected.json"), `${JSON.stringify(verdicts, null, 2)}\n`);

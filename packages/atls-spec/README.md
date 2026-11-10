@@ -1,8 +1,8 @@
 # @caifrazier/atls-spec
 
-Specification package for the Atlas (`.atls`) archive format. It ships the Zod schemas, the generated JSON Schemas, the TypeScript types, and the spec 1.2 helpers for URL identity, blob refs, and archive digests.
+Specification package for the Atlas (`.atls`) archive format. It ships the Zod schemas, the generated JSON Schemas, the TypeScript types, and the helpers for URL identity, blob refs, and archive digests.
 
-The schema tag is `2026-09-04`. The spec contract is `1.2.0`. Archives stamped 1.1 stay valid. This package covers 21 datasets.
+The schema tag is `2026-09-04`. The spec contract is `1.3.0`. Archives stamped 1.1 and 1.2 stay valid. This package covers 22 datasets. Spec 1.3 is not published to npm.
 
 Install `@caifrazier/atls-spec`. The name `@atls/spec` is not published on npm.
 
@@ -72,7 +72,7 @@ console.log(result.valid, result.stats.errorsFound);
 
 ## Conformance suite
 
-The suite is in the [atls repository](https://github.com/CaiFrazier/atls/blob/main/conformance/README.md), not in this tarball. It has seven small archives plus URL and hash vectors. The reference check is `validate()` from `@caifrazier/atls-sdk`.
+The suite is in the [atls repository](https://github.com/CaiFrazier/atls/blob/main/conformance/README.md), not in this tarball. It has small archives plus URL, hash, and spec 1.3 vectors. The reference check is `validate()` from `@caifrazier/atls-sdk`.
 
 ```bash
 git clone https://github.com/CaiFrazier/atls.git

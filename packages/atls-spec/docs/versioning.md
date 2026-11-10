@@ -14,9 +14,9 @@ does not enum-lock it.
 
 | Field | Schema | Current edition value | Meaning |
 |---|---|---|---|
-| `atlasVersion` | required string matching `^v?\d+(\.\d+)?$` | `"1.2"` | Public Atlas product line. `"1.1"` remains valid. |
-| `formatVersion` | required string | `"1.2.0"` | Archive container version. The reference reader accepts any major `1` and refuses other majors. |
-| `specVersion` | optional string | `"1.2.0"` | Specification contract version. Strict validation is what requires it to be present. |
+| `atlasVersion` | required string matching `^v?\d+(\.\d+)?$` | `"1.3"` | Public Atlas line. `"1.1"` and `"1.2"` remain valid. A writer stamps `"1.3"` only when the archive emits a spec 1.3 field. |
+| `formatVersion` | required string | `"1.3.0"` | Archive container version. The reference reader accepts any major `1` and refuses other majors. |
+| `specVersion` | optional string | `"1.3.0"` | Specification contract version. Strict validation is what requires it to be present. |
 | `schemaVersion` | optional string | `"2026-09-04"` | Date-stamped dataset-schema tag. Any string validates. Spec 1.2 does not change this tag. |
 | `generator` | required string | _(producer-defined)_ | Producer id and version. The schema does not constrain the spelling. |
 
@@ -33,7 +33,7 @@ The current-edition column is what this specification documents for archives sta
    manifest**. It names the dataset-schema edition. The reference reader copies it onto
    `describeArchive().schemaVersion` and does not branch on it.
 
-2. **The `@caifrazier/atls-spec` package version** (`1.2.0`, from `package.json`) is the npm
+2. **The `@caifrazier/atls-spec` package version** (`1.3.0`, from `package.json`) is the npm
    semver of the schema package. It is **not** written into archives.
 
 A reader must never use the spec package version to reason about an archive's layout — it isn't in
@@ -119,9 +119,9 @@ not change the schemas.
 
 ## Spec 1.2
 
-`ATLAS_SPEC_VERSION` is `1.2.0`. `ATLAS_FORMAT_VERSION` is `1.2.0`. `ATLAS_VERSION` is `1.2`.
-`ATLAS_SCHEMA_VERSION` stays `2026-09-04`. The changelog is
-[CHANGELOG.md](../CHANGELOG.md).
+Spec 1.2 set `ATLAS_SPEC_VERSION` to `1.2.0`, `ATLAS_FORMAT_VERSION` to `1.2.0`, and
+`ATLAS_VERSION` to `1.2`. `ATLAS_SCHEMA_VERSION` stays `2026-09-04`. The current constants are
+spec 1.3. The changelog is [CHANGELOG.md](../CHANGELOG.md).
 
 What 1.2 makes normative, without a new schema tag:
 
@@ -153,6 +153,51 @@ keys this schema tag already stores. Camel case for those keys is the spec 2.0 t
 A 1.2 writer stamps `atlasVersion` `1.2`, `formatVersion` `1.2.0`, `specVersion` `1.2.0`, omits
 `archiveSha256` and `auditHash`, sets `hashing.urlKeyAlgo` to `sha256`, and sets
 `urlNormalization.trailing_slash` to `append-unless-file`.
+
+## Spec 1.3
+
+`ATLAS_SPEC_VERSION` is `1.3.0`. `ATLAS_FORMAT_VERSION` is `1.3.0`. `ATLAS_VERSION` is `1.3`.
+`ATLAS_SCHEMA_VERSION` stays `2026-09-04`. Spec 1.3 adds optional fields and one optional
+dataset. It does not rename a 1.2 field and it does not add a value to an enum that a 1.2
+reader parses strictly.
+
+A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only
+when the archive emits a spec 1.3 field. Those fields are:
+
+- the `robots` dataset
+- `manifest.robotsPolicy` keys `mode`, `modeSource`, `failClosed`, `retryAttempts`, and `keepLastGood`
+- `frontier_ledger.skipSource` and `frontier_ledger.matchedRobotsRule`
+- `summary.crawlContext.endReason` and `summary.crawlContext.skippedByReason`
+
+`frontier_ledger.skipReason` is already an open string. `ROBOTS_DISALLOWED` and
+`ROBOTS_UNREACHABLE` are spellings a 1.3 writer uses. They are not new fields, and they are
+not new enum values. A 1.2 reader that accepts any string accepts them. A writer that emits
+only those strings, and none of the fields in the list above, does not have to stamp 1.3.
+
+`contentSha256` for spec 1.3 is the spec 1.2 rule: UTF-8 byte order. `integrityEdition` returns
+the label `"1.2"` for every minor of 2 or higher. That label names the byte-order rule.
+
+New 1.3 counters use null when the producer did not measure the count and 0 when it measured
+zero. A missing key is not a zero. `skippedByReason` on the summary follows that rule. On a
+robots row, `responses429` and `responses5xx` follow it too, and they count the page responses
+received from that origin during the crawl. They do not count fetches of robots.txt.
+
+## 1.2 to 1.3
+
+1.1 archives and 1.2 archives remain valid. A reader accepts every `formatVersion` major 1.
+A 1.2 reader ignores unknown fields and unknown datasets. The conformance archive
+`minimal-valid-1.3.atls` is the case a 1.2 reader reads.
+
+| Topic | 1.3 archive | 1.2 reader |
+|---|---|---|
+| `robots/` | Optional dataset, one row per origin | Ignore the directory. `page_metadata` still reads. |
+| `robotsPolicy` | May add `mode`, `modeSource`, `failClosed`, `retryAttempts`, `keepLastGood` | The 1.2 schema strips unknown keys and still requires `respect` and `overridesUsed` when the object is present. A 1.3 writer that wants that parse to succeed keeps those two booleans. A 1.3-only object is valid in 1.3 and fails that 1.2 schema. |
+| `capabilities.robots` | Unchanged (`respectsRobotsTxt`, `overrideUsed`) | Unchanged. |
+| `summary.crawlContext.endReason` | Optional. Maps onto the existing `completionReason` when both are present | Strip the key. `completionReason` is unchanged and still required. |
+| `summary.crawlContext.skippedByReason` | Optional record, or null when not measured | Strip the key. |
+| `frontier_ledger.skipReason` | Open string. New spellings `ROBOTS_DISALLOWED` and `ROBOTS_UNREACHABLE` | Accept any string. The field was not a closed enum, so it was not widened. |
+| `frontier_ledger.skipSource`, `matchedRobotsRule` | Optional | Strip the keys. |
+| `contentSha256` | UTF-8 byte order, same as 1.2 | Byte order only, because the minor is 2 or higher. |
 
 ---
 

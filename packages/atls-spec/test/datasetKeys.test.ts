@@ -26,6 +26,7 @@ describe('Atlas dataset registry', () => {
     const names = Object.values(ATLAS_DATASET_KEYS);
     for (const name of names) expect(name).toMatch(/^[a-z]+(_[a-z]+)*$/);
     expect(new Set(names).size).toBe(names.length);
-    expect(names).toHaveLength(21);
+    expect(names).toHaveLength(22);
+    expect(names).toContain("robots");
   });
 });

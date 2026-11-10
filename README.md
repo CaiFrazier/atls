@@ -2,7 +2,7 @@
 
 The **Atlas** archive format (`.atls`): specification, JSON Schemas, TypeScript types, and a read-side SDK.
 
-An `.atls` file is a zip archive of compressed JSON Lines datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format (spec 1.2, schema tag `2026-09-04`) and provides the reference reader. The Zod schemas are authoritative when the prose disagrees. Decisions for this edition are in [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md). Conformance archives are in [`conformance/`](conformance/README.md).
+An `.atls` file is a zip archive of compressed JSON Lines datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format (spec 1.3, schema tag `2026-09-04`) and provides the reference reader. Spec 1.3 is additive: archives stamped 1.1 and 1.2 stay valid. The Zod schemas are authoritative when the prose disagrees. Decisions for this edition are in [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md). Conformance archives are in [`conformance/`](conformance/README.md). Spec 1.3.0 is not published to npm.
 
 ## Packages
 
@@ -25,7 +25,7 @@ Requires Node ≥ 20 and pnpm ≥ 9.
 
 ## Publish
 
-Both packages release together. See [RELEASING.md](./RELEASING.md). A tag `v1.2.0` runs the provenance workflow. That workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance.
+Both packages release together. See [RELEASING.md](./RELEASING.md). A tag such as `v1.3.0` runs the provenance workflow. That workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance. This change does not publish.
 
 ## License
 

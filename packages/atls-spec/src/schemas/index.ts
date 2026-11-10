@@ -34,6 +34,9 @@ export { ResourceRecordV1Schema, type ResourceRecordV1, ResourceTypeEnum } from 
 // Reconstruction Index dataset
 export { ReconstructionIndexRecordV1Schema, type ReconstructionIndexRecordV1 } from './reconstruction_index.schema.js';
 
+// Spec 1.3 robots dataset
+export { RobotsDatasetRecordV1Schema, type RobotsDatasetRecordV1 } from './robots.schema.js';
+
 // Optional full-mode schemas
 export { DOMSnapshotRecordV1Schema, type DOMSnapshotRecordV1 } from './dom_snapshot.schema.js';
 

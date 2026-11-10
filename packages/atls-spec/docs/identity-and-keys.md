@@ -85,6 +85,7 @@ addition to) `pageId`:
 | `assets` | `assetId` (UUID v5 of the normalized asset URL; see below) | `pageId` (UUID) | Spec 1.1 hashed the raw URL. The schema accepts any non-empty string. |
 | `quarantine` | `quarantineId` (UUID; writers use UUID v7) | `pageId` (optional string) | Forensic dataset for records that failed validation; carries `crawlId`. |
 | `frontier_ledger` | `url` | `pageId` (optional UUID) | URL-keyed discovery accounting. `pageId` is set when the URL was visited. |
+| `robots` | `origin` | none | Spec 1.3. One row per origin. `origin` is the serialized origin of `normalizeUrl(robotsUrl)`. |
 | `pipeline_failures` / `pipeline_alerts` | `url` + `occurredAt` | `pageId` (optional UUID) | `pageId` is absent when the failure happened before a page id existed. |
 
 `resources` is the one to watch: its page link is **`ownerPageId`**, not `pageId`

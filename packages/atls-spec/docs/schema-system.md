@@ -33,7 +33,7 @@ The authoritative roster of which schemas the package publishes is the `schemaMa
   `structured_data.v1`, `technology.v1`, `render_state.v1`, `security.v1`, `performance.v1`,
   `accessibility.v1`, `responses.v1`, `resources.v1`, `pipeline_failures.v1`,
   `pipeline_alerts.v1`, `events.v1`, `sitemaps.v1`, `sitemap_urls.v1`, `extraction.v1`,
-  `frontier_ledger.v1`, `reconstruction_index.v1`, `quarantine.v1`.
+  `frontier_ledger.v1`, `robots.v1`, `reconstruction_index.v1`, `quarantine.v1`.
 - Schemas that are not dataset directories: `dom_snapshot.v1`, `acc_tree.v1`, `render.v1`.
 
 `audit_results` is exported from the package and is intentionally absent from `schemaMap`.
@@ -67,7 +67,13 @@ See [OPEN_QUESTIONS.md](https://github.com/CaiFrazier/atls/blob/main/docs/OPEN_Q
 On read, `openAtlas` schema-checks `assets`, `responses`, and `resources`. `validate()` then
 parses navigation, those three, and content, structured data, technology, render state,
 performance, security, responses, resources, sitemaps, sitemap URLs, extraction, events,
-accessibility, pipeline failures, and pipeline alerts.
+accessibility, pipeline failures, pipeline alerts, and robots.
+
+`validate()` checks a robots `bodyBlobRef` for the canonical spelling in the schema and, unless
+`skipBlobVerification` is set, checks that the ref resolves. It rejects `blockedNoCopy: true`
+unless `manifest.robotsPolicy.failClosed` is true, and it rejects two robots rows with the same
+origin. When `summary.crawlContext.endReason` and `completionReason` are both present, it checks
+the spec 1.3 map. A summary that omits `endReason` is not checked.
 
 `validate()` does not open `quarantine`, `reconstruction_index`, or `frontier_ledger`. Quarantine
 records are retained because they already failed validation; the published schema documents that

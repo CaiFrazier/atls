@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+Not published. The npm version matches spec contract `1.3.0`. The schema tag stays `2026-09-04`.
+
+- `readers.robots()` reads the optional spec 1.3 `robots` dataset. `RobotsRecord` is exported.
+- `validate()` checks robots records, canonical `bodyBlobRef` resolution, `blockedNoCopy` against `manifest.robotsPolicy.failClosed`, duplicate origins, and the `endReason` / `completionReason` map when both are present.
+- Re-exports `serializedOrigin` and `completionReasonForEndReason`.
+- 1.1 and 1.2 archives still validate. A 1.2 reader can read a 1.3 archive that keeps `robotsPolicy.respect` and `robotsPolicy.overridesUsed`, because new keys are optional and `skipReason` stays a string.
+
 ## 1.2.0
 
 First stable release. Replaces `1.0.0-rc.1` (2026-07-04). The npm version matches spec contract `1.2.0`. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.
