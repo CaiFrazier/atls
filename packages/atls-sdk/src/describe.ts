@@ -30,6 +30,7 @@ import {
   readManifest,
   readSummary,
   normalizeBlobPath,
+  AtlasResourceLimitError,
   type AtlasReadOptions,
 } from "./reader.js";
 import type { AtlasManifest, AtlasSummary } from "./types.js";
@@ -263,6 +264,8 @@ function undeclaredFolders(handle: ZipHandle, declared: Set<string>): string[] {
     const slash = entry.indexOf("/");
     if (slash <= 0) continue;
     const folder = entry.slice(0, slash);
+    // Infrastructure directories are not datasets, even when they hold JSONL.
+    if (folder === "meta" || folder === "schemas" || folder === "blobs") continue;
     const canonical = ALIAS_TO_CANONICAL[folder] ?? folder;
     if (declared.has(folder) || declared.has(canonical)) continue;
     folders.add(canonical);
@@ -422,9 +425,9 @@ function parseCursor(cursor: string | null | undefined): CursorState {
   }
   const c = parsed as Partial<CursorState>;
   if (
-    typeof c.part !== "number" || c.part < 0 ||
-    typeof c.line !== "number" || c.line < 0 ||
-    typeof c.ordinal !== "number" || c.ordinal < 0
+    typeof c.part !== "number" || !Number.isSafeInteger(c.part) || c.part < 0 ||
+    typeof c.line !== "number" || !Number.isSafeInteger(c.line) || c.line < 0 ||
+    typeof c.ordinal !== "number" || !Number.isSafeInteger(c.ordinal) || c.ordinal < 0
   ) {
     throw new Error(`Invalid dataset cursor: ${cursor}`);
   }
@@ -432,6 +435,8 @@ function parseCursor(cursor: string | null | undefined): CursorState {
 }
 
 export interface ReadDatasetSliceOptions extends AtlasReadOptions {
+  /** Maximum accumulated raw JSON bytes in a slice (default 16 MiB). */
+  maxBytes?: number;
   cursor?: string | null;
   limit?: number;
   signal?: AbortSignal;
@@ -447,7 +452,14 @@ export async function readDatasetSlice(
   dataset: string,
   options: ReadDatasetSliceOptions = {},
 ): Promise<DatasetSlice> {
-  const limit = Math.max(1, Math.min(options.limit ?? 100, 10_000));
+  if (!Number.isSafeInteger(options.limit ?? 100) || (options.limit ?? 100) < 1) {
+    throw new RangeError("limit must be a positive integer");
+  }
+  const limit = Math.min(options.limit ?? 100, 10_000);
+  const maxBytes = options.maxBytes ?? 16 * 1024 * 1024;
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
+    throw new RangeError("maxBytes must be a positive integer");
+  }
   const start = parseCursor(options.cursor);
 
   return withHandle(target, options, async (handle) => {
@@ -455,6 +467,7 @@ export async function readDatasetSlice(
     const partFiles = handle.listPartFiles(folder);
     const records: DatasetSliceRecord[] = [];
     let ordinal = start.ordinal;
+    let returnedBytes = 0;
 
     for (let partIndex = start.part; partIndex < partFiles.length; partIndex += 1) {
       const partFile = partFiles[partIndex];
@@ -465,6 +478,17 @@ export async function readDatasetSlice(
         limits: options.limits,
       })) {
         if (lineIndex >= skipTo) {
+          const lineBytes = Buffer.byteLength(line, "utf8");
+          if (returnedBytes + lineBytes > maxBytes) {
+            if (!records.length) {
+              throw new AtlasResourceLimitError("dataset slice", maxBytes, lineBytes);
+            }
+            return {
+              records,
+              nextCursor: JSON.stringify({ part: partIndex, line: lineIndex, ordinal }),
+            };
+          }
+          returnedBytes += lineBytes;
           records.push({ ordinal, part: partFile, partIndex, lineInPart: lineIndex, json: line });
           ordinal += 1;
           if (records.length >= limit) {
@@ -538,7 +562,8 @@ export interface DatasetSchemaResult {
 
 /**
  * Read a dataset's archived JSON Schema. Resolution order: the manifest's
- * dataset schema declaration, then the conventional `schemas/<name>.v1.schema.json`.
+ * dataset schema declaration, then manifest.schemas, then the conventional
+ * `schemas/<name>.v1.schema.json`.
  * Returns null when the archive carries no schema for the dataset.
  */
 export async function readSchema(
@@ -550,7 +575,8 @@ export async function readSchema(
     const manifest = await readManifest(handle);
     const datasets = (manifest.datasets ?? {}) as Record<string, DatasetMeta>;
     const declared = stripFragment(
-      metaString(datasets[dataset], "schema", "schema_uri", "schemaUri"),
+      metaString(datasets[dataset], "schema", "schema_uri", "schemaUri")
+        ?? (typeof manifest.schemas?.[dataset] === "string" ? manifest.schemas[dataset] : null),
     );
     const candidates = [
       ...(declared ? [declared] : []),

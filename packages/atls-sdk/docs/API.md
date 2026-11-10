@@ -155,7 +155,7 @@ interface ValidateOptions {
   checkIntegrity?: boolean;   // default true. Edges and assets reference real pages.
   checkBrokenLinks?: boolean; // default true. Internal edges to 4xx/5xx are warnings.
   checkManifest?: boolean;    // default true. Manifest counts versus records read.
-  maxIssues?: number;         // default 1000. Stop collecting after N issues.
+  maxIssues?: number;         // default 1000. Positive integer. Stop collecting after N issues.
   errorsOnly?: boolean;       // default false. Skip warnings.
   strict?: boolean;           // default false. Full manifest fields, blob-ref spelling, no nulls.
   skipBlobVerification?: boolean; // default false. Skip decompress-and-hash of blobs.
@@ -254,6 +254,24 @@ for await (const line of iterateParts("./crawl.atls", "page_metadata")) {
 ```
 
 Decompression of zstd frames uses `fzstd`.
+
+---
+
+## `readDatasetSlice(target, dataset, options?) → Promise<DatasetSlice>`
+
+Read a bounded slice of one dataset. Parts before the cursor are not opened. Lines before the cursor line are not parsed.
+
+```ts
+interface ReadDatasetSliceOptions {
+  cursor?: string | null;  // previous nextCursor. Omit to start at the first row.
+  limit?: number;          // positive integer. Default 100. Capped at 10000.
+  maxBytes?: number;       // positive integer. Max accumulated raw JSON bytes. Default 16 MiB.
+  limits?: Partial<AtlasReadLimits>;
+  signal?: AbortSignal;
+}
+```
+
+`limit` and `maxBytes` must be positive integers. A row that would push the slice past `maxBytes` stays unread, and `nextCursor` points at that row. When the first row alone is larger than `maxBytes`, the call throws `AtlasResourceLimitError`. `part`, `line`, and `ordinal` in a cursor must be safe non-negative integers.
 
 ---
 

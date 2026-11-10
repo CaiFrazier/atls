@@ -201,6 +201,9 @@ export async function validate(
   atlsPath: string,
   options: ValidateOptions = {}
 ): Promise<ValidationResult> {
+  if (!Number.isInteger(options.maxIssues ?? 1000) || (options.maxIssues ?? 1000) < 1) {
+    throw new RangeError("maxIssues must be a positive integer");
+  }
   const {
     checkIntegrity = true,
     checkBrokenLinks = true,

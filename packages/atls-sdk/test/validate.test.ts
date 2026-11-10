@@ -121,6 +121,15 @@ describe("SDK validate()", () => {
     expect(brokenLinkWarnings[0].details?.statusCode).toBe(404);
   });
   
+  test("rejects a maxIssues value that is not a positive integer", async () => {
+    await expect(validate(validArchive.path, { maxIssues: 0 })).rejects.toThrow(
+      /maxIssues must be a positive integer/,
+    );
+    await expect(validate(validArchive.path, { maxIssues: -3 })).rejects.toThrow(RangeError);
+    await expect(validate(validArchive.path, { maxIssues: 1.5 })).rejects.toThrow(RangeError);
+    await expect(validate(validArchive.path, { maxIssues: Number.POSITIVE_INFINITY })).rejects.toThrow(RangeError);
+  });
+
   test("respects maxIssues limit", async () => {
     const result = await validate(validArchive.path, {
       maxIssues: 5,
