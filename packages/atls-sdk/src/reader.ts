@@ -17,6 +17,7 @@
 import { open, type Entry, type ZipFile } from "yauzl";
 import { Readable, Transform } from "stream";
 import { Decompress } from "fzstd";
+import { parseBlobRef } from "@caifrazier/atls-spec";
 import type { AtlasManifest, AtlasSummary, DatasetName } from "./types.js";
 
 const MiB = 1024 * 1024;
@@ -600,19 +601,18 @@ export async function openZipHandle(atlsPath: string, options: AtlasReadOptions 
   return ZipHandle.open(atlsPath, options);
 }
 
+/**
+ * ZIP entry for a blob ref. Accepts the canonical `sha256/<2>/<2>/<hash>`
+ * spelling and the legacy `blobs/sha256/<2>/<2>/<hash>.zst` spelling.
+ */
 export function normalizeBlobPath(blobRef: string): string {
-  const trimmed = blobRef.trim();
-  const hasZst = trimmed.toLowerCase().endsWith(".zst");
-
-  if (trimmed.startsWith("blobs/")) {
-    return hasZst ? trimmed : `${trimmed}.zst`;
+  const parsed = parseBlobRef(blobRef);
+  if (!parsed) {
+    throw new AtlasPathError(
+      "Blob ref must be sha256/<2>/<2>/<64 hex> or blobs/sha256/<2>/<2>/<64 hex>.zst.",
+    );
   }
-
-  if (trimmed.startsWith("sha256/")) {
-    return hasZst ? `blobs/${trimmed}` : `blobs/${trimmed}.zst`;
-  }
-
-  return hasZst ? `blobs/${trimmed}` : `blobs/${trimmed}.zst`;
+  return parsed.archivePath;
 }
 
 async function withOwnedZipHandle<T>(

@@ -1,41 +1,49 @@
 {
   "name": "@caifrazier/atls-sdk",
-  "version": "1.0.0-rc.1",
+  "version": "1.2.0",
   "description": "TypeScript SDK for reading and validating Atlas (.atls) archives",
   "author": "Cai Frazier",
   "license": "Apache-2.0",
   "type": "module",
   "keywords": [
     "atlas",
+    "atls",
+    "archive",
     "crawler",
     "seo",
     "accessibility",
     "sdk",
-    "archive",
     "validation"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/CaiFrazier/atls.git",
+    "url": "git+https://github.com/CaiFrazier/atls.git",
     "directory": "packages/atls-sdk"
   },
   "bugs": {
     "url": "https://github.com/CaiFrazier/atls/issues"
   },
   "homepage": "https://github.com/CaiFrazier/atls/tree/main/packages/atls-sdk#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "QUICK_REFERENCE.md",
-    "examples"
+    "docs",
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "tsc -b",
@@ -49,8 +57,9 @@
     "access": "public"
   },
   "dependencies": {
-    "@caifrazier/atls-spec": "workspace:*",
+    "@caifrazier/atls-spec": "1.2.0",
     "@mongodb-js/zstd": "^2.0.1",
+    "@types/node": "^20.14.10",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "fzstd": "0.1.1",
@@ -58,7 +67,6 @@
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
-    "@types/node": "^20.0.0",
     "@types/yauzl": "^2.10.3",
     "archiver": "^7.0.1",
     "typescript": "^5.6.3"

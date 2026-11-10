@@ -42,6 +42,9 @@ const INTENTIONALLY_EXCLUDED = new Set([
   // Sub-schemas and building blocks (not standalone datasets)
   'JsonValueSchema',
   'LandmarkSchema',
+  // Embedded in page_metadata.media.screenshots and reconstruction_index refs.
+  'ScreenshotTileSchema',
+  'ScreenshotReferenceSchema',
   // B2: per-form sub-schema embedded in SecurityDatasetRecordV1Schema.forms[]
   'SecurityFormV1Schema',
   'TabOrderEntrySchema',

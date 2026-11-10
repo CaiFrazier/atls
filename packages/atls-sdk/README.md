@@ -1,30 +1,23 @@
 # @caifrazier/atls-sdk
 
-TypeScript SDK for reading and validating Atlas `.atls` archives.
+Read and validate Atlas (`.atls`) archives. An `.atls` file is a ZIP of Zstandard-compressed JSON Lines datasets plus content-addressed blobs.
 
-## API
+Install `@caifrazier/atls-sdk`. The name `@atls/sdk` is not published on npm. If an import still says `@atls/sdk`, change it to `@caifrazier/atls-sdk`.
 
-> **Full API reference:** [`docs/API.md`](./docs/API.md) — every method, option, and return type.
-> The Atlas archive **format** itself is specified in
-> [`@caifrazier/atls-spec`](../atls-spec/SPECIFICATION.md).
+```bash
+npm install @caifrazier/atls-sdk
+```
 
-Primary exports:
+Requires Node.js 20 or newer. The package is ESM only. It depends on `@caifrazier/atls-spec` at the same version.
 
-- `openAtlas(atlsPath, options?)`
-- `select(atlsPath, options)`
-- `validate(atlsPath, options)` (`skipBlobVerification` skips blob hashes)
-- `normalizeUrl`, `urlKey`, `assetId`, `contentSha256`
-- `diffManifests` / `formatManifestDiff`, `buildCrossModeIndex`
-- Low-level: `readManifest`, `readSummary`, `iterateParts`, `readBlob`, `openZipHandle`
-- `MalformedRecordError`
-- `AtlasResourceLimitError`
+The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.2.0`.
 
-## Quick Example
+## Read an archive
 
 ```ts
-import { openAtlas } from '@caifrazier/atls-sdk';
+import { openAtlas } from "@caifrazier/atls-sdk";
 
-const atlas = await openAtlas('./crawl.atls');
+const atlas = await openAtlas("./crawl.atls");
 
 console.log(atlas.manifest.atlasVersion);
 console.log([...atlas.datasets]);
@@ -36,192 +29,97 @@ for await (const page of atlas.readers.pageMetadata()) {
 atlas.close();
 ```
 
-## Read Limits
+`openAtlas` is strict by default. A record that is not valid JSON, or that fails the schema for `assets`, `responses`, or `resources`, throws `MalformedRecordError`. Pass `{ strict: false }` to skip those records and count them on `atlas.stats.corruptedRecordCount`.
 
-All archive read APIs apply bounded ZIP, zstd, and JSONL limits by default. Oversized entries,
-dataset parts, blobs, root JSON files, and JSONL lines throw `AtlasResourceLimitError`.
+Dataset readers include `pageMetadata()`, `navigation()`, `responses()`, `sitemapUrls()` (`SitemapUrlRecord`), and `extraction()` (`ExtractionRecord`). `ATLAS_DATASET_KEYS` is the full registry of directory names.
 
-Trusted local workflows can raise limits explicitly:
+## Resolve a blob
 
-```ts
-const atlas = await openAtlas("./large-local-crawl.atls", {
-  limits: {
-    maxPartDecompressedBytes: 1024 * 1024 * 1024,
-    maxBlobDecompressedBytes: 512 * 1024 * 1024,
-  },
-});
-```
+`getBlob`, `readBlob`, and `statBlob` take the ref as an opaque string. Both spellings resolve to the same ZIP entry:
 
-## Reader Surface
-
-`openAtlas()` returns an `AtlasReader` with:
-
-- `manifest`
-- `summary`
-- `datasets`
-- `packs`
-- `stats` — `{ corruptedRecordCount }` (incremented when `strict: false`)
-- `hasDataset(name)` — returns `true` if the dataset is present in this archive
-- `getBlob(ref)` — fetch a content-addressed blob by its `bodyBlobRef` string
-- `close()`
-- `readers.*` — typed async iterables per dataset (see table below)
-
-Source: `src/index.ts`
-
-### `readers` methods
-
-| Method | Return type | Notes |
-|---|---|---|
-| `navigation()` | `AsyncIterable<Record>` | Link graph edges |
-| `pageMetadata()` | `AsyncIterable<FlatPageMetadata>` | On-page SEO signals |
-| `content()` | `AsyncIterable<Record>` | Full page text and headings |
-| `structuredData()` | `AsyncIterable<Record>` | JSON-LD / microdata / OpenGraph |
-| `technology()` | `AsyncIterable<Record>` | Detected tech stack per page |
-| `renderState()` | `AsyncIterable<Record>` | Full-mode render state (`full` only) |
-| `security()` | `AsyncIterable<Record>` | Security headers and HTTPS posture |
-| `performance()` | `AsyncIterable<Record>` | Performance timing (`prerender`/`full`) |
-| `pipelineFailures()` | `AsyncIterable<Record>` | Hard crawl failures |
-| `pipelineAlerts()` | `AsyncIterable<Record>` | Non-fatal warnings |
-| `assets()` | `AsyncIterable<AssetRecord>` | Images, scripts, fonts, stylesheets |
-| `events()` | `AsyncIterable<EventRecord>` | Crawl lifecycle events |
-| `accessibility()` | `AsyncIterable<AccessibilityRecord>` | WCAG 2.2 audit results |
-| `responses()` | `AsyncIterable<ResponseRecordV1>` | HTTP response metadata, including redirect rows |
-| `resources()` | `AsyncIterable<ResourceRecordV1>` | Resource timing and network requests |
-| `sitemapUrls()` | `AsyncIterable<SitemapUrlRecord>` | Per-URL sitemap entries |
-| `extraction()` | `AsyncIterable<ExtractionRecord>` | Custom extraction-rule results |
-| `dataset<T>(name)` | `AsyncIterable<T>` | Generic accessor for any dataset by key, including `sitemaps`, `quarantine`, `reconstruction_index`, and `frontier_ledger` |
-
-Deprecated aliases (still functional, do not use in new code):
-
-| Method | Canonical equivalent |
-|---|---|
-| `pages()` | `pageMetadata()` |
-| `edges()` | `navigation()` |
-| `errors()` | `pipelineFailures()` |
-| `failedPages()` | `pipelineFailures()` |
-
-## Error Policy for Malformed Records
-
-By default, `openAtlas` operates in **strict mode** (`strict: true`). If a
-dataset iterator encounters a record that cannot be parsed (invalid JSON or
-schema validation failure), it throws a `MalformedRecordError` with the
-`dataset` name and a human-readable `reason`.
-
-To opt into lenient processing, pass `{ strict: false }`. Malformed records are
-skipped and counted in `atlas.stats.corruptedRecordCount`, so callers always
-know how many records were lost.
+- canonical: `sha256/<2>/<2>/<64 hex>`
+- legacy: `blobs/sha256/<2>/<2>/<64 hex>.zst`
 
 ```ts
-import { openAtlas, MalformedRecordError } from '@caifrazier/atls-sdk';
+import { openAtlas } from "@caifrazier/atls-sdk";
 
-// Strict (default) — throws on first bad record
-try {
-  const atlas = await openAtlas('./crawl.atls');
-  for await (const page of atlas.readers.pageMetadata()) {
-    console.log(page.url);
+const atlas = await openAtlas("./crawl.atls");
+for await (const response of atlas.readers.responses()) {
+  if (response.bodyBlobRef) {
+    const html = await atlas.getBlob(response.bodyBlobRef);
+    console.log(html.byteLength);
   }
-} catch (err) {
-  if (err instanceof MalformedRecordError) {
-    console.error(`Bad record in ${err.dataset}: ${err.reason}`);
-  }
-}
-
-// Lenient — skip bad records, inspect count afterwards
-const atlas = await openAtlas('./crawl.atls', { strict: false });
-for await (const page of atlas.readers.pageMetadata()) {
-  console.log(page.url);
-}
-if (atlas.stats.corruptedRecordCount > 0) {
-  console.warn(`Skipped ${atlas.stats.corruptedRecordCount} malformed records`);
 }
 atlas.close();
 ```
 
-## Validation
+## Screenshot refs
+
+Do not reshape screenshot refs. Both of these stay valid:
+
+- a plain string
+- `{ tiles: [{ src, height, width, y }], totalWidth, totalHeight }`
+
+They live at `page_metadata.media.screenshots.desktop`, `page_metadata.media.screenshots.desktopFullPage`, `reconstruction_index.screenshotDesktopBlobRef`, `reconstruction_index.faviconBlobRef`, and `reconstruction_index.bodyBlobRef`.
+
+If a tile `src` is a blob ref, pass that string to `getBlob`. Both spellings work. `screenshotBlobRefs()` collects those strings and skips live URLs.
+
+## Validate an archive
 
 ```ts
-import { validate } from '@caifrazier/atls-sdk';
+import { validate } from "@caifrazier/atls-sdk";
 
-const result = await validate('./crawl.atls', {
+const result = await validate("./crawl.atls", {
   checkIntegrity: true,
   checkBrokenLinks: true,
   checkManifest: true,
-  strict: false,
 });
 
 console.log(result.valid, result.stats.errorsFound);
-```
-
-Source: `src/validate.ts`
-
-## `select` — Filtered Dataset Streaming
-
-For one-off filtered reads without opening a full `AtlasReader`:
-
-```ts
-import { select } from '@caifrazier/atls-sdk';
-
-for await (const record of select('./crawl.atls', {
-  dataset: 'accessibility',
-  where: (a: any) => a.missingAltCount > 0,
-  fields: ['pageUrl', 'missingAltCount'],
-  limit: 50,
-})) {
-  console.log(record);
+for (const issue of result.issues) {
+  console.log(issue.severity, issue.code, issue.message);
 }
 ```
 
-`SelectOptions`: `dataset` (required), `where` (filter predicate), `fields` (dot-path projection), `limit`.
+`validate()` checks part checksums, `integrity.contentSha256`, and blob hashes. `skipBlobVerification: true` skips blob hashes only. `archiveSha256` and `auditHash` are ignored.
 
-## Advanced / Utilities
+`validate({ strict: true })` also requires manifest fields and accepts either blob-ref spelling. That `strict` flag is not the same as `openAtlas({ strict })`.
 
-### Diff two archives
-
-```ts
-import { openAtlas, diffManifests, formatManifestDiff } from '@caifrazier/atls-sdk';
-
-const [a, b] = await Promise.all([openAtlas('./before.atls'), openAtlas('./after.atls')]);
-const diff = diffManifests(a.manifest, b.manifest);
-console.log(formatManifestDiff(diff));   // formatted table
-// or: JSON.stringify(diff)              // ManifestDiff object
-a.close(); b.close();
-```
-
-Exports: `diffManifests`, `formatManifestDiff`, types `ManifestDiff`, `DatasetDelta`, `DiffManifestsOptions`.
-
-### Cross-mode index
+## Describe an archive
 
 ```ts
-import { buildCrossModeIndex } from '@caifrazier/atls-sdk';
+import { describeArchive, describeDataset } from "@caifrazier/atls-sdk";
+
+const description = await describeArchive("./crawl.atls");
+console.log(description.schemaVersion, description.datasets.map((dataset) => dataset.name));
 ```
 
-Builds a `CrossModeIndex` that aligns records across archives produced in different render modes. Exports: `buildCrossModeIndex`, types `CrossModeIndex`, `CrossModeEntry`.
+`describeArchive`, `describeDataset`, `readDatasetSlice`, `readRecord`, `readSchema`, and `statBlob` return plain data.
 
-### Low-level helpers
+## URL identity and digests
 
-These bypass `openAtlas` and operate directly on the zip:
+These spec 1.2 helpers are re-exported:
 
-| Export | Description |
-|---|---|
-| `readManifest(zipHandle)` | Read and parse `manifest.json` |
-| `readSummary(zipHandle)` | Read and parse `summary.json` |
-| `iterateParts(zipHandle, dataset)` | Iterate raw NDJSON lines from compressed dataset parts |
-| `readBlob(zipHandle, ref)` | Fetch a blob by content-addressed ref string |
-| `openZipHandle(path)` | Open a zip for repeated reads (must call `.close()`) |
-| `ZipHandle` | Type for the handle returned by `openZipHandle` |
+```ts
+import { assetId, contentSha256, normalizeUrl, urlKey } from "@caifrazier/atls-sdk";
+```
 
-## Development
+## Conformance suite
+
+The suite lives in the [atls repository](https://github.com/CaiFrazier/atls/blob/main/conformance/README.md). Clone it and run the tests. `legacy-blob-ref-1.1.atls` is a 1.1 archive whose `bodyBlobRef` uses the legacy spelling. The SDK test reads that ref with `getBlob()`.
 
 ```bash
-pnpm --filter @caifrazier/atls-sdk build
-pnpm --filter @caifrazier/atls-sdk test
-pnpm --filter @caifrazier/atls-sdk lint
+git clone https://github.com/CaiFrazier/atls.git
+cd atls
+pnpm install
+pnpm build
+pnpm test
 ```
 
-Dataset directories use the long names in `ATLAS_DATASET_KEYS`. This reader also accepts the short
-aliases `pages`, `edges`, and `failed_pages`, and prefers the long directory when both exist.
-Current schema tag: `2026-09-04`. The format spec is [`packages/atls-spec/SPECIFICATION.md`](../atls-spec/SPECIFICATION.md).
+## More detail
 
----
+[QUICK_REFERENCE.md](./QUICK_REFERENCE.md) and [docs/API.md](./docs/API.md) list the reader methods and options.
 
-_Last verified against `packages/atls-sdk/src/`: 2026-11-10._
+## License
+
+Apache-2.0. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

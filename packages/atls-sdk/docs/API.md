@@ -186,14 +186,14 @@ console.log(result.valid, result.stats.errorsFound, result.stats.warningsFound);
 ```
 
 > `validate()` checks part checksums, `contentSha256`, and blob hashes, then schema-checks the
-> datasets listed in [schema-system.md](../../atls-spec/docs/schema-system.md). It ignores
+> datasets listed in [schema-system.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/schema-system.md). It ignores
 > `archiveSha256` and `auditHash`. `skipBlobVerification` skips blob hashes only. It does not
 > open `quarantine`, `reconstruction_index`, or `frontier_ledger`. `checkIntegrity` checks
 > references. `strict` here defaults to false. `openAtlas({ strict })` defaults to true and means
 > something else: throw on a malformed record.
 
 `normalizeUrl`, `urlKey`, `assetId`, and `contentSha256` are exported from this package. They
-implement spec 1.2. See [url-identity.md](../../atls-spec/docs/url-identity.md).
+implement spec 1.2. See [url-identity.md](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/url-identity.md).
 
 ---
 
@@ -249,7 +249,7 @@ Decompression of zstd frames uses `fzstd`.
 ## Types
 
 Record types (`PageRecord`, `AssetRecord`, `ResponseRecordV1`, …) come from `@caifrazier/atls-spec`. The
-authoritative field reference is the [Atlas dataset reference](../../atls-spec/docs/datasets.md).
+authoritative field reference is the [Atlas dataset reference](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/docs/datasets.md).
 
 ---
 

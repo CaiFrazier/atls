@@ -1,0 +1,62 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Require the tag to match both package versions
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME#v}"
+          spec=$(node -p "require('./packages/atls-spec/package.json').version")
+          sdk=$(node -p "require('./packages/atls-sdk/package.json').version")
+          if [ "$tag" != "$spec" ] || [ "$tag" != "$sdk" ]; then
+            echo "Tag v${tag} does not match @caifrazier/atls-spec@${spec} and @caifrazier/atls-sdk@${sdk}."
+            exit 1
+          fi
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Publish @caifrazier/atls-spec
+        working-directory: packages/atls-spec
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @caifrazier/atls-sdk
+        working-directory: packages/atls-sdk
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
