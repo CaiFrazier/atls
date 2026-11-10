@@ -29,6 +29,8 @@ export * from './types/records/index.js';
 export * from './pageMetadataMapping.js';
 // Export the dataset registry shared by producers and readers
 export * from './datasetKeys.js';
+// Documented current schema tag (not a validation enum)
+export * from './edition.js';
 
 // Export Zod schemas and types
 export * from './schemas/index.js';

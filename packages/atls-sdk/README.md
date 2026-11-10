@@ -84,9 +84,11 @@ Source: `src/index.ts`
 | `assets()` | `AsyncIterable<AssetRecord>` | Images, scripts, fonts, stylesheets |
 | `events()` | `AsyncIterable<EventRecord>` | Crawl lifecycle events |
 | `accessibility()` | `AsyncIterable<AccessibilityRecord>` | WCAG 2.2 audit results |
-| `responses()` | `AsyncIterable<ResponseRecordV1>` | HTTP response metadata |
+| `responses()` | `AsyncIterable<ResponseRecordV1>` | HTTP response metadata, including redirect rows |
 | `resources()` | `AsyncIterable<ResourceRecordV1>` | Resource timing and network requests |
-| `dataset<T>(name)` | `AsyncIterable<T>` | Generic accessor for any dataset by key |
+| `sitemapUrls()` | `AsyncIterable<SitemapUrlRecord>` | Per-URL sitemap entries |
+| `extraction()` | `AsyncIterable<ExtractionRecord>` | Custom extraction-rule results |
+| `dataset<T>(name)` | `AsyncIterable<T>` | Generic accessor for any dataset by key, including `sitemaps`, `quarantine`, `reconstruction_index`, and `frontier_ledger` |
 
 Deprecated aliases (still functional, do not use in new code):
 
@@ -215,8 +217,10 @@ pnpm --filter @caifrazier/atls-sdk test
 pnpm --filter @caifrazier/atls-sdk lint
 ```
 
-Archived legacy docs are available at `legacy/v1/`.
+Dataset directories use the long names in `ATLAS_DATASET_KEYS`. This reader also accepts the short
+aliases `pages`, `edges`, and `failed_pages`, and prefers the long directory when both exist.
+Current schema tag: `2026-09-04`. The format spec is [`packages/atls-spec/SPECIFICATION.md`](../atls-spec/SPECIFICATION.md).
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against `packages/atls-sdk/src/`: 2026-11-10._

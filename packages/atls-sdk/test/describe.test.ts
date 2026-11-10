@@ -82,8 +82,8 @@ describe("describeArchive", () => {
     expect(description.datasets.find((d) => d.name === "responses")!.state).toBe("corrupt");
   });
 
-  it("resolves newer-format alias folders", async () => {
-    fixture = await createFixtureArchive({ newerFormatFolders: true });
+  it("resolves short alias dataset folders", async () => {
+    fixture = await createFixtureArchive({ aliasFolders: true });
     const description = await describeArchive(fixture.path);
     const pageMetadata = description.datasets.find((d) => d.name === "page_metadata")!;
     expect(pageMetadata.folder).toBe("pages");

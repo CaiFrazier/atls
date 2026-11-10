@@ -1,8 +1,10 @@
 # Identity & Keys
 
-How records identify themselves and how to join across datasets.
+How records identify themselves and how to join across datasets. Identifier checks below are what
+the Zod schemas enforce. Producer conventions that the schemas do not check are noted as
+conventions, not as format rules. See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
-_Verified against `packages/atls-spec/src/schemas/` and the cartographer writer on 2026-06-04._
+_Verified against the Zod schemas on 2026-11-10._
 
 ---
 
@@ -34,33 +36,34 @@ page_metadata.pageId ─┬─ navigation.pageId
 
 ## `pageId`
 
-- A **UUID v7** (time-ordered) generated per page, per crawl.
+- A UUID generated per page, per crawl. Schemas that require it use `z.string().uuid()`, which
+  accepts any UUID version. A UUID v7 producer convention is not a schema constraint.
 - Stable **within an archive**: every dataset record for the same captured page carries the same
   `pageId`.
 - **Not stable across crawls.** The same URL crawled twice gets two different `pageId`s. To align
   pages across archives (temporal diffs, cross-mode joins) match on `url`/normalized URL, not
   `pageId`. The SDK's cross-mode index does exactly this — see
   [reading-archives.md](./reading-archives.md).
-
-In the `responses` schema `pageId` is documented as "Foreign key to page_metadata pageId"
-(`responses.schema.ts:16`).
+- `quarantine.pageId` is a plain string, because the quarantined record may already be malformed.
 
 ---
 
 ## `crawlId`
 
-- Identifies the crawl run. Appears in `manifest.json` (`crawlId`, snake_case), `summary` context,
-  and in operational datasets (`events.crawlId`, `sitemaps.crawlId`, `quarantine.crawlId`).
-- Format is either a hex string or `crawl_<timestamp>_<random>` depending on how the run was
-  started.
+- Identifies the crawl run. The manifest field is `crawlId` (camelCase, optional string).
+  Operational datasets that carry it include `events`, `sitemaps`, `sitemap_urls`, `extraction`,
+  and `quarantine`.
+- The schema does not constrain the spelling. A hex string or `crawl_<timestamp>_<random>` is a
+  producer convention, not a format rule.
 
 ---
 
 ## `datasetId`
 
-- A short (16-char hex) archive identity derived from the crawl id + origin hash
-  (`manifest.json` → `datasetId`, camelCase).
-- Used to identify the archive as a unit (e.g. for compare/diff compatibility).
+- Optional string on `manifest.json` (`datasetId`, camelCase). The schema does not require 16 hex
+  characters.
+- Used to identify the archive as a unit (for example compare/diff compatibility). A 16-hex
+  derivation is a producer convention, not a format rule.
 
 ---
 
@@ -69,38 +72,40 @@ In the `responses` schema `pageId` is documented as "Foreign key to page_metadat
 A few datasets are operational or record-scoped and use their own primary key instead of (or in
 addition to) `pageId`:
 
-| Dataset | Primary key | Page link | Notes |
+| Dataset | Primary key (what the schema checks) | Page link | Notes |
 |---|---|---|---|
-| `events` | `eventId` (UUID v7) | `pageId` (optional) | Operational telemetry; also carries `crawlId`. |
-| `resources` | `resId` (UUID v4) | `ownerPageId` | Sub-resource network log; links to the owning page via `ownerPageId`. |
-| `sitemaps` | `sitemapId` (UUID v7) | — | Discovery-phase; carries `crawlId`, not `pageId`. |
-| `assets` | `assetId` (UUID v5) | `pageId` | `assetId` is deterministic (namespaced), so the same asset on the same page is stable. |
-| `quarantine` | `quarantineId` | `pageId` (optional) | Forensic dataset for records that failed validation; carries `crawlId`. |
-| `frontier_ledger` | `url` (natural key) | — | Discovery accounting; keyed by discovered URL. |
-| `pipeline_failures` / `pipeline_alerts` | none | — | Operational ledgers keyed by `url` + `occurredAt`; no UUID. |
+| `events` | `eventId` (`z.string()`) | `pageId` (optional UUID) | Operational telemetry; also carries `crawlId`. |
+| `resources` | `resId` (`z.string().uuid()`, any version) | `ownerPageId` | Sub-resource network log. There is no `pageId` on this record. |
+| `sitemaps` | `sitemapId` (`z.string()`) | — | Discovery-phase; carries `crawlId`, not `pageId`. |
+| `assets` | `assetId` (`z.string().min(1)`) | `pageId` (UUID) | A UUID v5 producer convention is not a schema constraint. |
+| `quarantine` | `quarantineId` (UUID) | `pageId` (optional string) | Forensic dataset for records that failed validation; carries `crawlId`. |
+| `frontier_ledger` | `url` | `pageId` (optional UUID) | URL-keyed discovery accounting. `pageId` is set when the URL was visited. |
+| `pipeline_failures` / `pipeline_alerts` | `url` + `occurredAt` | `pageId` (optional UUID) | `pageId` is absent when the failure happened before a page id existed. |
 
 `resources` is the one to watch: its page link is **`ownerPageId`**, not `pageId`
 (`resources.schema.ts`).
 
 ---
 
-## UUID versions in use
+## UUID versions
 
-| Version | Used for | Why |
-|---|---|---|
-| UUID v7 | `pageId`, `eventId`, `sitemapId` | Time-ordered — sorts roughly by creation time. |
-| UUID v5 | `assetId` | Deterministic from a namespace + asset identity, so identical assets are stable. |
-| UUID v4 | `resId` | Random per captured sub-resource. |
+The schemas do not pin a UUID version. `z.string().uuid()` accepts any version. `eventId` and
+`sitemapId` are plain strings. `assetId` is a non-empty string.
+
+A producer may still emit UUID v7 for `pageId`, UUID v5 for `assetId`, and UUID v4 for `resId`.
+That is a convention. Archives that use another version remain schema-valid. See
+[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
 ---
 
 ## URL keys
 
-`manifest.hashing.urlKeyAlgo` is `sha1`: where the engine needs a compact URL key (for dedup and
-some compare operations) it uses a SHA-1 of the normalized URL. This is distinct from the SHA-256
-used for blob content addressing and integrity. The normalization rules applied before keying are
-recorded under `manifest.url_normalization`.
+`manifest.hashing.urlKeyAlgo` is a required string. The current edition's documented value is
+`sha1`. The normalization steps that feed that digest are not specified in this edition. The
+manifest block that records normalization flags is `manifest.urlNormalization` (camelCase block,
+snake_case inner keys). See [root-files.md](./root-files.md) and
+[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
 ---
 
-_Last verified against codebase: 2026-06-04._
+_Last verified against the Zod schemas: 2026-11-10._

@@ -2,7 +2,9 @@
 
 Complete reference for `@caifrazier/atls-sdk`, the read-side SDK for `.atls` archives.
 
-_Verified against `packages/atls-sdk/src/` on 2026-07-01._
+Current schema tag: `2026-09-04`.
+
+_Verified against `packages/atls-sdk/src/` and `AtlasManifestV1Schema` on 2026-11-10._
 
 ---
 
@@ -159,6 +161,8 @@ interface ValidateOptions {
 
 interface ValidationResult {
   valid: boolean;
+  /** True when the run stopped at maxIssues before it could decide. Not valid. */
+  indeterminate: boolean;
   issues: { severity: "error" | "warning"; code: string; message: string;
             dataset?: string; record?: any; details?: object }[];
   stats: {
@@ -166,6 +170,7 @@ interface ValidationResult {
     contentChecked: number; structuredDataChecked: number; technologyChecked: number;
     renderStateChecked: number; performanceChecked: number; securityChecked: number;
     responsesChecked: number; resourcesChecked: number; sitemapsChecked: number;
+    sitemapUrlsChecked: number; extractionChecked: number;
     eventsChecked: number; accessibilityChecked: number;
     pipelineFailuresChecked: number; pipelineAlertsChecked: number;
     errorsFound: number; warningsFound: number;
@@ -179,9 +184,11 @@ const result = await validate("./crawl.atls", { strict: false });
 console.log(result.valid, result.stats.errorsFound, result.stats.warningsFound);
 ```
 
-> `assets` is schema-validated against `assets.v1`. `quarantine` has a published schema but is not
-> re-validated (it holds records that already failed validation). See the
-> [Atlas schema-system chapter](../../atls-spec/docs/schema-system.md).
+> `validate()` schema-checks the datasets listed in
+> [schema-system.md](../../atls-spec/docs/schema-system.md). It does not open `quarantine`,
+> `reconstruction_index`, or `frontier_ledger`. `checkIntegrity` checks references, not digests.
+> `strict` here defaults to false. `openAtlas({ strict })` defaults to true and means something
+> else: throw on a malformed record.
 
 ---
 
@@ -196,9 +203,8 @@ console.log(formatManifestDiff(diff));   // formatted table
 a.close(); b.close();
 ```
 
-Exports the `ManifestDiff`, `DatasetDelta`, and `DiffManifestsOptions` types. Note: `diff` compares
-a fixed set of canonical datasets and may not reflect newer datasets — read the diff output as
-indicative, not exhaustive.
+Exports the `ManifestDiff`, `DatasetDelta`, and `DiffManifestsOptions` types. The default dataset
+list is `ATLAS_DATASET_KEYS` (all 21 registry names).
 
 ---
 
@@ -212,26 +218,26 @@ Exports `CrossModeIndex` and `CrossModeEntry`.
 
 ## Low-level helpers
 
-These bypass `openAtlas` and operate on the zip directly. **`iterateParts` works on current
-archives today** when given the long folder name — it sidesteps the broken folder resolution.
+These bypass `openAtlas` and operate on the zip directly. `iterateParts` reads the directory name
+you pass. It does not apply the short-alias fallback. `openAtlas` and `select` do: they prefer
+the long `ATLAS_DATASET_KEYS` directory and fall back to `pages`, `edges`, or `failed_pages`.
 
 | Export | Signature | Notes |
 |---|---|---|
 | `openZipHandle(path)` | `=> ZipHandle` | Open a zip for repeated reads; call `.close()`. |
-| `readManifest(zipHandle)` | `=> AtlasManifest` | Parse `manifest.json`. |
+| `readManifest(zipHandle)` | `=> AtlasManifest` | Parse `manifest.json`. Field names match `AtlasManifestV1Schema`, including `integrity.contentSha256`. |
 | `readSummary(zipHandle)` | `=> AtlasSummary` | Parse `summary.json`. |
-| `iterateParts(path, dataset)` | `=> AsyncIterable<string>` | Raw NDJSON lines from a dataset's parts. Pass the **long** name (`page_metadata`). |
-| `readBlob(zipHandle, ref)` | `=> Promise<Buffer>` | Resolve a blob ref. |
+| `iterateParts(path, dataset)` | `=> AsyncIterable<string>` | Raw JSON Lines from a dataset directory. Pass the long name (`page_metadata`) unless the archive stored that dataset under a short alias. |
+| `readBlob(zipHandle, ref)` | `=> Promise<Buffer>` | Resolve a blob ref and decompress it. |
 
 ```ts
-// Works on current 2026-07-01 archives:
 for await (const line of iterateParts("./crawl.atls", "page_metadata")) {
   const rec = JSON.parse(line);
   console.log(rec.pageId, rec.url);
 }
 ```
 
-Decompression uses `@mongodb-js/zstd`.
+Decompression of zstd frames uses `fzstd`.
 
 ---
 
@@ -242,4 +248,4 @@ authoritative field reference is the [Atlas dataset reference](../../atls-spec/d
 
 ---
 
-_Last verified against codebase: 2026-07-06._
+_Last verified against `packages/atls-sdk/src/`: 2026-11-10._

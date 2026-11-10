@@ -4,20 +4,20 @@ The complete, code-verified field reference for every dataset record in an `.atl
 is the normative reference; the per-dataset `schemas/*.v1.schema.json` files in each archive are
 the machine-validatable form.
 
-_Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.ts`,
-`responses.schema.ts`, `resources.schema.ts`, `reconstruction_index.schema.ts`, and
-`packages/atls-spec/src/types.ts` on 2026-06-04._
+_Verified against the dataset Zod schemas on 2026-11-10. Current schema tag: `2026-09-04`._
 
 ---
 
 ## Conventions
 
-- **Casing:** all dataset record fields are camelCase (RC2+, `schemaVersion >= 2026-07-01`).
-  Older archives predating the naming-parity sweep may contain snake_case fields — readers
-  targeting legacy archives should tolerate both spellings.
-- **Join key:** every page-scoped record carries `pageId` (UUID v7). Exceptions are called out
-  per dataset — see [identity-and-keys.md](./identity-and-keys.md).
-- **Presence:** which datasets appear depends on render mode. The matrix below is authoritative.
+- **Casing:** dataset record fields are camelCase from schema tag `2026-07-01` onward, with the
+  exceptions the schemas still spell in snake_case (notably `page_metadata.capture_degraded` and
+  `page_metadata.degraded_reason`). See [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+- **Join key:** every page-scoped record carries `pageId`. Where the schema uses
+  `z.string().uuid()`, any UUID version matches. Exceptions are called out per dataset — see
+  [identity-and-keys.md](./identity-and-keys.md).
+- **Presence:** the matrix below is the reference producer's policy, not a schema constraint. A
+  dataset that the matrix omits for a mode still validates if its record matches the Zod schema.
 
 ## Presence by render mode
 
@@ -30,8 +30,8 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 | `assets` | ✓ | ✓ | ✓ | `pageId`/`assetId` | Zod |
 | `technology` | ✓ | ✓ | ✓ | `pageId` | Zod |
 | `events` | ✓ | ✓ | ✓ | `eventId` | Zod |
-| `pipeline_failures` | ✓ | ✓ | ✓ | — | Zod |
-| `pipeline_alerts` | ✓ | ✓ | ✓ | — | Zod |
+| `pipeline_failures` | ✓ | ✓ | ✓ | `pageId?` | Zod |
+| `pipeline_alerts` | ✓ | ✓ | ✓ | `pageId?` | Zod |
 | `quarantine` | ✓* | ✓* | ✓* | `quarantineId` | Zod |
 | `structured_data` | — | ✓ | ✓ | `pageId` | Zod |
 | `security` | — | ✓ | ✓ | `pageId` | Zod |
@@ -43,7 +43,7 @@ _Verified against `packages/atls-spec/src/schemas/cartographer-datasets.schema.t
 | `sitemap_urls` | ✓* | ✓* | ✓* | `loc` | Zod |
 | `extraction` | ✓* | ✓* | ✓* | `pageId`+`ruleId` | Zod |
 | `reconstruction_index` | ✓† | ✓† | ✓† | `pageId` | Zod |
-| `frontier_ledger` | opt | opt | opt | `url` | Zod |
+| `frontier_ledger` | opt | opt | opt | `url`, `pageId?` | Zod |
 
 `*` pruned/written only when records exist · `†` built at finalization under default replay tier.
 Every emitted dataset now has a published Zod schema in `@caifrazier/atls-spec` (see
@@ -53,24 +53,34 @@ Every emitted dataset now has a published Zod schema in `@caifrazier/atls-spec` 
 
 ## page_metadata
 
-On-page SEO signals. Schema: `cartographer-datasets.schema.ts:31-71`. Key: `pageId`.
+On-page SEO signals. Schema: `PageMetadataDatasetRecordV1Schema`. Key: `pageId` (`z.string().uuid()`).
 
-- `pageId` · `url` · `capturedAt` (ISO 8601) — root.
+- `pageId` · `url` · `capturedAt` (ISO 8601) — root. `capturedAt` is required.
 - `core` (object): `title`, `titleLength`, `metaDescription`, `descriptionLength`, `h1`,
-  `canonicalTag`, `language`, `charset`, `favicon`, `viewport`, `themeColor`, `generator`.
-  `core` is `passthrough` — extra keys may appear.
+  `canonicalTag`, `canonicalResolved`, `language`, `charset`, `favicon`, `viewport`, `themeColor`,
+  `generator`. `canonicalTag` is the raw authored value. `canonicalResolved` is that href resolved
+  to an absolute URL. `core` is `passthrough` — extra keys may appear.
 - `indexing` (object): `robotsMeta` (raw `<meta robots>`), `xRobotsTag` (raw header), and
   `robotsDirectives` — a **nested boolean object**: `noindex`, `nofollow`, `noarchive`,
   `nosnippet`, `noimageindex`, plus `unavailableAfter` (string date).
-- `social` (object): `openGraph` (string map), `twitterCard` (string map).
+- `social` (object): `openGraph` (string map), `twitterCard` (string map). Both are required when
+  `social` is present, and `social` itself is required.
 - `resourceHints` (object, optional): `preload`, `prefetch`, `preconnect`, `dnsPrefetch` — each an
   array of URL strings.
+- `media` (object, optional): `screenshots` (`desktop`, `mobile`, `desktopFullPage`,
+  `mobileFullPage` — each a blob-path string or a tiled-capture object with `src`, `tiles`,
+  `totalHeight`, `totalWidth`) and `favicon` (blob path).
+- `capture_degraded` (optional boolean) and `degraded_reason` (optional string). These two names
+  are snake_case on this otherwise camelCase record.
+- `limits` (object, optional): `requestsCapped`, `maxRequestsPerPage`, `bytesCapped`,
+  `maxBytesPerPage`, `assetsTruncated`, `maxAssetsPerPage`, `structuredDataTruncated`,
+  `maxStructuredDataItems`, `totalRequests`, `totalBytes`.
 
 ---
 
 ## navigation
 
-Per-page link graph. Schema: `cartographer-datasets.schema.ts:92-114`. Key: `pageId`.
+Per-page link graph. Schema: `NavigationDatasetRecordV1Schema`. Key: `pageId` (`z.string().uuid()`).
 
 - `pageId` · `sourceUrl` · `capturedAt` — root.
 - `edges[]` (array): one per outbound link —
@@ -89,7 +99,7 @@ The link graph lives **here**, in `edges[]` — there is no separate `edges/` da
 
 ## content
 
-Extracted text and headings. Schema: `cartographer-datasets.schema.ts:116-140`. Key: `pageId`.
+Extracted text and headings. Schema: `ContentDatasetRecordV1Schema`. Key: `pageId` (`z.string().uuid()`).
 
 - `pageId` · `url` · `capturedAt` — root.
 - `mainText` (**required**) — full normalized body text.
@@ -102,17 +112,30 @@ Extracted text and headings. Schema: `cartographer-datasets.schema.ts:116-140`. 
 
 ## responses
 
-Network truth — one record per fetched page. Schema: `responses.schema.ts`. Key: `pageId`.
+Network truth. Schema: `ResponseRecordV1Schema`. Key: `pageId` (`z.string().uuid()`).
 
-- `pageId` · `url` · `finalUrl` · `statusCode` (**required**).
+Two kinds of row share this schema. The schema does not use a discriminated union; body fields
+are optional so both kinds validate.
+
+- **Terminal rows** — the crawled request's final response, including `statusCode` `0` when no
+  HTTP response was received. Producers set `encoding` and `bodyBlobRef` on these rows.
+- **Redirect rows** — one row per intermediate 3xx hop, keyed by that hop's requested `url`.
+  `isRedirect` is `true`, `statusCode` is the 3xx status, and `location` is the next hop.
+  `redirectType` classifies the hop. These rows omit `encoding` and `bodyBlobRef`.
+
+Fields:
+
+- `pageId` · `url` · `finalUrl` · `statusCode` (integer 0–599). These four are required.
 - `statusText`, `requestMethod`, `responseType`, `fromCache`.
-- `redirectChain[]`, `redirectChainLength`.
-- `contentType`, `contentLength`, `headers` (normalized map).
+- `redirectChain[]` (array of strings), `redirectChainLength`.
+- `isRedirect`, `location`, `redirectType` — redirect rows. Terminal rows omit them.
+- `contentType`, `contentLength`, `headers` (normalized map), `setCookie` (every `Set-Cookie`
+  value; `headers` keeps only the first).
 - Timing: `fetchStartedAt`, `fetchCompletedAt`, `renderStartedAt`, `renderCompletedAt`,
   `fetchMs`, `renderMs`, `renderMode`, `navEndReason`.
-- `encoding` (**required**) — character encoding.
-- `bodyBlobRef` (**required**) — blob ref to the source HTML body.
-- `renderedBodyBlobRef`, `renderedDomHash` — post-JS rendered HTML (full mode only).
+- `encoding` — character encoding. Optional. Absent on redirect rows.
+- `bodyBlobRef` — blob ref to the source HTML body. Optional. Absent on redirect rows.
+- `renderedBodyBlobRef`, `renderedDomHash` — post-JS rendered HTML.
 
 Use `responses.statusCode` as the transport truth — `page_metadata` has no status field.
 
@@ -120,8 +143,9 @@ Use `responses.statusCode` as the transport truth — `page_metadata` has no sta
 
 ## assets
 
-Images, video, audio, documents. Schema: `runtime-core.schema.ts` (`AssetRecordSchema`, generated
-as `assets.v1.schema.json`). Keys: `pageId` + `assetId` (UUID v5, deterministic).
+Images, video, audio, documents. Schema: `AssetRecordSchema` (generated as `assets.v1.schema.json`).
+Keys: `pageId` (`z.string().uuid()`) and `assetId` (`z.string().min(1)`). A UUID v5 producer
+convention is not a schema constraint.
 
 - Identity: `pageId`, `assetId`, `pageUrl`, `assetUrl`, `type` (`image\|video\|audio\|document`).
 - Image basics: `alt`, `hasAlt`, `naturalWidth/Height`, `displayWidth/Height`, `estimatedBytes`,
@@ -167,7 +191,7 @@ Archive contract validation checks this record's shape and reference integrity. 
 
 ## technology
 
-Detected stack. Schema: `cartographer-datasets.schema.ts:185-196`. Key: `pageId`.
+Detected stack. Schema: `TechnologyDatasetRecordV1Schema` (the record itself is `.passthrough()`). Key: `pageId` (`z.string().uuid()`).
 
 - `pageId` · `url`.
 - `detectedTechnologies[]` — Wappalyzer-style entries (name, version, categories…).
@@ -179,7 +203,7 @@ Detected stack. Schema: `cartographer-datasets.schema.ts:185-196`. Key: `pageId`
 
 ## security
 
-Transport and third-party posture. Schema: `cartographer-datasets.schema.ts:212-246`. Key:
+Transport and third-party posture. Schema: `SecurityDatasetRecordV1Schema`. Key:
 `pageId`. Present in prerender/full.
 
 - `pageId` · `url` · `capturedAt`.
@@ -203,7 +227,7 @@ Transport and third-party posture. Schema: `cartographer-datasets.schema.ts:212-
 
 ## accessibility
 
-WCAG audit. Schema: `cartographer-datasets.schema.ts:311-346`. Key: `pageId`. Field depth grows
+WCAG audit. Schema: `AccessibilityDatasetRecordV1Schema`. Key: `pageId` (`z.string().uuid()`). Field depth grows
 with render mode.
 
 **Base (all modes):** `pageId`, `pageUrl`, `missingAltCount`, `headingOrder[]`,
@@ -227,7 +251,7 @@ violations/passes/incomplete/inapplicable), `auditEngine {name, version}`, `wcag
 
 ## performance
 
-Resource timing and lab metrics. Schema: `cartographer-datasets.schema.ts:248-273`. Key:
+Resource timing and lab metrics. Schema: `PerformanceDatasetRecordV1Schema`. Key:
 `pageId`. Present in prerender/full.
 
 - `pageId` · `url` · `capturedAt`.
@@ -241,22 +265,26 @@ Resource timing and lab metrics. Schema: `cartographer-datasets.schema.ts:248-27
 
 ## render_state
 
-Post-render DOM capture. Schema: `cartographer-datasets.schema.ts:198-210`. Key: `pageId`. **Full
-mode only.**
+Post-render DOM capture. Schema: `RenderStateDatasetRecordV1Schema`. Key: `pageId`
+(`z.string().uuid()`). The reference producer writes this dataset in `full` mode. The schema does
+not enforce that.
 
-- `pageId` · `url` · `captureTimestamp` (unix ms).
-- `viewport`: `width`, `height`, `devicePixelRatio`.
-- `domSnapshot` (serialized DOM), `computedText`, `accessibilityTree` — each a record; full mode.
+- `pageId` · `url` · `captureTimestamp` (unix ms, required).
+- `viewport`: `width`, `height`, `devicePixelRatio` (optional).
+- `domSnapshot`, `computedText`, `accessibilityTree` — each an optional free JSON object
+  (`z.record`). They are not typed as `dom_snapshot.v1` or `acc_tree.v1`.
 
-The `dom_snapshot` and `acc_tree` Zod schemas describe the payloads embedded here, not separate
-top-level datasets.
+`dom_snapshot.v1`, `acc_tree.v1`, and `render.v1` are published schemas and are not dataset
+directories. See [schema-system.md](./schema-system.md) and
+[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
 ---
 
 ## resources
 
-Sub-resource network log. Schema: `resources.schema.ts`. Key: `resId` (UUID v4). Page link:
-`ownerPageId`. **Full mode**, pruned if empty.
+Sub-resource network log. Schema: `ResourceRecordV1Schema`. Key: `resId` (`z.string().uuid()`, any
+version). Page link: `ownerPageId`. The reference producer writes this in full mode and prunes
+the directory when it is empty. The schema does not enforce the mode.
 
 - `resId` · `ownerPageId` · `url` · `type` (`css\|js\|font\|image`).
 - `status`, `contentType`, `hashBodySha256`, `bodyBlobRef`, `sizeBytes`, `critical`.
@@ -265,8 +293,9 @@ Sub-resource network log. Schema: `resources.schema.ts`. Key: `resId` (UUID v4).
 
 ## sitemaps
 
-Sitemap discovery. Schema: `cartographer-datasets.schema.ts:348-362`. Key: `sitemapId`. Carries
-`crawlId`, not `pageId`. Written only when sitemaps were discovered.
+Sitemap discovery. Schema: `SitemapDatasetRecordV1Schema`. Key: `sitemapId` (`z.string()`, not a
+UUID check). Carries `crawlId`, not `pageId`. The reference producer writes this only when
+sitemaps were discovered.
 
 - `sitemapId` · `crawlId` · `url` · `fetchedAt` · `httpStatus` · `contentType`.
 - `isIndex`, `entriesFound`, `entriesEnqueued`, `parseWarning`, `parseError` (nullable),
@@ -323,8 +352,8 @@ rewrites a historical archive.
 
 ## events
 
-Operational telemetry. Schema: `cartographer-datasets.schema.ts:289-309`. Key: `eventId`
-(UUID v7). Optional `pageId`. Always present.
+Operational telemetry. Schema: `EventRecordV1Schema`. Key: `eventId` (`z.string()`, not a UUID
+check). Optional `pageId` (`z.string().uuid()`). The reference producer always writes this dataset.
 
 - `eventId` · `crawlId` · `occurredAt` · `eventType` (enum) · `severity`
   (`info\|warn\|error\|critical`) · `message`.
@@ -340,11 +369,13 @@ Operational telemetry. Schema: `cartographer-datasets.schema.ts:289-309`. Key: `
 
 ## pipeline_failures / pipeline_alerts
 
-Hard failures and non-fatal alerts. Schema: `cartographer-datasets.schema.ts:275-287`
-(`pipeline_alerts` is an alias of the same shape). No join key.
+Hard failures and non-fatal alerts. Schema: `PipelineFailureRecordV1Schema`
+(`pipeline_alerts` is the same shape). `pageId` is an optional UUID: fetch and render failures
+can happen before a page id exists. Join by `url`, and by `pageId` when it is present.
 
-- `url` · `origin` · `hostname` · `occurredAt` · `phase` (`fetch\|render\|extract\|write`).
-- `code`, `message`, `stack`, `details` (nullable record).
+- `pageId` (optional UUID) · `url` · `origin` · `hostname` · `occurredAt` · `phase`
+  (`fetch`\|`render`\|`extract`\|`write`).
+- `code`, `message` (required), `stack`, `details` (nullable record).
 
 ---
 
@@ -376,12 +407,13 @@ Per-page replay index, built at finalization. Schema: `reconstruction_index.sche
 
 ## frontier_ledger
 
-Discovery accounting. Schema: `cartographer-datasets.schema.ts:364-373`. Key: `url`. Written only
-when a discovery tracker is wired.
+Discovery accounting. Schema: `FrontierLedgerRecordV1Schema`. Key: `url`. `pageId` is an optional
+UUID, set when the URL was visited. The reference producer writes this dataset only when a
+discovery tracker is wired.
 
-- `url` · `normalizedUrl` · `status` (`discovered\|queued\|visited\|skipped`).
-- `skipReason`, `depth`, `discoveredFrom`, `discoveredAt`, `hostGroup`.
+- `url` · `normalizedUrl` · `status` (`discovered`\|`queued`\|`visited`\|`skipped`) · `hostGroup`.
+- `pageId` (optional UUID), `skipReason`, `depth`, `discoveredFrom`, `discoveredAt`.
 
 ---
 
-_Last verified against codebase: 2026-09-04._
+_Last verified against the dataset Zod schemas: 2026-11-10._
