@@ -52,15 +52,15 @@ def read_dataset(archive_path, dataset_name):
                 ["zstd", "-d", "-", "--stdout"],
                 input=z.read(part), capture_output=True,
             )
-            if out.returncode == 0:
-                rows += [json.loads(line) for line in out.stdout.decode().splitlines() if line.strip()]
+            out.check_returncode()
+            rows += [json.loads(line) for line in out.stdout.decode().splitlines() if line.strip()]
         return rows
 
 pages     = read_dataset("crawl.atls", "page_metadata")   # NOT "pages"
 responses = read_dataset("crawl.atls", "responses")
 
 # Join page_metadata to responses on pageId for status codes
-resp_by_pid = {r["pageId"]: r for r in responses}
+resp_by_pid = {r["pageId"]: r for r in responses if not r.get("isRedirect")}
 for p in pages:
     status = resp_by_pid.get(p["pageId"], {}).get("statusCode")
     print(status, p["url"], p.get("core", {}).get("title"))
@@ -81,7 +81,9 @@ Key points:
 def read_blob(z, blobRef):
     # blobRef like "sha256/ab/cd/abcd…ef"
     data = z.read(f"blobs/{blobRef}.zst")
-    return subprocess.run(["zstd","-d","-","--stdout"], input=data, capture_output=True).stdout
+    out = subprocess.run(["zstd","-d","-","--stdout"], input=data, capture_output=True)
+    out.check_returncode()
+    return out.stdout
 ```
 
 Resolve `sha256/<2>/<2>/<64 hex>` by reading `blobs/<ref>.zst`. Also accept a reference that
