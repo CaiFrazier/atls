@@ -2,15 +2,19 @@
 
 Read and validate Atlas (`.atls`) archives. An `.atls` file is a ZIP of Zstandard-compressed JSON Lines datasets plus content-addressed blobs.
 
-Install `@caifrazier/atls-sdk`. The name `@atls/sdk` is not published on npm. If an import still says `@atls/sdk`, change it to `@caifrazier/atls-sdk`.
+Install the current release from the GitHub Release. `npm pack` names the files `caifrazier-atls-spec-26.11.2.tgz` and `caifrazier-atls-sdk-26.11.2.tgz`. Install both. npm then resolves this package's `@caifrazier/atls-spec` dependency to the spec tarball. The name `@atls/sdk` is not an npm package. If an import still says `@atls/sdk`, change it to `@caifrazier/atls-sdk`.
 
 ```bash
-npm install @caifrazier/atls-sdk
+npm install https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-spec-26.11.2.tgz https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-sdk-26.11.2.tgz
 ```
+
+npm currently has only the old 1.0.0-rc.1 release candidate. Use the GitHub release.
+
+`pnpm add` of the two tarballs still requests `@caifrazier/atls-spec@26.11.2` from the registry. Override that package with the spec tarball, as in the [repository README](https://github.com/CaiFrazier/atls/blob/main/README.md). You can also clone the repository and build it. The commands are under Conformance suite below.
 
 Requires Node.js 20 or newer. The package is ESM only. It depends on `@caifrazier/atls-spec` at the same version.
 
-The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Format stamps: `atlasVersion` `1.3`, `formatVersion` `1.3.0`. Package release: `26.11.2`, not published to npm. The package release is the date the tooling shipped. It is separate from those stamps. Archives stamped 1.1 and 1.2 stay readable. `validate()` enforces the 1.2 writer rules when `atlasVersion` is 1.2 or later. See [Versioning](../../docs/VERSIONING.md).
+The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Format stamps: `atlasVersion` `1.3`, `formatVersion` `1.3.0`. Package release: `26.11.2`. The package release is the date the tooling shipped. It is separate from those stamps. Archives stamped 1.1 and 1.2 stay readable. `validate()` enforces the 1.2 writer rules when `atlasVersion` is 1.2 or later. See [Versioning](../../docs/VERSIONING.md).
 
 ## Read an archive
 

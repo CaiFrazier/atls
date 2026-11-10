@@ -168,7 +168,7 @@ sets `hashing.urlKeyAlgo` to `sha256`.
 
 ### `environment`
 
-Required when the object is present: `device` (`desktop` \| `mobile`), `viewport`, `user_agent`,
+Required when the object is present: `device` (`desktop` | `mobile`), `viewport`, `user_agent`,
 `locale`, `timezone`, `accept_language`, `browser`, `platform`.
 
 | Field | Type |
@@ -331,12 +331,12 @@ and `identity` itself is required.
 
 ### `crawlContext`
 
-Required: `specLevel`, `completionReason` (`finished` \| `capped` \| `error_budget` \|
-`schema_budget_exhausted` \| `manual`), `config`. The `completionReason` enum does not grow
+Required: `specLevel`, `completionReason` (`finished` | `capped` | `error_budget` |
+`schema_budget_exhausted` | `manual`), `config`. The `completionReason` enum does not grow
 in spec 1.3.
 
-- `endReason` (optional, spec 1.3): `complete` \| `pageCap` \| `timeBudget` \| `circuitOpen` \|
-  `schemaBudget` \| `manualStop` \| `aborted`. When it is present, it maps onto
+- `endReason` (optional, spec 1.3): `complete` | `pageCap` | `timeBudget` | `circuitOpen` |
+  `schemaBudget` | `manualStop` | `aborted`. When it is present, it maps onto
   `completionReason`: `complete` to `finished`, `pageCap` and `timeBudget` to `capped`,
   `circuitOpen` to `error_budget`, `schemaBudget` to `schema_budget_exhausted`, and
   `manualStop` and `aborted` to `manual`. `validate()` checks that map. A 1.2 summary omits

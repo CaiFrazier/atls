@@ -16,11 +16,21 @@ The version is `YY.M.W`.
 
 At most one release each week is published. A build between weekly releases is a lettered hotfix of that week's release. The weekly release is implicitly `a` and is written `26.11.2`. The next build that week is the semver prerelease `26.11.2-b`, then `26.11.2-c`. `version:set --hotfix` writes the next letter. The first build of a new week is that week's release. It is never a hotfix of the previous week.
 
-Only the weekly release is published, on npm's `latest` tag. A hotfix is not published. A tag such as `v26.11.2-b` still matches the publish workflow's `v*.*.*` trigger. The workflow checks that the tag matches both package versions, then stops without publishing.
+A weekly tag such as `v26.11.2` is the release. The publish workflow packs both packages and attaches `caifrazier-atls-spec-26.11.2.tgz` and `caifrazier-atls-sdk-26.11.2.tgz` to that GitHub Release. Those are the file names `npm pack` writes. The workflow publishes to npm only when `NPM_TOKEN` is set. A hotfix tag such as `v26.11.2-b` still matches the workflow's `v*.*.*` trigger. The workflow checks that the tag matches both package versions, then stops. A hotfix has no GitHub Release and no npm publish.
+
+Install the current release with both tarballs:
+
+```bash
+npm install https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-spec-26.11.2.tgz https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-sdk-26.11.2.tgz
+```
+
+npm currently has only the old 1.0.0-rc.1 release candidate. Use the GitHub release.
+
+That npm command resolves the SDK's `@caifrazier/atls-spec` dependency to the spec tarball. pnpm needs the override in the [README](../README.md). You can also clone the repository and build it.
 
 `node scripts/version.mjs label 26.11.2-b` prints `26.11.2b`.
 
-`1.2.0` and the `1.3.x` package versions (`1.3.0` and `1.3.1`) were the last counter-based package versions. Those numbers were the same as the spec contract. A package release no longer tracks that contract. `1.2.0` is the last of those versions on npm. `1.3.0` and `1.3.1` were not published.
+`1.2.0` and the `1.3.x` package versions (`1.3.0` and `1.3.1`) were the last counter-based package versions. Those numbers were the same as the spec contract. A package release no longer tracks that contract. `1.2.0`, `1.3.0`, and `1.3.1` were never released. There is no git tag for them.
 
 ## Format version
 

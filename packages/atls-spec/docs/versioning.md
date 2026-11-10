@@ -43,7 +43,7 @@ These identifiers move on their own:
 
 3. **The package release** (`26.11.2` on `@caifrazier/atls-spec` and `@caifrazier/atls-sdk`) says
    when that tooling shipped. It is a date-based `YY.M.W` version. An archive does not store it.
-   `1.2.0` and the `1.3.x` package versions were the last counter-based ones. See
+   `1.2.0` and the `1.3.x` package versions were the last counter-based ones. They were never released. See
    [Package versioning](https://github.com/CaiFrazier/atls/blob/main/docs/VERSIONING.md).
 
 A reader uses the manifest stamps to reason about an archive. Read `manifest.schemaVersion`,
@@ -66,11 +66,11 @@ python3 -c "import zipfile,json; print(json.loads(zipfile.ZipFile('crawl.atls').
   (`isRedirect`, `location`, `redirectType`) with optional encoding and body references.
 - **`2026-07-17`** (custom extraction): adds the `extraction` dataset (one record per
   page × consumer-configured rule, with `ruleId`@`ruleVersion` provenance and an
-  `ok`\|`empty`\|`error`\|`unavailable-source` status). Additive: archives without rules carry
+  `ok`|`empty`|`error`|`unavailable-source` status). Additive: archives without rules carry
   neither the dataset nor a rules capability flag.
 - **`2026-07-16`** (sitemap completeness): adds the `sitemap_urls` dataset (per-URL entries),
   an optional `truncated` flag on `sitemaps` records, an optional `manifest.sitemapCoverage`
-  (`absent`\|`failed`\|`partial`\|`complete`), and the `seo.sitemap_coverage` capability. Additive:
+  (`absent`|`failed`|`partial`|`complete`), and the `seo.sitemap_coverage` capability. Additive:
   a reader must treat a missing `sitemapCoverage` or `truncated` as *unknown*, never as
   `false` or `complete`.
 - **`2026-07-01`** (camelCase cutover): dataset record fields moved to camelCase. A few names

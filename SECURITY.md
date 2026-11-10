@@ -2,13 +2,15 @@
 
 ## Supported versions
 
-Security fixes apply to the latest date-based release line of the packages and to format 1.x archives.
+Security fixes apply to the latest date-based release line of the packages and to format 1.x archives. The `1.0.0-rc.1` release candidate of `@caifrazier/atls-spec` and `@caifrazier/atls-sdk` on npm is unsupported.
 
 | Version | Supported |
 | ------- | --------- |
 | `@caifrazier/atls-spec` 26.11.x | Yes |
 | `@caifrazier/atls-sdk` 26.11.x | Yes |
 | Format 1.x | Yes |
+| `@caifrazier/atls-spec` 1.0.0-rc.1 | No |
+| `@caifrazier/atls-sdk` 1.0.0-rc.1 | No |
 | Earlier package releases | No |
 
 ## Threat model
