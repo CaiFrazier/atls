@@ -100,6 +100,16 @@ to the hash in the path. A value that is not that shape may be a live URL. See
 
 ## Reading archives with the SDK (TypeScript)
 
+Install the current SDK from the GitHub Release. `npm pack` names the files `caifrazier-atls-spec-26.11.2.tgz` and `caifrazier-atls-sdk-26.11.2.tgz`. Install both so the SDK's spec dependency resolves to the spec tarball.
+
+```bash
+npm install https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-spec-26.11.2.tgz https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-sdk-26.11.2.tgz
+```
+
+npm currently has only the old 1.0.0-rc.1 release candidate. Use the GitHub release.
+
+pnpm needs the spec-tarball override in the [repository README](https://github.com/CaiFrazier/atls/blob/main/README.md). You can also clone the repository and build it with `pnpm install` and `pnpm build`.
+
 The high-level reader is the standard path for TypeScript/JavaScript users:
 
 ```ts

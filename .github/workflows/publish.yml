@@ -16,6 +16,9 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -41,9 +44,9 @@ jobs:
             exit 1
           fi
 
-      - name: Hotfix tags are not published
+      - name: Hotfix tags are not released
         if: contains(github.ref_name, '-')
-        run: echo "Hotfix tag ${GITHUB_REF_NAME} matches v*.*.* and is not published. Only a weekly release is published to npm latest."
+        run: echo "Hotfix tag ${GITHUB_REF_NAME} matches v*.*.* and is not released. No GitHub Release is created and nothing is published to npm."
 
       - name: Install
         if: ${{ !contains(github.ref_name, '-') }}
@@ -57,16 +60,47 @@ jobs:
         if: ${{ !contains(github.ref_name, '-') }}
         run: pnpm test
 
-      - name: Publish @caifrazier/atls-spec
+      - name: Pack release tarballs
         if: ${{ !contains(github.ref_name, '-') }}
-        working-directory: packages/atls-spec
-        run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          npm pack ./packages/atls-spec
+          npm pack ./packages/atls-sdk
+          test -f "caifrazier-atls-spec-${version}.tgz"
+          test -f "caifrazier-atls-sdk-${version}.tgz"
 
-      - name: Publish @caifrazier/atls-sdk
+      - name: Create GitHub Release
         if: ${{ !contains(github.ref_name, '-') }}
-        working-directory: packages/atls-sdk
-        run: npm publish --access public --provenance
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          spec="caifrazier-atls-spec-${version}.tgz"
+          sdk="caifrazier-atls-sdk-${version}.tgz"
+          notes="$(mktemp)"
+          cat > "$notes" <<EOF
+          Weekly release of @caifrazier/atls-spec and @caifrazier/atls-sdk ${version}.
+
+          npm install https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${spec} https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${sdk}
+
+          npm currently has only the old 1.0.0-rc.1 release candidate. Use this release.
+          EOF
+          gh release create "$GITHUB_REF_NAME" "$spec" "$sdk" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "$notes"
+
+      - name: Publish to npm when NPM_TOKEN is set
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN is not set. Skipping npm publish."
+            exit 0
+          fi
+          (cd packages/atls-spec && npm publish --access public --provenance)
+          (cd packages/atls-sdk && npm publish --access public --provenance)

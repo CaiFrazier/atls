@@ -94,9 +94,9 @@ Per-page link graph. Schema: `NavigationDatasetRecordV1Schema`. Key: `pageId` (`
   `sourceUrl`, `targetUrl` (**required**), `anchorText`, `anchorTextLength`, `rel`, `relTokens[]`,
   `nofollow`, `isExternal`, `location` (nav/header/footer/aside/main/other), `linkType`,
   `isPrimaryNav`, `isBreadcrumb`, `isSkipLink`, `isPagination`,
-  `protocolClass` (`http\|https\|mailto\|tel\|javascript\|hash`), `emptyAnchorReason`.
+  `protocolClass` (`http|https|mailto|tel|javascript|hash`), `emptyAnchorReason`.
 - `redirectChain[]` (optional): `{ fromUrl, toUrl, statusCode, redirectType }` where
-  `redirectType` ∈ `permanent\|temporary\|meta-refresh\|js-redirect`.
+  `redirectType` ∈ `permanent|temporary|meta-refresh|js-redirect`.
 - `hreflang[]` (optional): `{ lang, url, rel }`.
 - `pagination` (optional): `hasPrevNext`, `relPrev`, `relNext`, `detectedPageNumber`.
 
@@ -157,15 +157,15 @@ Images, video, audio, documents. Schema: `AssetRecordSchema` (generated as `asse
 Keys: `pageId` (`z.string().uuid()`) and `assetId` (`z.string().min(1)`). A UUID v5 producer
 convention is not a schema constraint.
 
-- Identity: `pageId`, `assetId`, `pageUrl`, `assetUrl`, `type` (`image\|video\|audio\|document`).
+- Identity: `pageId`, `assetId`, `pageUrl`, `assetUrl`, `type` (`image|video|audio|document`).
 - Image basics: `alt`, `hasAlt`, `naturalWidth/Height`, `displayWidth/Height`, `estimatedBytes`,
   `visible` (null in raw), `inViewport` (null in raw), `loading`, `wasLazyLoaded`.
 - Responsive: `srcset`, `srcsetCandidates[]` (`{url, descriptor, width, density}`), `sizes`,
   `pictureContext` (`hasPictureParent`, `sourceCount`, `sources[] {srcset, media, type}`).
 - Media (video/audio): `duration`, `mimeType`, `hasControls`, `autoplay`, `loop`, `muted`,
-  `preload` (`none\|metadata\|auto`), `poster`, `tracks[]` (`{kind, src, srclang, label}`),
+  `preload` (`none|metadata|auto`), `poster`, `tracks[]` (`{kind, src, srclang, label}`),
   `sources[]` (`{src, type}`).
-- Lazy loading: `lazyStrategy` (`native\|intersection-observer\|data-src\|none`),
+- Lazy loading: `lazyStrategy` (`native|intersection-observer|data-src|none`),
   `lazyDataAttrs` (`data_src`, `data_srcset`, `data_sizes`, `data_bg`), `lazyClasses[]`.
 - Misc: `occurrenceCount`, `resourceHint` (`{resId, bodyBlobRef, sizeBytes}`),
   `tiles[]` (`{src, height, width, y, path}` — tiled screenshots).
@@ -189,8 +189,8 @@ Present in raw, prerender, and full.
 - `captureIssues[]`: typed capture and syntax diagnostics with item ids, evidence plane, severity,
   certainty, and JSON Pointer path.
 - `schemaOrgAudit`: non-destructive vocabulary audit output. It records the audit engine version,
-  pinned Schema.org vocabulary version, source URL, release date, and SHA-256, outcome (`no_findings\|findings\|not_applicable`),
-  coverage (`complete\|partial\|unavailable`), diagnostic counts, and typed diagnostics. Schema.org
+  pinned Schema.org vocabulary version, source URL, release date, and SHA-256, outcome (`no_findings|findings|not_applicable`),
+  coverage (`complete|partial|unavailable`), diagnostic counts, and typed diagnostics. Schema.org
   domains and ranges are treated as expected-use guidance, so mismatches are findings rather than
   grounds for discarding captured markup.
 
@@ -217,15 +217,15 @@ Transport and third-party posture. Schema: `SecurityDatasetRecordV1Schema`. Key:
 `pageId`. Present in raw, prerender, and full.
 
 - `pageId` · `url` · `capturedAt`.
-- `mixedContent`: `hasIssues`, `resources[] {url, type, severity (active\|passive)}`.
+- `mixedContent`: `hasIssues`, `resources[] {url, type, severity (active|passive)}`.
 - `subresourceIntegrity`: `checkedResources`, `integrityMissing[] {url, type}`, `integrityPresent`.
 - `contentSecurityPolicy` (parsed CSP map), `cookies[]`, `storage`.
 - `thirdPartyDomains[]`: `{ domain, resourceCount, resourceTypes[], category
-  (analytics\|advertising\|cdn\|unknown), categoryMatcher }`.
-- `transport.protocol` (`http\|https`), `securityHeaders` (header → value/null).
+  (analytics|advertising|cdn|unknown), categoryMatcher }`.
+- `transport.protocol` (`http|https`), `securityHeaders` (header → value/null).
 - `forms[]` (B2 / schemaVersion `2026-07-16`, optional): per-`<form>` submission-security
   facts — `formIndex`, `selector`, `method`, `actionRaw`/`actionNormalized`/`actionProtocol`/
-  `actionOrigin`, `actionState` (`same-origin\|external\|insecure\|relative\|malformed`),
+  `actionOrigin`, `actionState` (`same-origin|external|insecure|relative|malformed`),
   `mixedAction`, `hasPasswordField`, and `sensitiveControls[] {name, type}`. **Never captures
   input values** — only control name + type. Form actions also strip userinfo, query parameters,
   and fragments before persistence, so credentials embedded in an action URL are not archived.
@@ -244,14 +244,14 @@ with render mode.
 `landmarks` (`header`, `nav`, `main`, `aside`, `footer` booleans), `roles` (ARIA role → count),
 `missingAltSources[]`.
 
-**Prerender additions:** `contrastViolations[]` (`{selector, fg, bg, ratio, level (AA\|AAA)}`),
+**Prerender additions:** `contrastViolations[]` (`{selector, fg, bg, ratio, level (AA|AAA)}`),
 `ariaIssues[]`, `lang`, `focusOrder[]` (`{selector, tabindex}`),
 `formControls` (`totalInputs`, `missingLabel`, `inputsMissingLabel[]`, autocomplete/constraint
 counts, `elements[] {selector, tag, type, required, hasLabel, autocomplete, hasConstraint}`).
 
 **Full additions:** `wcagData` (full WCAG dict), `axe` (complete axe-core result:
 violations/passes/incomplete/inapplicable), `auditEngine {name, version}`, `wcagVersion`,
-`auditProfile` (`basic\|essential\|full\|custom`), `auditedAt`, `_meta`.
+`auditProfile` (`basic|essential|full|custom`), `auditedAt`, `_meta`.
 
 > Known issue: `contrastViolations` over-reports (~87% false positives) because the detector
 > ignores transparent backgrounds and mis-pairs foreground color. Prefer `axe` contrast rules.
@@ -295,7 +295,7 @@ Sub-resource network log. Schema: `ResourceRecordV1Schema`. Key: `resId` (`z.str
 version). Page link: `ownerPageId`. The reference producer writes this in full mode and prunes
 the directory when it is empty. The schema does not enforce the mode.
 
-- `resId` · `ownerPageId` · `url` · `type` (`css\|js\|font\|image`).
+- `resId` · `ownerPageId` · `url` · `type` (`css|js|font|image`).
 - `status`, `contentType`, `hashBodySha256`, `bodyBlobRef`, `sizeBytes`, `critical`.
 
 ---
@@ -328,7 +328,7 @@ sitemap, preserving the per-entry metadata the crawl parses. Schema:
 - `enqueued`: the engine accepted the URL into the frontier as a new entry. Not a crawl-outcome
   claim; join `normalizedUrl` to the pages actually captured to classify missing-from-crawl.
 
-The crawl-level rollup is `manifest.sitemapCoverage` (`absent`\|`failed`\|`partial`\|`complete`).
+The crawl-level rollup is `manifest.sitemapCoverage` (`absent`|`failed`|`partial`|`complete`).
 
 ---
 
@@ -339,14 +339,14 @@ consumer-configured rule. Schema: `cartographer-datasets.schema.ts`
 (`ExtractionDatasetRecordV1Schema`). Present ONLY when the crawl ran with rules; the
 `extraction.rules` capability flag advertises that. Reader: `atlas.readers.extraction()`.
 
-Rule DEFINITIONS are mutable and live in the consumer (Continuum registry); the archive
+Rule definitions are mutable and live in the consuming application. The archive
 records only the immutable outcome plus a crawl-time snapshot, so editing a rule never
 rewrites a historical archive.
 
 - `crawlId` · `pageId` · `url` — page anchors.
 - `ruleId` · `ruleVersion` — rule provenance.
-- `ruleName` · `kind` (`css`\|`xpath`\|`regex`) · `expression` · `attribute` · `multiplicity` ·
-  `failurePolicy` · `valueType` (`text`\|`number`\|`boolean`\|`date`) · `evaluatorVersion` —
+- `ruleName` · `kind` (`css`|`xpath`|`regex`) · `expression` · `attribute` · `multiplicity` ·
+  `failurePolicy` · `valueType` (`text`|`number`|`boolean`|`date`) · `evaluatorVersion` —
   the complete evaluator input and policy snapshot at crawl time. The added hotfix.2 fields are
   optional so archives written before evaluator version 2 remain valid.
 - `sourceStage`: which captured source was read — `raw` (pre-JS server body, every mode) or
@@ -365,7 +365,7 @@ Operational telemetry. Schema: `EventRecordV1Schema`. Key: `eventId` (`z.string(
 check). Optional `pageId` (`z.string().uuid()`). The reference producer always writes this dataset.
 
 - `eventId` · `crawlId` · `occurredAt` · `eventType` (enum) · `severity`
-  (`info\|warn\|error\|critical`) · `message`.
+  (`info|warn|error|critical`) · `message`.
 - `url`, `hostname`, `pageId`, `details` (record).
 - `metrics`: `durationMs`, `memoryRssMb`, `queueDepth`, `concurrentRequests`.
 - `rateLimit`, `challenge`, `resourceUsage` — free-form context maps on the relevant events.
@@ -383,7 +383,7 @@ Hard failures and non-fatal alerts. Schema: `PipelineFailureRecordV1Schema`
 can happen before a page id exists. Join by `url`, and by `pageId` when it is present.
 
 - `pageId` (optional UUID) · `url` · `origin` · `hostname` · `occurredAt` · `phase`
-  (`fetch`\|`render`\|`extract`\|`write`).
+  (`fetch`|`render`|`extract`|`write`).
 - `code`, `message` (required), `stack`, `details` (nullable record).
 
 ---
@@ -424,14 +424,14 @@ Discovery accounting. Schema: `FrontierLedgerRecordV1Schema`. Key: `url`. `pageI
 UUID, set when the URL was visited. The reference producer writes this dataset only when a
 discovery tracker is wired.
 
-- `url` · `normalizedUrl` · `status` (`discovered`\|`queued`\|`visited`\|`skipped`) · `hostGroup`.
+- `url` · `normalizedUrl` · `status` (`discovered`|`queued`|`visited`|`skipped`) · `hostGroup`.
 - `pageId` (optional UUID), `skipReason`, `depth`, `discoveredFrom`, `discoveredAt`.
 - `skipReason` is an open string, not an enum. Spec 1.3 writers use `ROBOTS_DISALLOWED` when a
   robots Disallow rule skipped the URL, and `ROBOTS_UNREACHABLE` when the URL was skipped because
   robots.txt for the origin was unreachable. Other strings remain valid. A 1.2 reader that
   accepts any string accepts the new spellings. The schema was not widened into an enum, and no
   value was added to a closed enum.
-- `skipSource` (optional): `page` \| `scout` \| `sitemap` \| `warmup`. Where the skip decision was
+- `skipSource` (optional): `page` | `scout` | `sitemap` | `warmup`. Where the skip decision was
   made. A 1.2 row omits it.
 - `matchedRobotsRule` (optional string or null): the matched robots rule, or null when
   no rule was recorded. The recommended string is `<Directive>: <pattern>`, for example
@@ -470,7 +470,7 @@ What the crawler did is recorded on `manifest.robotsPolicy` and on `blockedNoCop
 - `matchedGroup`: the user-agent group that applied, for example `*`, or null when there is no file.
 - `httpStatus`: integer or null.
 - `fetchedAt` (ISO 8601), `attempts` (nonnegative integer).
-- `bodySource`: `fresh` \| `lastGood` \| `none`.
+- `bodySource`: `fresh` | `lastGood` | `none`.
 - `lastGoodFetchedAt`: nullable. Set when `bodySource` is `lastGood`, and null otherwise.
 - `lastGoodBodySha256`: nullable lowercase SHA-256 hex. The digest of a last-good body that is
   not the body stored in `bodyBlobRef`. It is a plain digest, not a blob ref, and it does not

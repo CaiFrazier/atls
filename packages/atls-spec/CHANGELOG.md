@@ -2,15 +2,15 @@
 
 ## 26.11.2
 
-Not published. First date-based package release (`YY.M.W` for November 10, 2026). The spec contract stays `1.3.0`. `atlasVersion` stays `1.3`. `formatVersion` stays `1.3.0`. The schema tag stays `2026-09-04`.
+Not on npm. First date-based package version (`YY.M.W` for November 10, 2026). A weekly tag attaches both package tarballs to a GitHub Release. The spec contract stays `1.3.0`. `atlasVersion` stays `1.3`. `formatVersion` stays `1.3.0`. The schema tag stays `2026-09-04`.
 
-`1.2.0`, `1.3.0`, and `1.3.1` were the last counter-based package versions. A package release says when the tooling shipped. The format version says what an archive may contain and moves only when the format changes. Within 1.x those changes stay additive.
+`1.2.0`, `1.3.0`, and `1.3.1` were the last counter-based package versions. They were never released. A package release says when the tooling shipped. The format version says what an archive may contain and moves only when the format changes. Within 1.x those changes stay additive.
 
-A later build in the same week is a lettered hotfix (`26.11.2-b`, then `26.11.2-c`). The weekly release is implicitly `a`. Only the weekly release is published, on npm `latest`. A hotfix is not published. See [Versioning](../../docs/VERSIONING.md).
+A later build in the same week is a lettered hotfix (`26.11.2-b`, then `26.11.2-c`). The weekly release is implicitly `a`. Only that weekly tag creates a GitHub Release. A hotfix is not released. See [Versioning](../../docs/VERSIONING.md).
 
 ## 1.3.1
 
-Not published. Counter-based package version `1.3.1`. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
+Never released. Counter-based package version `1.3.1`. There is no git tag for it. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
 
 - A writer that emits the `robots` dataset must settle each origin's robots outcome, retries included, before fetching that origin's first page, and must use that copy for the rest of the crawl. The dataset has one row per origin.
 - `frontier_ledger.matchedRobotsRule` stays a string. The recommended form is `<Directive>: <pattern>`, for example `Disallow: /cart`.
@@ -19,7 +19,7 @@ Not published. Counter-based package version `1.3.1`. The spec contract stays `1
 
 ## 1.3.0
 
-Not published. This counter-based package version used the same number as spec contract `1.3.0`. The schema tag stays `2026-09-04`. Archives stamped 1.1 and 1.2 stay valid. Every new field and the `robots` dataset are optional. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field.
+Never released. This counter-based package version used the same number as spec contract `1.3.0`. There is no git tag for it. The schema tag stays `2026-09-04`. Archives stamped 1.1 and 1.2 stay valid. Every new field and the `robots` dataset are optional. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field.
 
 ### Format
 
@@ -31,9 +31,9 @@ Not published. This counter-based package version used the same number as spec c
 
 ## 1.2.0
 
-Published to npm as `@caifrazier/atls-spec@1.2.0`. This replaces `1.0.0-rc.1` (2026-07-04). This counter-based package version used the same number as the spec contract. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.
+Never released. This was the first stable package version in the repository, after `1.0.0-rc.1` (2026-07-04). There is no git tag for it. This counter-based package version used the same number as the spec contract. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package.
 
-Install `@caifrazier/atls-spec`. `@atls/spec` is not published. The reader package is `@caifrazier/atls-sdk`. `@atls/sdk` is not published. Change those imports before you depend on the registry instead of a local checkout.
+The package name is `@caifrazier/atls-spec`. `@atls/spec` is not an npm package. The reader package is `@caifrazier/atls-sdk`. `@atls/sdk` is not an npm package.
 
 ### Package surface since 1.0.0-rc.1
 

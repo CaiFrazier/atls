@@ -2,13 +2,17 @@
 
 Specification package for the Atlas (`.atls`) archive format. It ships the Zod schemas, the generated JSON Schemas, the TypeScript types, and the helpers for URL identity, blob refs, and archive digests.
 
-The schema tag is `2026-09-04`. The spec contract is `1.3.0` (`atlasVersion` `1.3`, `formatVersion` `1.3.0`). The package release is `26.11.2`, the date this tooling shipped. Archives stamped 1.1 and 1.2 stay valid. This package covers 22 datasets. Package release `26.11.2` is not published to npm. See [Versioning](../../docs/VERSIONING.md).
+The schema tag is `2026-09-04`. The spec contract is `1.3.0` (`atlasVersion` `1.3`, `formatVersion` `1.3.0`). The package release is `26.11.2`, the date this tooling shipped. Archives stamped 1.1 and 1.2 stay valid. This package covers 22 datasets. See [Versioning](../../docs/VERSIONING.md).
 
-Install `@caifrazier/atls-spec`. The name `@atls/spec` is not published on npm.
+Install the current release from the GitHub Release. This package's tarball is `caifrazier-atls-spec-26.11.2.tgz`. Install the SDK tarball in the same command when you want the reader. npm then resolves the SDK's spec dependency to the spec tarball. The name `@atls/spec` is not an npm package.
 
 ```bash
-npm install @caifrazier/atls-spec
+npm install https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-spec-26.11.2.tgz https://github.com/CaiFrazier/atls/releases/download/v26.11.2/caifrazier-atls-sdk-26.11.2.tgz
 ```
+
+npm currently has only the old 1.0.0-rc.1 release candidate. Use the GitHub release.
+
+pnpm needs an override that points `@caifrazier/atls-spec` at the spec tarball. The snippet is in the [repository README](https://github.com/CaiFrazier/atls/blob/main/README.md). You can also clone the repository and build it. The commands are under Conformance suite below.
 
 Requires Node.js 20 or newer. The package is ESM only.
 

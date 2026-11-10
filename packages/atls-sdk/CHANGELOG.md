@@ -2,13 +2,13 @@
 
 ## 26.11.2
 
-Not published. First date-based package release, in lockstep with `@caifrazier/atls-spec@26.11.2`. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`. Archive format stamps are unchanged.
+Not on npm. First date-based package version, in lockstep with `@caifrazier/atls-spec@26.11.2`. A weekly tag attaches both package tarballs to a GitHub Release. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`. Archive format stamps are unchanged.
 
-A later build in the same week is a lettered hotfix (`26.11.2-b`, then `26.11.2-c`) and is not published. Only the weekly release is published, on npm `latest`. See [Versioning](../../docs/VERSIONING.md).
+A later build in the same week is a lettered hotfix (`26.11.2-b`, then `26.11.2-c`) and is not released. Only the weekly tag creates a GitHub Release. See [Versioning](../../docs/VERSIONING.md).
 
 ## 1.3.1
 
-Not published. Counter-based package version `1.3.1`. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
+Never released. Counter-based package version `1.3.1`. There is no git tag for it. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
 
 - `validate()` enforces the spec 1.2 writer rules when `atlasVersion` is 1.2 or later. Archives stamped 1.1 or earlier keep the previous checks.
 - `readDatasetSlice` accepts `maxBytes` (default 16 MiB). A slice stops before a row that would pass the cap and returns a cursor for that row. One row larger than the cap throws `AtlasResourceLimitError`. `limit` must be a positive integer and is still capped at 10,000.
@@ -24,7 +24,7 @@ Not published. Counter-based package version `1.3.1`. The spec contract stays `1
 
 ## 1.3.0
 
-Not published. This counter-based package version used the same number as spec contract `1.3.0`. The schema tag stays `2026-09-04`.
+Never released. This counter-based package version used the same number as spec contract `1.3.0`. There is no git tag for it. The schema tag stays `2026-09-04`.
 
 - `readers.robots()` reads the optional spec 1.3 `robots` dataset. `RobotsRecord` is exported.
 - `validate()` checks robots records, canonical `bodyBlobRef` resolution, `blockedNoCopy` against `manifest.robotsPolicy.failClosed`, duplicate origins, and the `endReason` / `completionReason` map when both are present.
@@ -33,9 +33,9 @@ Not published. This counter-based package version used the same number as spec c
 
 ## 1.2.0
 
-First stable release. Replaces `1.0.0-rc.1` (2026-07-04). This counter-based package version used the same number as spec contract `1.2.0`. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.
+Never released. This was the first stable package version in the repository, after `1.0.0-rc.1` (2026-07-04). There is no git tag for it. This counter-based package version used the same number as spec contract `1.2.0`. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package.
 
-Install `@caifrazier/atls-sdk`. `@atls/sdk` is not published. Change imports from `@atls/sdk` to `@caifrazier/atls-sdk`. The spec package is `@caifrazier/atls-spec` at the same version. `@atls/spec` is not published.
+The package name is `@caifrazier/atls-sdk`. `@atls/sdk` is not an npm package. Change imports from `@atls/sdk` to `@caifrazier/atls-sdk`. The spec package is `@caifrazier/atls-spec` at the same version. `@atls/spec` is not an npm package.
 
 ### Since 1.0.0-rc.1
 
@@ -51,4 +51,4 @@ Install `@caifrazier/atls-sdk`. `@atls/sdk` is not published. Change imports fro
 
 ## 1.0.0-rc.1
 
-Pre-release reader published on 2026-07-04. It did not include the describe layer, the spec 1.2 helpers, or the exports above.
+Pre-release reader published to npm on 2026-07-04. It predates the current format. It did not include the describe layer, the spec 1.2 helpers, or the exports above.
