@@ -33,8 +33,9 @@ the exact part files per dataset. Prefer these over globbing directories.
 
 ## Reading archives without the SDK (Python)
 
-Python 3 is a dependency-light way to read any archive. Decompress each
-`<dataset>/part-*.jsonl.zst` and parse JSON Lines:
+Python 3 is a dependency-light way to read any archive. Read each
+`<dataset>/*.jsonl` part as UTF-8. Decompress each `<dataset>/*.jsonl.zst`
+part, then parse JSON Lines:
 
 ```python
 import zipfile, subprocess, json
@@ -42,18 +43,22 @@ import zipfile, subprocess, json
 def read_dataset(archive_path, dataset_name):
     """Read all records of a dataset from a current-format .atls archive."""
     with zipfile.ZipFile(archive_path) as z:
+        prefix = f"{dataset_name}/"
         parts = sorted(
             n for n in z.namelist()
-            if n.startswith(f"{dataset_name}/") and n.endswith(".zst")
+            if n.startswith(prefix) and (n.endswith(".jsonl") or n.endswith(".jsonl.zst"))
         )
         rows = []
         for part in parts:
-            out = subprocess.run(
-                ["zstd", "-d", "-", "--stdout"],
-                input=z.read(part), capture_output=True,
-            )
-            out.check_returncode()
-            rows += [json.loads(line) for line in out.stdout.decode().splitlines() if line.strip()]
+            raw = z.read(part)
+            if part.endswith(".jsonl.zst"):
+                out = subprocess.run(
+                    ["zstd", "-d", "-", "--stdout"],
+                    input=raw, capture_output=True,
+                )
+                out.check_returncode()
+                raw = out.stdout
+            rows += [json.loads(line) for line in raw.decode().splitlines() if line.strip()]
         return rows
 
 pages     = read_dataset("crawl.atls", "page_metadata")   # NOT "pages"
@@ -107,7 +112,7 @@ for await (const page of atlas.readers.pageMetadata()) {
 atlas.close();
 ```
 
-Full API details can be found in the [Atlas SDK reference](https://github.com/CaiFrazier/atls/blob/main/packages/atls-sdk/README.md).
+Full API details can be found in the [Atlas SDK reference](https://github.com/CaiFrazier/atls/blob/main/packages/atls-sdk/docs/API.md).
 
 ---
 

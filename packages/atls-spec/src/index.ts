@@ -18,7 +18,7 @@
  * @caifrazier/atls-spec - Atlas Archive Specification
  * 
  * Core types, schemas, and validators for Atlas (.atls) archives.
- * Used by both the Cartographer engine and Atlas SDK.
+ * Used by archive producers and the Atlas SDK.
  */
 
 // Export all types

@@ -18,9 +18,9 @@
  * The Atlas dataset registry: every dataset name an archive producer writes,
  * keyed by itself, in snake_case as it appears in .atls archives.
  *
- * Producers (Cartographer) and readers (the SDK's manifest diff) both take
- * their dataset lists from here, so a dataset added to the registry is written
- * and compared everywhere without a second hand-kept list drifting out of step.
+ * Archive producers and readers (including the SDK's manifest diff) take their
+ * dataset lists from here, so a dataset added to the registry is written and
+ * compared without a second hand-kept list drifting out of step.
  *
  * Fifteen of the names are the SDK's `CanonicalDatasetName` datasets. The other
  * seven (sitemaps, sitemap_urls, extraction, quarantine, reconstruction_index,

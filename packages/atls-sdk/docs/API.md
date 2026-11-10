@@ -18,6 +18,8 @@ import {
   buildCrossModeIndex,
   readManifest, readSummary, iterateParts, readBlob, openZipHandle,
   AtlasResourceLimitError,
+  describeArchive, describeDataset, readDatasetSlice, readRecord, readSchema, statBlob,
+  AtlasRecordNotFoundError,
 } from "@caifrazier/atls-sdk";
 ```
 
@@ -61,7 +63,7 @@ interface AtlasReadLimits {
 | `packs` | `PackView` | Capability-pack view. |
 | `stats` | `{ corruptedRecordCount: number }` | Cumulative read stats (lenient mode). |
 | `hasDataset(name)` | `(DatasetName) => boolean` | Presence check. |
-| `getBlob(ref)` | `(string) => Promise<Buffer>` | Resolve a `*_blob_ref` to bytes. |
+| `getBlob(ref)` | `(ref: string) => Promise<Buffer>` | Decompress a blob ref. Record fields are camelCase (`bodyBlobRef`). Accepts `sha256/<2>/<2>/<64 hex>` and `blobs/sha256/<2>/<2>/<64 hex>.zst`, including either the `blobs/` prefix or the `.zst` suffix alone. |
 | `close()` | `() => void` | Release the zip handle. Always call it. |
 | `readers.*` | object | Async-iterable dataset readers (below). |
 
@@ -86,6 +88,8 @@ Each returns an `AsyncIterable` of records for one dataset.
 | `events()` | `EventRecord` | `events` |
 | `pipelineFailures()` | record | `pipeline_failures` |
 | `pipelineAlerts()` | record | `pipeline_alerts` |
+| `sitemapUrls()` | `SitemapUrlRecord` | `sitemap_urls` |
+| `extraction()` | `ExtractionRecord` | `extraction` |
 | `robots()` | `RobotsRecord` | `robots` (spec 1.3, one row per origin) |
 | `dataset<T>(name)` | `T` | any dataset by canonical key |
 
@@ -131,6 +135,7 @@ interface SelectOptions {
   where?: (record: any) => boolean;     // filter predicate
   fields?: string[];                    // dot-path projection
   limit?: number;                       // cap rows
+  limits?: Partial<AtlasReadLimits>;    // ZIP, zstd, and JSONL read limits
 }
 
 // status codes live in `responses`
@@ -158,6 +163,7 @@ interface ValidateOptions {
   maxIssues?: number;         // default 1000. Positive integer. Stop collecting after N issues.
   errorsOnly?: boolean;       // default false. Skip warnings.
   strict?: boolean;           // default false. Full manifest fields, blob-ref spelling, no nulls.
+  limits?: Partial<AtlasReadLimits>; // default read limits while reading archive entries.
   skipBlobVerification?: boolean; // default false. Skip decompress-and-hash of blobs.
 }
 
@@ -240,11 +246,11 @@ the long `ATLAS_DATASET_KEYS` directory and fall back to `pages`, `edges`, or `f
 
 | Export | Signature | Notes |
 |---|---|---|
-| `openZipHandle(path)` | `=> ZipHandle` | Open a zip for repeated reads; call `.close()`. |
-| `readManifest(zipHandle)` | `=> AtlasManifest` | Parse `manifest.json`. Field names match `AtlasManifestV1Schema`, including `integrity.contentSha256`. |
-| `readSummary(zipHandle)` | `=> AtlasSummary` | Parse `summary.json`. |
-| `iterateParts(path, dataset)` | `=> AsyncIterable<string>` | Raw JSON Lines from a dataset directory. Pass the long name (`page_metadata`) unless the archive stored that dataset under a short alias. |
-| `readBlob(zipHandle, ref)` | `=> Promise<Buffer>` | Resolve a blob ref and decompress it. |
+| `openZipHandle(path, options?)` | `(path: string, options?: AtlasReadOptions) => Promise<ZipHandle>` | Open a zip for repeated reads; call `.close()`. |
+| `readManifest(path, options?)` | `(path: string, options?: AtlasReadOptions) => Promise<AtlasManifest>` | Also `(handle: ZipHandle) => Promise<AtlasManifest>`. Parse `manifest.json`. Field names match `AtlasManifestV1Schema`, including `integrity.contentSha256`. |
+| `readSummary(path, options?)` | `(path: string, options?: AtlasReadOptions) => Promise<AtlasSummary>` | Also `(handle: ZipHandle) => Promise<AtlasSummary>`. Parse `summary.json`. |
+| `iterateParts(path, dataset, options?)` | `(path: string, dataset: DatasetName, options?: { signal?: AbortSignal; zipHandle?: ZipHandle; limits?: Partial<AtlasReadLimits> }) => AsyncIterable<string>` | Raw JSON Lines from a dataset directory. Pass the long name (`page_metadata`) unless the archive stored that dataset under a short alias. The options type is not exported. |
+| `readBlob(path, ref, options?)` | `(path: string, ref: string, options?: AtlasReadOptions) => Promise<Buffer>` | Also `(handle: ZipHandle, ref: string) => Promise<Buffer>`. Decompresses the blob. Accepts both spellings, the same as `getBlob`. |
 
 ```ts
 for await (const line of iterateParts("./crawl.atls", "page_metadata")) {
@@ -254,6 +260,86 @@ for await (const line of iterateParts("./crawl.atls", "page_metadata")) {
 ```
 
 Decompression of zstd frames uses `fzstd`.
+
+---
+
+## `describeArchive(target, options?) → Promise<ArchiveDescription>`
+
+```ts
+function describeArchive(
+  target: string | ZipHandle,
+  options?: AtlasReadOptions,
+): Promise<ArchiveDescription>;
+```
+
+Joins `manifest.json` to ZIP central-directory facts. It does not scan dataset rows and does not inflate blobs. `identity` is the summary identity when that file parses and has one, otherwise the manifest identity. `summaryStats` is `summary.stats`, or null when the summary is missing or unreadable. `options` is `{ limits?: Partial<AtlasReadLimits> }`.
+
+```ts
+type DatasetState = "present" | "empty" | "absent" | "partial" | "unexpected" | "corrupt";
+
+interface DatasetPartDescription {
+  path: string;
+  compressedBytes: number;  // ZIP central-directory compressed size
+  storedBytes: number;      // stored payload size (still zstd-compressed for .zst parts)
+}
+
+interface DatasetDescription {
+  name: string;             // canonical dataset name (manifest key)
+  folder: string;           // physical folder: the long name, or a short alias
+  state: DatasetState;
+  expected: boolean | null;
+  declaredRecordCount: number | null;
+  coveragePct: number | null;
+  partCount: number;
+  parts: DatasetPartDescription[];
+  compressedBytes: number;
+  storedBytes: number;
+  schemaPath: string | null;    // fragment stripped
+  schemaVersion: string | null;
+  schemaHash: string | null;
+}
+
+interface ArchiveDescription {
+  atlasVersion: string | null;
+  formatVersion: string | null;
+  specVersion: string | null;
+  schemaVersion: string | null;
+  crawlId: string | null;
+  mode: string | null;
+  generator: string | null;
+  createdAt: string | null;
+  crawlStartedAt: string | null;
+  crawlCompletedAt: string | null;
+  crawlConfigHash: string | null;
+  configIncluded: boolean | null;
+  incomplete: unknown;
+  redactionApplied: unknown;
+  privacyPolicy: unknown;
+  identity: unknown;
+  entryCount: number;
+  datasets: DatasetDescription[];
+  blobs: { count: number; compressedBytes: number; storedBytes: number };
+  schemaEntries: string[];   // entries under schemas/
+  hasCapabilities: boolean;
+  summaryStats: unknown;
+}
+```
+
+`state` comes from the manifest and the central directory. `unexpected` is a folder of part files the manifest did not declare. `corrupt` is a declared part missing from the archive. `meta/`, `schemas/`, and `blobs/` are not reported as datasets.
+
+---
+
+## `describeDataset(target, dataset, options?) → Promise<DatasetDescription | null>`
+
+```ts
+function describeDataset(
+  target: string | ZipHandle,
+  dataset: string,
+  options?: AtlasReadOptions,
+): Promise<DatasetDescription | null>;
+```
+
+Returns the `DatasetDescription` from `describeArchive` whose `name` or `folder` equals `dataset`. Returns `null` when neither matches.
 
 ---
 
@@ -272,6 +358,67 @@ interface ReadDatasetSliceOptions {
 ```
 
 `limit` and `maxBytes` must be positive integers. A row that would push the slice past `maxBytes` stays unread, and `nextCursor` points at that row. When the first row alone is larger than `maxBytes`, the call throws `AtlasResourceLimitError`. `part`, `line`, and `ordinal` in a cursor must be safe non-negative integers.
+
+---
+
+## `readRecord(target, dataset, ordinal, options?) → Promise<DatasetSliceRecord>`
+
+```ts
+function readRecord(
+  target: string | ZipHandle,
+  dataset: string,
+  ordinal: number,
+  options?: ReadRecordOptions,
+): Promise<DatasetSliceRecord>;
+
+interface ReadRecordOptions extends AtlasReadOptions {
+  signal?: AbortSignal;
+}
+```
+
+Reads one record by its global dataset ordinal (the same `ordinal` as `readDatasetSlice`). A negative ordinal, or one that is not an integer, throws `AtlasRecordNotFoundError`. So does an ordinal past the last record. The error has `code` `"ATLAS_RECORD_NOT_FOUND"`, `dataset`, and `ordinal`.
+
+`DatasetSliceRecord` is `{ ordinal, part, partIndex, lineInPart, json }`. `json` is the raw JSON line, unparsed.
+
+---
+
+## `readSchema(target, dataset, options?) → Promise<DatasetSchemaResult | null>`
+
+```ts
+function readSchema(
+  target: string | ZipHandle,
+  dataset: string,
+  options?: AtlasReadOptions,
+): Promise<DatasetSchemaResult | null>;
+
+interface DatasetSchemaResult {
+  path: string;
+  schema: unknown;
+}
+```
+
+Reads the dataset's archived JSON Schema. When the dataset's manifest entry has `schema`, `schema_uri`, or `schemaUri`, that path is used with any fragment stripped. Otherwise a string at `manifest.schemas[dataset]` is used. `schemas/<dataset>.v1.schema.json` is the next candidate. The first of those entries that exists is returned. Returns `null` when none exist.
+
+---
+
+## `statBlob(target, blobRef, options?) → Promise<BlobStat>`
+
+```ts
+function statBlob(
+  target: string | ZipHandle,
+  blobRef: string,
+  options?: AtlasReadOptions,
+): Promise<BlobStat>;
+
+interface BlobStat {
+  path: string;            // normalized archive path, blobs/sha256/<2>/<2>/<hash>.zst
+  exists: boolean;
+  compressedBytes: number; // ZIP central-directory compressed size; 0 when absent
+  storedBytes: number;     // stored payload size; 0 when absent. Not the inflated size.
+}
+```
+
+Returns size metadata and does not inflate the blob. `blobRef` must be a non-empty string. It accepts the same spellings as `getBlob`: `sha256/<2>/<2>/<64 hex>` and `blobs/sha256/<2>/<2>/<64 hex>.zst`, including the same path with only the `blobs/` prefix or only the `.zst` suffix. The two shard directories must match the hash. An empty ref throws `Error`. Any other string throws `AtlasPathError`.
 
 ---
 

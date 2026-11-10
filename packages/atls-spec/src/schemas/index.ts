@@ -91,7 +91,7 @@ export {
   OutputMetadataSchema
 } from './provenance.schema.js';
 
-// Runtime validation (Cartographer/SDK core datasets)
+// Runtime validation (core dataset schemas)
 export {
   PageRecordSchema,
   EdgeRecordSchema,
@@ -104,7 +104,7 @@ export {
 } from './runtime-core.schema.js';
 export type { AssetRecordV1 } from './runtime-core.schema.js';
 
-// Cartographer writer-facing dataset schemas
+// Writer-facing dataset schemas
 export {
   RecordMetaSchema,
   PageMetadataDatasetRecordV1Schema,

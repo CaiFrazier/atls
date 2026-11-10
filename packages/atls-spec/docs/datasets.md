@@ -50,7 +50,7 @@ _Verified against the dataset Zod schemas on 2026-11-10. Current schema tag: `20
 | `frontier_ledger` | opt | opt | opt | `url`, `pageId?` | Zod |
 | `robots` | opt | opt | opt | `origin` | Zod |
 
-`*` pruned/written only when records exist · `†` built at finalization under default replay tier.
+`*` pruned/written only when records exist · `†` built at finalization under default replay tier · `opt` the dataset is optional and may be absent.
 Every emitted dataset now has a published Zod schema in `@caifrazier/atls-spec` (see
 [schema-system.md](./schema-system.md)).
 
