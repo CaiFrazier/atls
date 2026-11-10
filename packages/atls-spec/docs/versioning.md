@@ -27,17 +27,27 @@ The current-edition column is what this specification documents for archives sta
 
 ---
 
-## Two independent axes — do not conflate
+## Separate the archive stamps from the package release
+
+These identifiers move on their own:
 
 1. **`schemaVersion`** (`"2026-09-04"`) is a **date-stamped tag a producer writes into the
    manifest**. It names the dataset-schema edition. The reference reader copies it onto
    `describeArchive().schemaVersion` and does not branch on it.
 
-2. **The `@caifrazier/atls-spec` package version** (`1.3.1`, from `package.json`) is the npm
-   semver of the schema package. It is **not** written into archives.
+2. **The format version** is what an archive may contain. The current stamps are `atlasVersion`
+   `"1.3"`, `formatVersion` `"1.3.0"`, and `specVersion` `"1.3.0"` (`ATLAS_VERSION`,
+   `ATLAS_FORMAT_VERSION`, `ATLAS_SPEC_VERSION`). A writer stamps 1.3 only when the archive emits
+   a spec 1.3 field. Readers accept every `formatVersion` major 1. Within 1.x the format changes
+   by addition.
 
-A reader must never use the spec package version to reason about an archive's layout — it isn't in
-the archive. Read `manifest.schemaVersion`.
+3. **The package release** (`26.11.2` on `@caifrazier/atls-spec` and `@caifrazier/atls-sdk`) says
+   when that tooling shipped. It is a date-based `YY.M.W` version. An archive does not store it.
+   `1.2.0` and the `1.3.x` package versions were the last counter-based ones. See
+   [Package versioning](https://github.com/CaiFrazier/atls/blob/main/docs/VERSIONING.md).
+
+A reader uses the manifest stamps to reason about an archive. Read `manifest.schemaVersion`,
+`manifest.atlasVersion`, `manifest.formatVersion`, and `manifest.specVersion`.
 
 ### Quick check
 

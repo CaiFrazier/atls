@@ -100,7 +100,7 @@ describe("spec 1.3 robots producer text", () => {
 });
 
 describe("spec 1.3 versions", () => {
-  test("the package stamps 1.3 and keeps the schema tag", () => {
+  test("the format stamps stay on spec 1.3", () => {
     expect(ATLAS_SPEC_VERSION).toBe("1.3.0");
     expect(ATLAS_FORMAT_VERSION).toBe("1.3.0");
     expect(ATLAS_VERSION).toBe("1.3");

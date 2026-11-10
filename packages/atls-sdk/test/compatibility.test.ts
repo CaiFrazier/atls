@@ -45,6 +45,11 @@ describe("SDK compatibility enforcement (BUG-0134)", () => {
     expect(() => assertCompatible(caps("1.0.0"), "1.2.3")).not.toThrow();
   });
 
+  test("a date-based SDK release still satisfies a 1.x minSdkVersion", () => {
+    expect(checkCompatible(caps("1.3.1"), "26.11.2").compatible).toBe(true);
+    expect(checkCompatible(caps("1.3.0"), "26.11.2-b").compatible).toBe(true);
+  });
+
   test("prerelease SDK tags are ignored — 1.0.0-rc.1 satisfies minSdkVersion 1.0.0", () => {
     // Without this, the shipping 1.0.0-rc.1 SDK would rank below the 1.0.0
     // floor every native archive declares, flagging its own archives.

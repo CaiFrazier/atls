@@ -1,8 +1,14 @@
 # Changelog
 
+## 26.11.2
+
+Not published. First date-based package release, in lockstep with `@caifrazier/atls-spec@26.11.2`. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`. Archive format stamps are unchanged.
+
+A later build in the same week is a lettered hotfix (`26.11.2-b`, then `26.11.2-c`) and is not published. Only the weekly release is published, on npm `latest`. See [Versioning](../../docs/VERSIONING.md).
+
 ## 1.3.1
 
-Not published. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
+Not published. Counter-based package version `1.3.1`. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04`.
 
 - `validate()` enforces the spec 1.2 writer rules when `atlasVersion` is 1.2 or later. Archives stamped 1.1 or earlier keep the previous checks.
 - `readDatasetSlice` accepts `maxBytes` (default 16 MiB). A slice stops before a row that would pass the cap and returns a cursor for that row. One row larger than the cap throws `AtlasResourceLimitError`. `limit` must be a positive integer and is still capped at 10,000.
@@ -18,7 +24,7 @@ Not published. The spec contract stays `1.3.0`. The schema tag stays `2026-09-04
 
 ## 1.3.0
 
-Not published. The npm version matches spec contract `1.3.0`. The schema tag stays `2026-09-04`.
+Not published. This counter-based package version used the same number as spec contract `1.3.0`. The schema tag stays `2026-09-04`.
 
 - `readers.robots()` reads the optional spec 1.3 `robots` dataset. `RobotsRecord` is exported.
 - `validate()` checks robots records, canonical `bodyBlobRef` resolution, `blockedNoCopy` against `manifest.robotsPolicy.failClosed`, duplicate origins, and the `endReason` / `completionReason` map when both are present.
@@ -27,7 +33,7 @@ Not published. The npm version matches spec contract `1.3.0`. The schema tag sta
 
 ## 1.2.0
 
-First stable release. Replaces `1.0.0-rc.1` (2026-07-04). The npm version matches spec contract `1.2.0`. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.
+First stable release. Replaces `1.0.0-rc.1` (2026-07-04). This counter-based package version used the same number as spec contract `1.2.0`. The schema tag stays `2026-09-04`. There was no `1.0.0` or `1.1.0` package on npm.
 
 Install `@caifrazier/atls-sdk`. `@atls/sdk` is not published. Change imports from `@atls/sdk` to `@caifrazier/atls-sdk`. The spec package is `@caifrazier/atls-spec` at the same version. `@atls/spec` is not published.
 

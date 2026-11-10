@@ -2,7 +2,7 @@
 
 The **Atlas** archive format (`.atls`): specification, JSON Schemas, TypeScript types, and a read-side SDK.
 
-An `.atls` file is a zip archive of compressed JSON Lines datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format (spec 1.3, schema tag `2026-09-04`) and provides the reference reader. Spec 1.3 is additive: archives stamped 1.1 and 1.2 stay valid. The Zod schemas are authoritative when the prose disagrees. Decisions for this edition are in [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md). Conformance archives are in [`conformance/`](conformance/README.md). Package version 1.3.1 is not published to npm.
+An `.atls` file is a zip archive of compressed JSON Lines datasets plus content-addressed blobs, produced by crawl/analysis tooling and designed to be read back losslessly. This repository defines the format (spec 1.3, schema tag `2026-09-04`) and provides the reference reader. Spec 1.3 is additive: archives stamped 1.1 and 1.2 stay valid. The Zod schemas are authoritative when the prose disagrees. Decisions for this edition are in [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md). Conformance archives are in [`conformance/`](conformance/README.md). The package release is `26.11.2`. That date says when the tooling shipped. It is separate from the format version. `26.11.2` is not published to npm. See [`docs/VERSIONING.md`](docs/VERSIONING.md).
 
 ## Packages
 
@@ -25,7 +25,7 @@ Requires Node ≥ 20 and pnpm ≥ 9.
 
 ## Publish
 
-Both packages release together. See [RELEASING.md](./RELEASING.md). A tag such as `v1.3.1` runs the provenance workflow. That workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance. This change does not publish.
+Both packages release together on the date-based version `YY.M.W`. See [RELEASING.md](./RELEASING.md) and [docs/VERSIONING.md](./docs/VERSIONING.md). A weekly tag such as `v26.11.2` runs the provenance workflow and publishes to npm `latest`. A hotfix tag such as `v26.11.2-b` matches the same `v*.*.*` trigger and is not published. The workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance. This change does not publish.
 
 ## License
 

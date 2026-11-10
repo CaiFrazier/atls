@@ -5,9 +5,9 @@ repository is the Zod schemas in `@caifrazier/atls-spec` (`packages/atls-spec/sr
 file is the index; each chapter is a focused document under [`docs/`](./docs/). **When this prose
 and the Zod schemas differ, the schemas are authoritative.**
 
-_Spec package version: `1.3.1`. Spec contract: `1.3.0`. Current schema tag: `2026-09-04`._
+_Package release: `26.11.2`. Spec contract: `1.3.0`. Format stamps: `atlasVersion` `1.3`, `formatVersion` `1.3.0`. Current schema tag: `2026-09-04`._
 
-Spec 1.3 is an additive minor. New fields and the `robots` dataset are optional, so archives stamped 1.1 and 1.2 stay valid. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field. The schema tag does not change. On a robots row, `responses429` and `responses5xx` count the page responses received from that origin during the crawl. They do not count fetches of robots.txt. Null means the count was not measured. 0 means it was measured and was zero. Package `1.3.1` does not change the contract. It states that a robots writer settles each origin, retries included, before that origin's first page, and that `robotsPolicy.mode`, `modeSource`, `failClosed`, and the applied-body digest stay stable across 1.3.x. It is not published to npm.
+Spec 1.3 is an additive minor. New fields and the `robots` dataset are optional, so archives stamped 1.1 and 1.2 stay valid. A writer stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0` only when the archive emits a spec 1.3 field. The schema tag does not change. On a robots row, `responses429` and `responses5xx` count the page responses received from that origin during the crawl. They do not count fetches of robots.txt. Null means the count was not measured. 0 means it was measured and was zero. A robots writer settles each origin, retries included, before that origin's first page. `robotsPolicy.mode`, `modeSource`, `failClosed`, and the applied-body digest stay stable across 1.3.x. Those rules are spec contract `1.3.0`. The package release `26.11.2` is the date the tooling shipped, and it is a separate number. See [Package versioning](https://github.com/CaiFrazier/atls/blob/main/docs/VERSIONING.md).
 
 The current schema tag is the constant `ATLAS_SCHEMA_VERSION` in `src/edition.ts`. It is the tag
 this edition documents. `AtlasManifestV1Schema` still accepts any `schemaVersion` string.
@@ -34,7 +34,7 @@ which datasets exist, how they join, and how the bytes are laid out — the chap
 | [Storage & Encoding](./docs/storage-and-encoding.md) | JSON Lines, Zstandard, part checksums, `contentSha256`, blob paths. |
 | [Identity & Keys](./docs/identity-and-keys.md) | `pageId`, `crawlId`, `datasetId`, `assetId`, `resId`, the join model. |
 | [URL Identity](./docs/url-identity.md) | `normalizeUrl`, `urlKey`, the trailing-slash field, redirect rows. |
-| [Versioning & Compatibility](./docs/versioning.md) | The version fields, the `schemaVersion` vs spec-package axes, `specLevel`, forward-compat rules. |
+| [Versioning & Compatibility](./docs/versioning.md) | Manifest stamps, the schema tag, the package release, `specLevel`, forward-compat rules. |
 | [Root Metadata Files](./docs/root-files.md) | Field reference for `manifest`, `summary`, `summary.v2`, `capabilities`, `provenance`, `schema.json`. |
 | [Dataset Reference](./docs/datasets.md) | Field reference for all 22 datasets, plus the producer presence-by-mode matrix. |
 | [Schema System](./docs/schema-system.md) | Zod source of truth, JSON Schema codegen, which schemas are datasets, normalization adapters. |
@@ -78,9 +78,8 @@ are not a second definition.
    and prefers the long directory when both are present. Producers write the long names. The short
    names are a reader fallback only.
 2. **Join on `pageId`, not `url`.** See [Identity & Keys](./docs/identity-and-keys.md).
-3. **`schemaVersion` ≠ spec package version.** The archive carries a date-stamped
-   `schemaVersion` (Current schema tag: `2026-09-04`); the npm package is `1.0.0-rc.1`. They are
-   independent — see [Versioning](./docs/versioning.md).
+3. **The schema tag, the format stamps, and the package release are separate.** The archive carries a date-stamped
+   `schemaVersion` (Current schema tag: `2026-09-04`) and the format stamps `atlasVersion` `1.3`, `formatVersion` `1.3.0`, and `specVersion` `1.3.0`. The package release (`26.11.2`) is the date the tooling shipped. It is not in the archive. See [Versioning](./docs/versioning.md).
 
 ---
 
