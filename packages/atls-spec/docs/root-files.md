@@ -1,246 +1,389 @@
 # Root Metadata Files
 
-Field reference for the seven files at the root of an `.atls` archive. For the physical layout see
-[archive-structure.md](./archive-structure.md); for dataset records see [datasets.md](./datasets.md).
+Field reference for the root metadata files of an `.atls` archive. Names and types in
+`manifest.json` match `AtlasManifestV1Schema` in `manifest.schema.ts`. For the physical layout
+see [archive-structure.md](./archive-structure.md); for dataset records see
+[datasets.md](./datasets.md).
 
-_Verified against `packages/atls-spec/src/schemas/*.schema.ts` and
-`packages/cartographer/src/io/atlas/` on 2026-06-04; re-verified after the camelCase naming
-parity sweep on 2026-06-30._
+Current schema tag: `2026-09-04`.
 
-> **Casing is intentionally mixed and load-bearing.** `manifest.json` uses snake_case only for its
-> free-form **identity, scope, and policy blocks** (`identity.primary_origin`, `scope.*`,
-> `crawler_settings.*`, `url_normalization.*`, `coverage.*`, `discovery_summary.*`) but camelCase
-> for all top-level, version, and integrity fields (`datasetId`, `crawlId`, `siteRoot`,
-> `atlasVersion`, `createdAt`, `contentSha256`, `configIncluded`). `summary.json` is camelCase
-> throughout. Match what's documented here exactly.
+Casing is mixed. Top-level manifest keys are camelCase. Some nested blocks keep snake_case inner
+keys, and `identity` accepts both spellings of two fields. The lists below are the schema's names.
+Why that mix should change is [OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md), not a license
+to invent a third spelling.
+
+`AtlasManifestV1Schema` is `.passthrough()` at the top, so a parse keeps unknown top-level keys.
+Blocks that are not `.passthrough()` drop unknown inner keys. See
+[versioning.md](./versioning.md).
 
 ---
 
 ## `manifest.json`
 
-The authoritative index. Schema: `manifest.schema.ts` (`AtlasManifestV1Schema`). Populated by
-`manifest.ts:958-1145`. Many blocks are optional; only the most load-bearing are required.
+The archive index. Schema: `AtlasManifestV1Schema`.
 
-### Identity & version
+### Required top-level fields
 
-| Field | Casing | Type | Meaning |
-|---|---|---|---|
-| `datasetId` | camel | string (16 hex) | Archive identity (crawl id + origin hash). |
-| `crawlId` | camel | string | Crawl run id. |
-| `mode` | — | enum `raw\|import\|prerender\|full` | Render mode of the crawl. |
-| `atlasVersion` | camel | string | Public Atlas line — `"1.1"` (RC2 camelCase cutover). **Required.** |
-| `formatVersion` | camel | string | Container format — `"1.1.0"`. **Required.** |
-| `specVersion` | camel | string | Spec contract — `"1.1.0"`. |
-| `schemaVersion` | camel | string | Date-stamped schema tag — `"2026-07-01"`. |
-| `incomplete` | camel | boolean | `true` at start, flipped to `false` at finalization. A `true` here means the crawl did not seal cleanly. |
-| `createdAt` | camel | ISO 8601 | Manifest build time. **Required.** |
-| `generator` | camel | string | `cartographer-engine/<version>`. **Required.** |
-| `owner.name` | camel | string | `"Cai Frazier"`. |
-| `consumers` | camel | string[] | Default `["atlas-sdk"]`. |
-
-### Identity & scope blocks
-
-| Field | Casing | Notes |
+| Field | Type | Meaning |
 |---|---|---|
-| `identity.primary_origin` | snake | Primary origin URL. |
-| `identity.domain` / `identity.public_suffix` | snake | Registered domain / public suffix. |
-| `identity.seed_urls` | snake | Seed URL list. |
-| `siteRoot` | camel | Site root URL. |
-| `scope.seeds` / `scope.allow` / `scope.deny` | snake | Discovery scope. |
-| `scope.block_params` | snake | Stripped query params. |
-| `scope.follow_external` | snake | Whether external links were followed. |
-| `scope.max_pages` / `scope.max_depth` | snake | Crawl limits (0 / -1 meaning unlimited mirror the CLI). |
+| `atlasVersion` | string matching `^v?\d+(\.\d+)?$` | Public Atlas line. Current edition value: `"1.1"`. |
+| `formatVersion` | string | Container version. Current edition value: `"1.1.0"`. |
+| `owner` | object | `name` (string). Any name. Required. |
+| `consumers` | string[] | Consumer labels. No schema default. Required. |
+| `hashing` | object | See below. Required. |
+| `parts` | map of string → string[] | Dataset directory name → part paths. Required. |
+| `schemas` | map of string → string | Dataset directory name → schema reference. Required. |
+| `configIncluded` | boolean | Whether crawl config was packaged. Required. |
+| `redactionApplied` | boolean | Whether redaction ran. Required. |
+| `notes` | string[] | Free-form notes. Required. |
+| `integrity` | object | See below. Required. |
+| `createdAt` | string | Manifest build time. Required. |
+| `generator` | string | Producer id. Any string. Required. |
 
-### Policy blocks
+### Optional top-level fields
 
-**Free-form `z.record` blocks — snake_case keys** (unchanged by the camelCase sweep):
-
-- `crawler_settings.*` — `render_mode`, `robots_policy`, `robots_override`, `user_agent`,
-  `concurrency`, `rps`, `replay_tier`, `cpu_slowdown_multiplier`, `network_conditions`.
-- `url_normalization.*` — `lowercase_host`, `remove_default_port`, `strip_fragment`,
-  `remove_trailing_slash`, `trailing_slash_policy`, `sort_query_params`, `querystring_policy`,
-  `blocked_query_params`.
-
-**Typed blocks — camelCase keys:**
-
-- `privacyPolicy.*` — `stripCookies`, `stripAuthHeaders`, `redactInputs`, `redactForms`,
-  `redactPii`.
-- `robotsPolicy.*` — `respect`, `overridesUsed`, `overrideReason`.
-
-### Crawl context & timing
-
-| Field | Casing | Notes |
+| Field | Type | Meaning |
 |---|---|---|
-| `crawlContext` | camel | Full runtime context (mode, limits, normalization, completion inputs). |
-| `crawlStartedAt` / `crawlCompletedAt` | camel | ISO 8601. |
-| `crawlConfigHash` | camel | SHA-256 of the normalized config (compare/diff key). |
-| `configSnapshot` | camel | Runtime config snapshot. |
-| `configIncluded` / `redactionApplied` | camel | Booleans. **Required.** |
+| `datasetId` | string | Archive identity. The schema does not require 16 hex characters. |
+| `crawlId` | string | Crawl run id. The schema does not constrain the spelling. |
+| `mode` | `raw` \| `import` \| `prerender` \| `full` | Render mode of the crawl. |
+| `specVersion` | string | Spec contract. Current edition value: `"1.1.0"`. |
+| `schemaVersion` | string | Date-stamped schema tag. Current edition value: `"2026-09-04"`. |
+| `incomplete` | boolean | `true` means the crawl did not seal cleanly. |
+| `source` | object | `sourceType`: `warc` \| `native`. Passthrough. |
+| `packs` | array of objects | Free-form pack descriptors. |
+| `identity` | object | See below. |
+| `siteRoot` | string | Site root URL. |
+| `scope` | object | See below. |
+| `crawlerSettings` | object | See below. The block name is camelCase. |
+| `urlNormalization` | object | See below. The block name is camelCase. |
+| `crawlContext` | object | See below. |
+| `crawlStartedAt` | string | ISO 8601. |
+| `crawlCompletedAt` | string | ISO 8601. |
+| `producer` | object | See below. |
+| `environment` | object | See below. |
+| `privacyPolicy` | object | See below. |
+| `robotsPolicy` | object | See below. |
+| `compareCompatibility` | map | Free-form compare metadata. |
+| `crawlConfigHash` | string | Digest of the normalized config. The canonicalization is not specified in this edition. |
+| `datasets` | map of string → dataset metadata | See below. |
+| `capabilities` | object | See below. |
+| `coverage` | object | See below. Inner keys are camelCase. |
+| `sitemapCoverage` | `absent` \| `failed` \| `partial` \| `complete` | Sitemap-discovery honesty. Missing means unknown, not `complete`. |
+| `storage` | object | See below. |
 
-### Parts, schemas & datasets
+`parts` and `schemas` are open records. Their keys are dataset directory names from
+`ATLAS_DATASET_KEYS`, not a fixed subset.
 
-| Field | Casing | Meaning |
-|---|---|---|
-| `parts` | snake keys | Map `<dataset> → ["<dataset>/part-001.jsonl.zst", …]`. **Required.** |
-| `schemas` | snake keys | Map `<dataset> → "schemas/<name>.v1.schema.json#1"`. **Required.** |
-| `datasets` | snake keys | Map `<dataset> → DatasetMetadata` (below). |
-| `naming.currentPattern` / `naming.recommended` | camel | Part-naming hints. |
+### `identity`
 
-**`DatasetMetadata`** (per dataset, `manifest.schema.ts:11-29`):
+Both spellings are in the schema for two fields. `publicSuffix` is camelCase only.
 
-| Field | Meaning |
+| Field | Type |
 |---|---|
-| `name` | Canonical dataset name. |
-| `present` | `true` if `recordCount > 0`. |
-| `partCount` / `parts` | Number of part files. |
-| `recordCount` | Total records across parts. |
-| `bytes` | Total compressed bytes. |
-| `schema` | Schema reference (`schemas/<name>.v1.schema.json#1`). |
-| `schemaVersion` | Schema tag. |
-| `schemaHash` | SHA-256 of the schema JSON. |
-| `integrity.algorithm` | `"sha256"`. |
-| `integrity.checksums` | Map `<part path> → SHA-256`. |
-| `sidecarUri` / `sidecarSha256` | Optional external sidecar. |
+| `primary_origin` | string, optional |
+| `primaryOrigin` | string, optional |
+| `domain` | string, optional |
+| `publicSuffix` | string, optional |
+| `seed_urls` | string[], optional |
+| `seedUrls` | string[], optional |
 
-### Capabilities, coverage, storage, integrity
+`summary.json` `identity` is camelCase only (`primaryOrigin`, `seedUrls`, `domain`, `publicSuffix`).
 
-- `capabilities.*` — `renderModes`, `modesUsed`, `specLevel` (1/2/3), `dataSets` (datasets with
-  records), `robots.respectsRobotsTxt`, `robots.overrideUsed`.
-- `coverage.*` — `matrix[]` (per-dataset `{part, expected, present, row_count, coverage_pct,
-  reason_if_absent}`), plus `total_pages`, `successful_pages`, `failed_status_pages`,
-  `pages_with_errors`, `incomplete`, `truncated_parts`.
-- `storage.*` (camelCase) — `compression.{algorithm,level}`, `blobFormat`, `replayTier`,
-  `contentAddressing`.
-- `hashing` (camel) — `algorithm: "sha256"`, `urlKeyAlgo: "sha1"`, plus `rawHtmlHash`/`domHash`
-  descriptions. **Required.**
-- `integrity` (camel) — `contentSha256` (SHA-256 over sorted file hashes), `files` (map of every
-  packaged path → SHA-256). **Required.**
-- `discovery_summary` (snake, optional) — `total_discovered`, `visited`, `queued`, `pending`,
-  `skipped`, `snapshot_at`, `skipped_by_reason`, `samples`.
-- `compare` / `compareCompatibility` — diff/compare metadata (inner comparison keys are free-form snake).
-- `notes` — free-form notes incl. resume/checkpoint/graceful-shutdown context. **Required.**
+### `scope`
+
+| Field | Type |
+|---|---|
+| `seeds` | string[], optional |
+| `allow` | string[], optional |
+| `deny` | string[], optional |
+| `block_params` | string[], optional |
+| `follow_external` | boolean, optional |
+| `max_pages` | number, optional |
+| `max_depth` | number, optional |
+
+### `crawlerSettings`
+
+| Field | Type |
+|---|---|
+| `render_mode` | string, optional |
+| `robots_policy` | string, optional |
+| `robots_override` | boolean, optional |
+| `user_agent` | string, optional |
+| `concurrency` | number, optional |
+| `rps` | number, optional |
+| `replay_tier` | string, optional |
+| `cpu_slowdown_multiplier` | number, optional |
+| `network_conditions` | `none` \| `mobile-4g` \| `mobile-3g` \| `mobile-2g` \| `slow-2g`, optional |
+
+### `urlNormalization`
+
+| Field | Type |
+|---|---|
+| `lowercase_host` | boolean, optional |
+| `remove_default_port` | boolean, optional |
+| `strip_fragment` | boolean, optional |
+| `remove_trailing_slash` | boolean, optional |
+| `sort_query_params` | boolean, optional |
+| `querystring_policy` | string, optional |
+| `blocked_query_params` | string[], optional |
+
+The steps that produce a URL key are not specified in this edition. The manifest records the
+algorithm name on `hashing.urlKeyAlgo`.
+
+### `crawlContext`
+
+| Field | Type |
+|---|---|
+| `mode` | `raw` \| `import` \| `prerender` \| `full`, optional |
+| `robots` | boolean, optional |
+| `maxPages` | number, optional |
+| `maxDepth` | number, optional |
+| `followExternal` | boolean, optional |
+| `concurrency` | number, optional |
+| `rps` | number, optional |
+| `userAgent` | string, optional |
+| `urlNormalization` | string, optional |
+| `urlNormalizationRules` | string[], optional |
+| `paramPolicy` | `keep` \| `sample` \| `strip`, optional |
+| `parameterBlockList` | string[], optional |
+| `allowUrls` | string[], optional |
+| `denyUrls` | string[], optional |
+
+### `producer`
+
+| Field | Type |
+|---|---|
+| `name` | string, required |
+| `version` | string, required |
+| `build` | string, required |
+| `git_hash` | string, optional |
+| `command_line` | string, optional |
+
+### `environment`
+
+Required when the object is present: `device` (`desktop` \| `mobile`), `viewport`, `user_agent`,
+`locale`, `timezone`, `accept_language`, `browser`, `platform`.
+
+| Field | Type |
+|---|---|
+| `viewport` | `width` (number), `height` (number) |
+| `cpu_throttling` | number or null, optional |
+| `network_conditions` | `none` \| `mobile-4g` \| `mobile-3g` \| `mobile-2g` \| `slow-2g`, optional |
+| `network_profile` | `name` (string), `download_kbps` (number), `upload_kbps` (number), `latency_ms` (number) |
+| `consent_state` | `cookies_enabled` (boolean), `do_not_track` (boolean), `gdpr_mode` (boolean, optional) |
+| `browser` | `name` (string), `version` (string), `headless` (boolean) |
+| `platform` | `os` (string), `arch` (string), `node_version` (string) |
+
+### `privacyPolicy`
+
+| Field | Type |
+|---|---|
+| `stripCookies` | boolean, required |
+| `stripAuthHeaders` | boolean, required |
+| `redactInputs` | boolean, required |
+| `redactPii` | boolean, required |
+| `redactForms` | boolean, optional |
+
+### `robotsPolicy`
+
+| Field | Type |
+|---|---|
+| `respect` | boolean, required |
+| `overridesUsed` | boolean, required |
+| `overrideReason` | string, optional |
+
+### `hashing`
+
+| Field | Type |
+|---|---|
+| `algorithm` | string, required |
+| `urlKeyAlgo` | string, required |
+| `rawHtmlHash` | string, required |
+| `domHash` | string, required |
+
+These are algorithm names and descriptions stored on the manifest. The URL-normalization function
+and the byte ranges of the body hashes are not specified in this edition.
+
+### Dataset metadata (`datasets` values)
+
+| Field | Type |
+|---|---|
+| `name` | string, optional |
+| `partCount` | non-negative integer, optional |
+| `recordCount` | non-negative integer, optional |
+| `bytes` | non-negative integer, optional |
+| `schema` | string, optional |
+| `schemaVersion` | string, optional |
+| `schemaHash` | string, optional. JSON canonicalization is not specified in this edition. |
+| `present` | boolean, optional |
+| `parts` | non-negative integer, optional. This is a count, not the top-level `parts` map. |
+| `sidecarUri` | string, optional |
+| `sidecarSha256` | string or null, optional |
+| `integrity` | object, optional |
+
+Dataset `integrity`: `algorithm` (string, required when the object is present) and `checksums`
+(map of part path → digest string, required when the object is present). The bytes that go into
+each checksum are not specified in this edition.
+
+### `capabilities`
+
+Required when the object is present:
+
+| Field | Type |
+|---|---|
+| `renderModes` | array of `raw` \| `import` \| `prerender` \| `full` |
+| `modesUsed` | array of the same enum |
+| `specLevel` | `1` \| `2` \| `3` |
+| `dataSets` | string[] |
+| `robots` | `respectsRobotsTxt` (boolean), `overrideUsed` (boolean) |
+
+### `coverage`
+
+Inner keys are camelCase. Required when the object is present, except the two marked optional.
+
+| Field | Type |
+|---|---|
+| `matrix` | array of `{ part, expected, present, rowCount, coveragePct?, reasonIfAbsent? }` |
+| `totalPages` | non-negative integer |
+| `totalEdges` | non-negative integer |
+| `totalAssets` | non-negative integer |
+| `successfulPages` | non-negative integer |
+| `failedStatusPages` | non-negative integer |
+| `pagesWithErrors` | non-negative integer |
+| `incomplete` | boolean |
+| `truncatedParts` | string[], optional |
+
+`matrix` entry fields: `part` (string), `expected` (boolean), `present` (boolean), `rowCount`
+(non-negative integer), `coveragePct` (number, optional), `reasonIfAbsent` (string, optional).
+
+The reference reader still reads a legacy `row_count` on a matrix entry when `rowCount` is
+absent. That is reader tolerance, not a second current spelling. See
+[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
+
+### `storage`
+
+| Field | Type |
+|---|---|
+| `compression` | `algorithm` (string), `level` (integer, optional) |
+| `blobFormat` | `zst` \| `tar.zst`, optional |
+| `replayTier` | `html` \| `html+css` \| `full`, optional |
+| `contentAddressing` | `on` \| `off`, optional |
+| `imagePolicy` | `none` \| `dimensions` \| `full`, optional |
+| `maxImageBytes` | non-negative integer, optional |
+| `media` | `location` (string), `formats` (string[]). Passthrough. |
+| `blobs` | `enabled` (boolean), `format` (string, optional) |
+
+### `integrity`
+
+| Field | Type |
+|---|---|
+| `algorithm` | string, optional |
+| `contentSha256` | string, optional |
+| `archiveSha256` | string, optional |
+| `auditHash` | string, optional |
+| `files` | map of packaged path → digest string, required |
+
+`contentSha256`, `archiveSha256`, and `auditHash` are the schema's names. What each digest is
+computed over is not specified in this edition.
 
 ---
 
 ## `summary.json`
 
-Aggregate stats. Schema: `summary.schema.ts` (`AtlasSummarySchema`). **camelCase throughout.**
+Aggregate stats. Schema: `AtlasSummarySchema`. The schema is a plain object: unknown keys are
+stripped on parse. **camelCase throughout.** `identity` does not accept the manifest's
+snake_case aliases.
 
-### `identity` (camelCase)
+### `identity`
 
-`seedUrls`, `primaryOrigin`, `domain`, `publicSuffix`. (Contrast with manifest's snake_case
-`identity.primary_origin`.)
+`seedUrls`, `primaryOrigin`, `domain`, `publicSuffix`. All required when `identity` is present,
+and `identity` itself is required.
 
 ### `crawlContext`
 
-- `specLevel`, `completionReason` (enum `finished\|capped\|error_budget\|schema_budget_exhausted\|manual`),
-  `frontierEmptyAtStop`, `stopConditionsTriggered`.
-- `completionInputs.*` — `errorBudgetExceeded`, `budgetStopReason`, `gracefulShutdown`, `maxPages`,
-  `pageCount`, `queueHasPending`, `enqueuedCount`, `visitedCount`.
-- `config.*` — `maxPages`, `maxDepth`, `robotsRespect`, `followExternal`, `concurrency`, `rps`,
-  `userAgent`, `paramPolicy`, `blockList`, `allowUrls`, `denyUrls`.
-- `captureLimits.*` — `maxBytesPerPage`, `maxRequestsPerPage`, `maxAssetsPerPage`,
+Required: `specLevel`, `completionReason` (`finished` \| `capped` \| `error_budget` \|
+`schema_budget_exhausted` \| `manual`), `config`.
+
+- `frontierEmptyAtStop`, `stopConditionsTriggered` — optional.
+- `completionInputs` — optional object: `errorBudgetExceeded`, `budgetStopReason`,
+  `gracefulShutdown`, `maxPages`, `pageCount`, `queueHasPending`, `enqueuedCount`,
+  `visitedCount`.
+- `config` — `robotsRespect`, `followExternal` required; `maxPages`, `maxDepth`, `concurrency`,
+  `rps`, `userAgent`, `paramPolicy`, `blockList`, `allowUrls`, `denyUrls` as in the schema.
+- `captureLimits` — optional: `maxBytesPerPage`, `maxRequestsPerPage`, `maxAssetsPerPage`,
   `maxStructuredDataItems`, `renderTimeoutMs`, `networkIdleMs`.
 
 ### `stats`
 
-Required totals: `totalPages`, `totalEdges`, `totalAssets`, `totalErrors`. Plus optional
-per-dataset totals (`totalResponses`, `totalEvents`, `totalAccessibilityRecords`,
-`totalNavigationRecords`, `totalSecurityRecords`, `totalResourceRecords`, `totalContentRecords`,
-`totalStructuredDataRecords`, `totalTechnologyRecords`, `totalSitemapRecords`,
-`totalQuarantineRecords`, `totalPerformanceDatasetRecords`, `totalDOMSnapshots`, and more).
-
-Distribution maps:
-
-- `statusCodes` — `{ "200": n, "301": n, "404": n, … }` (HTTP code → count). **Required.**
-- `renderModes` — `{ raw\|import\|prerender\|full → count }`. **Required.**
+Required: `totalPages`, `totalEdges`, `totalAssets`, `totalErrors`, `statusCodes`, `renderModes`.
+Further per-dataset totals are optional on the schema (`totalResponses`, `totalEvents`,
+`totalAccessibilityRecords`, and the other `total*Records` counters).
 
 ### Other blocks
 
-- `performance.avgRenderMs`, `performance.maxDepthReached`.
-- `configSnapshot.requested` / `configSnapshot.effective`.
-- `timestamps.crawlStartedAt`, `timestamps.crawlCompletedAt`, `timestamps.crawlDurationMs`.
+- `performance` is required. `avgRenderMs` is optional. `maxDepthReached` is required.
+- `configSnapshot` is optional (`requested`, `effective`). This block is on `summary.json`, not on the manifest schema.
+- `timestamps` is required: `crawlStartedAt`, `crawlCompletedAt`, `crawlDurationMs`.
 
 ---
 
 ## `summary.v2.json`
 
-`summary.json` plus a top-level **`aggregates`** block (derived in `archiveCompiler.ts:158-190`):
-
-| Field | Meaning |
-|---|---|
-| `aggregates.status.status2xx/3xx/4xx/5xx` | HTTP status-class counts. |
-| `aggregates.render_modes` | Copy of `stats.renderModes` (snake_case key here). |
-| `aggregates.totals.{pages,edges,assets,responses,errors}` | Convenience totals. |
-
-Everything else is identical to `summary.json`.
+There is no Zod schema for this file. `openAtlas` does not read it. Producers may write
+`summary.json` plus a top-level `aggregates` block. `AtlasSummarySchema` would strip `aggregates`
+if that object were parsed as `summary.json`. Do not treat a missing `summary.v2.json` as an
+invalid archive. The byte layout of `aggregates` is not part of this edition's schema; see
+[OPEN_QUESTIONS.md](../../../docs/OPEN_QUESTIONS.md).
 
 ---
 
 ## `capabilities.v1.json`
 
 Declared vs. active capabilities and the finalization seal. Schema: `capabilities.schema.ts`.
+Optional for `openAtlas`. The reference reader uses `compatibility.minSdkVersion` only as a
+warning unless the caller invokes `assertCompatible()`.
 
 | Field | Meaning |
 |---|---|
 | `version` | `"v1"`. |
-| `capabilities` | Capability names present (e.g. `seo.core`, `a11y.core`, `render.dom`, `replay.html`). |
-| `compatibility.minSdkVersion` | Minimum SDK version to read this archive. |
+| `capabilities` | Capability names present (for example `seo.core`, `a11y.core`, `render.dom`, `replay.html`). |
+| `compatibility.minSdkVersion` | Minimum SDK version the producer asks for. |
 | `compatibility.breakingChanges` | Declared breaking changes. |
-| `seal.extractors[]` | Each `{ id, capabilities[], datasets[] }` — what each extractor declared. |
+| `seal.extractors[]` | Each `{ id, capabilities[], datasets[] }`. |
 | `seal.reconciliation.declaredCapabilities` | Union of declared capabilities. |
 | `seal.reconciliation.activeCapabilities` | Capabilities that actually ran. |
-| `seal.reconciliation.datasetsWithRecords` | Datasets that got ≥1 record. |
+| `seal.reconciliation.datasetsWithRecords` | Datasets that got at least one record. |
 | `seal.reconciliation.orphanedCapabilities` | Active but produced no records. |
-| `seal.reconciliation.undeclaredDatasets` | Had records but weren't declared. |
+| `seal.reconciliation.undeclaredDatasets` | Had records but were not declared. |
 | `seal.sealedAt` | ISO 8601 finalization timestamp. |
-
-`orphanedCapabilities` and `undeclaredDatasets` are the fields to check when auditing whether an
-archive captured what it claimed to.
 
 ---
 
 ## `provenance.v1.jsonl.zst`
 
-Zstandard-compressed JSON Lines — **one record per dataset**. Schema: `provenance.schema.ts`
-(`ProvenanceRecordV1Schema`).
+Zstandard-compressed JSON Lines — one record per dataset the producer chooses to describe.
+Schema: `ProvenanceRecordV1Schema`. `openAtlas` does not read this file.
 
-| Field | Casing | Meaning |
-|---|---|---|
-| `datasetName` | camel | Dataset produced (e.g. `"navigation.v1"`). |
-| `producer.app` / `producer.version` / `producer.module` | camel | Producing component. |
-| `createdAt` | camel | ISO 8601. |
-| `inputs[]` | camel | `{ dataset, hashSha256 }` for each input dataset (empty for initial extraction). |
-| `parameters` | camel field / free-form values | Key/value parameters (e.g. `{ "mode": "full" }`). |
-| `output.recordCount` | camel | Records produced. |
-| `output.hashSha256` | camel | SHA-256 of the produced dataset. |
-
-This is the lineage record: it lets a consumer verify which producer/version generated each
-dataset and from what inputs.
+| Field | Meaning |
+|---|---|
+| `datasetName` | Dataset produced. |
+| `producer.app` / `producer.version` / `producer.module` | Producing component. |
+| `createdAt` | ISO 8601. |
+| `inputs[]` | `{ dataset, hashSha256 }` for each input dataset. |
+| `parameters` | Key/value parameters. |
+| `output.recordCount` | Records produced. |
+| `output.hashSha256` | Digest of the produced dataset. The byte range is not specified in this edition. |
 
 ---
 
 ## `schema.json`
 
-A computed **combined field dictionary** across every dataset schema (built in
-`archiveCompiler.ts:192-236`). One entry per schema file:
-
-```json
-{
-  "page_metadata.v1.schema.json": {
-    "title": "…", "description": "…", "version": "…",
-    "fields": [
-      { "name": "core.title", "type": "string", "nullable": false,
-        "required": false, "description": "…", "format": "…", "units": "…" }
-    ]
-  }
-}
-```
-
-Use it as a single-file index of every field in the archive without unpacking the individual
-`schemas/*.v1.schema.json` files. The per-dataset JSON Schemas in `schemas/` remain the
-machine-validatable source.
+There is no Zod schema for this file in this package. Producers may write a combined field
+dictionary here. The per-dataset JSON Schemas generated from the Zod `schemaMap` are the
+machine-readable record definitions. A missing `schema.json` does not make an archive invalid
+to the reference reader.
 
 ---
 
-_Last verified against codebase: 2026-06-30 (post camelCase naming parity sweep)._
+_Last verified against `AtlasManifestV1Schema`: 2026-11-10._

@@ -1,9 +1,10 @@
 # Reading Atlas Archives
 
-How to read an `.atls` archive correctly, including the current SDK incompatibility and the
-supported workaround.
+How to read an `.atls` archive. Dataset directories use the long names in `ATLAS_DATASET_KEYS`.
 
-_Verified against `packages/atls-sdk/src/` and the cartographer writer on 2026-06-04._
+Current schema tag: `2026-09-04`.
+
+_Verified against the Zod schemas and `@caifrazier/atls-sdk` on 2026-11-10._
 
 ---
 
@@ -18,9 +19,10 @@ with zipfile.ZipFile("crawl.atls") as z:
     manifest = json.loads(z.read("manifest.json"))
     summary  = json.loads(z.read("summary.json"))
 
-print(manifest["schemaVersion"])              # "2026-07-01"
-print(manifest["identity"]["primary_origin"]) # snake_case in manifest
-print(summary["identity"]["primaryOrigin"])   # camelCase in summary
+print(manifest["schemaVersion"])              # "2026-09-04"
+# manifest identity accepts primary_origin and primaryOrigin; summary identity is primaryOrigin
+print(manifest.get("identity", {}).get("primaryOrigin") or manifest.get("identity", {}).get("primary_origin"))
+print(summary["identity"]["primaryOrigin"])
 print(list(manifest.get("datasets", {})))     # which datasets are present
 ```
 
@@ -66,10 +68,13 @@ for p in pages:
 
 Key points:
 
-- Use the **long** dataset folder names (`page_metadata`, `navigation`, …). See
-  [datasets.md](./datasets.md).
+- Use the **long** dataset directory names (`page_metadata`, `navigation`, …). See
+  [datasets.md](./datasets.md). The reference reader also accepts `pages`, `edges`, and
+  `failed_pages` as aliases and prefers the long directory when both exist. Producers of this
+  edition write the long names. Manifest keys stay the long names.
 - Join across datasets on **`pageId`**, not `url`. See [identity-and-keys.md](./identity-and-keys.md).
-- Read **all** parts in a directory and concatenate.
+- Read **all** parts in a directory and concatenate. The reference reader accepts
+  `*.jsonl.zst` and uncompressed `*.jsonl`.
 
 ### Resolving a blob
 
@@ -103,4 +108,4 @@ Full API details can be found in the [Atlas SDK reference](../../atls-sdk/README
 
 ---
 
-_Last verified against codebase: 2026-07-01._
+_Last verified against the Zod schemas and `@caifrazier/atls-sdk`: 2026-11-10._

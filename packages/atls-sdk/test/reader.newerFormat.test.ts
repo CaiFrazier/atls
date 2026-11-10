@@ -15,13 +15,9 @@
  */
 
 /**
- * BUG-0114: the historical "SDK returns 0 records on newer archives"
- * regression (BUG-0135) was fixed via resolveFolder()'s NEWER_FORMAT_FOLDER_MAP
- * alias fallback — but no fixture ever wrote the newer layout, so that code
- * path was structurally invisible to the suite and the regression could
- * silently return. These fixtures place part files under the alias folders
- * (`pages/`, `edges/`) while manifest keys stay canonical, forcing the
- * fallback on every read.
+ * BUG-0114: archives that store part files only under the short alias folders
+ * (`pages/`, `edges/`) must still yield through the long-name readers. Manifest
+ * keys stay the long names. These fixtures force that fallback.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
@@ -32,14 +28,14 @@ import { createFixtureArchive, type FixtureArchive } from "./helpers/fixtureArch
 let archive: FixtureArchive;
 
 beforeAll(async () => {
-  archive = await createFixtureArchive({ newerFormatFolders: true });
+  archive = await createFixtureArchive({ aliasFolders: true });
 });
 
 afterAll(async () => {
   await archive?.cleanup();
 });
 
-describe("newer-format archives (alias dataset folders) — BUG-0114", () => {
+describe("alias dataset folders — BUG-0114", () => {
   test("fixture sanity: parts live ONLY under the alias folders", async () => {
     // Guards the guard: if the fixture silently reverted to canonical folder
     // names, every test below would pass without exercising the fallback.
