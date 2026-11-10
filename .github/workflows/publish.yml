@@ -29,33 +29,43 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
       - name: Require the tag to match both package versions
         run: |
           set -eu
           tag="${GITHUB_REF_NAME#v}"
           spec=$(node -p "require('./packages/atls-spec/package.json').version")
           sdk=$(node -p "require('./packages/atls-sdk/package.json').version")
-          if [ "$tag" != "$spec" ] || [ "$tag" != "$sdk" ]; then
-            echo "Tag v${tag} does not match @caifrazier/atls-spec@${spec} and @caifrazier/atls-sdk@${sdk}."
+          dep=$(node -p "require('./packages/atls-sdk/package.json').dependencies['@caifrazier/atls-spec']")
+          if [ "$tag" != "$spec" ] || [ "$tag" != "$sdk" ] || [ "$tag" != "$dep" ]; then
+            echo "Tag v${tag} does not match @caifrazier/atls-spec@${spec} and @caifrazier/atls-sdk@${sdk} (dependency ${dep})."
             exit 1
           fi
 
+      - name: Hotfix tags are not published
+        if: contains(github.ref_name, '-')
+        run: echo "Hotfix tag ${GITHUB_REF_NAME} matches v*.*.* and is not published. Only a weekly release is published to npm latest."
+
+      - name: Install
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: pnpm install --frozen-lockfile
+
       - name: Build
+        if: ${{ !contains(github.ref_name, '-') }}
         run: pnpm build
 
       - name: Test
+        if: ${{ !contains(github.ref_name, '-') }}
         run: pnpm test
 
       - name: Publish @caifrazier/atls-spec
+        if: ${{ !contains(github.ref_name, '-') }}
         working-directory: packages/atls-spec
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @caifrazier/atls-sdk
+        if: ${{ !contains(github.ref_name, '-') }}
         working-directory: packages/atls-sdk
         run: npm publish --access public --provenance
         env:

@@ -10,7 +10,7 @@ npm install @caifrazier/atls-sdk
 
 Requires Node.js 20 or newer. The package is ESM only. It depends on `@caifrazier/atls-spec` at the same version.
 
-The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Package version: `1.3.1`, not published to npm. Archives stamped 1.1 and 1.2 stay readable. `validate()` enforces the 1.2 writer rules when `atlasVersion` is 1.2 or later.
+The format spec is [`@caifrazier/atls-spec`](https://github.com/CaiFrazier/atls/blob/main/packages/atls-spec/SPECIFICATION.md). Current schema tag: `2026-09-04`. Spec contract: `1.3.0`. Format stamps: `atlasVersion` `1.3`, `formatVersion` `1.3.0`. Package release: `26.11.2`, not published to npm. The package release is the date the tooling shipped. It is separate from those stamps. Archives stamped 1.1 and 1.2 stay readable. `validate()` enforces the 1.2 writer rules when `atlasVersion` is 1.2 or later. See [Versioning](../../docs/VERSIONING.md).
 
 ## Read an archive
 
