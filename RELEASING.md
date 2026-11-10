@@ -4,7 +4,7 @@
 
 `.npmrc` sets `link-workspace-packages=true`, so a local install uses this repo's spec package. `npm pack` still records the dependency as the version in `packages/atls-sdk/package.json` (`26.11.2`).
 
-Nothing in this repository publishes on its own. A tag push runs `.github/workflows/publish.yml`. A laptop publish is the fallback when Actions cannot run. This change does not publish `26.11.2` and does not create a tag.
+Nothing in this repository publishes on its own. A tag push runs `.github/workflows/publish.yml`. A laptop publish is the fallback when Actions cannot run. The packages are not yet on npm. Publishing is documented in this file and in [docs/VERSIONING.md](./docs/VERSIONING.md).
 
 ## Cut a release
 

@@ -2,10 +2,14 @@
 
 ## Supported versions
 
+Security fixes apply to the latest date-based release line of the packages and to format 1.x archives.
+
 | Version | Supported |
 | ------- | --------- |
-| 1.0.0-rc.x | Yes |
-| Earlier pre-releases | No |
+| `@caifrazier/atls-spec` 26.11.x | Yes |
+| `@caifrazier/atls-sdk` 26.11.x | Yes |
+| Format 1.x | Yes |
+| Earlier package releases | No |
 
 ## Threat model
 

@@ -39,7 +39,7 @@ export const schemaMap: SchemaMapping[] = [
   { name: 'capabilities.v1', schema: schemas.AtlasCapabilitiesV1Schema },
   { name: 'provenance.v1', schema: schemas.ProvenanceRecordV1Schema },
   { name: 'summary.v1', schema: schemas.AtlasSummarySchema },
-  // Canonical Cartographer dataset schemas
+  // Canonical dataset schemas
   { name: 'page_metadata.v1', schema: schemas.PageMetadataRecordV1Schema },
   { name: 'navigation.v1', schema: schemas.NavigationDatasetRecordV1Schema },
   { name: 'content.v1', schema: schemas.ContentDatasetRecordV1Schema },
@@ -69,9 +69,9 @@ export const schemaMap: SchemaMapping[] = [
   // it at the write gate (a quarantine record failing validation would have
   // nowhere to go).
   { name: 'quarantine.v1', schema: schemas.QuarantineRecordV1Schema },
-  // NOTE: audit_results.v1 is intentionally excluded from Cartographer archives.
-  // That schema is owned by Horizon (downstream analysis) and is not emitted by the crawl engine.
-  // The schema remains available in @caifrazier/atls-spec for Horizon's use.
+  // audit_results.v1 is intentionally excluded from generated archive schemas.
+  // It is a downstream analysis schema, not a dataset a crawl archive emits.
+  // The Zod schema remains exported from @caifrazier/atls-spec.
 ];
 
 /**

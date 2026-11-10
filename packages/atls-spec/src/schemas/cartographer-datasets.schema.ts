@@ -15,7 +15,7 @@
  */
 
 /**
- * Cartographer dataset schemas (writer-facing Atlas JSONL records)
+ * Writer-facing Atlas JSONL dataset schemas.
  */
 
 import { z } from "zod";

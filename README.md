@@ -25,7 +25,7 @@ Requires Node ≥ 20 and pnpm ≥ 9.
 
 ## Publish
 
-Both packages release together on the date-based version `YY.M.W`. See [RELEASING.md](./RELEASING.md) and [docs/VERSIONING.md](./docs/VERSIONING.md). A weekly tag such as `v26.11.2` runs the provenance workflow and publishes to npm `latest`. A hotfix tag such as `v26.11.2-b` matches the same `v*.*.*` trigger and is not published. The workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance. This change does not publish.
+Both packages release together on the date-based version `YY.M.W`. A weekly tag such as `v26.11.2` runs the provenance workflow and publishes to npm `latest`. A hotfix tag such as `v26.11.2-b` matches the same `v*.*.*` trigger and is not published. The workflow needs the `NPM_TOKEN` Actions secret. A local `npm publish` is the fallback and does not attach provenance. The packages are not yet on npm. Publishing is documented in [RELEASING.md](./RELEASING.md) and [docs/VERSIONING.md](./docs/VERSIONING.md).
 
 ## License
 
