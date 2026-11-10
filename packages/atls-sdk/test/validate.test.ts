@@ -304,6 +304,36 @@ describe("SDK validate()", () => {
     expect(nullIssues.length).toBeGreaterThan(0);
     expect(result.valid).toBe(false);
   });
+
+  test("strict mode accepts a body-less redirect row and still requires a terminal body", async () => {
+    // "1.3" is the spec 1.3 atlasVersion stamp. Writer rules may report other
+    // issues on that stamp; this assertion is only about the missing body.
+    for (const atlasVersion of ["1.0", "1.3"]) {
+      for (const isRedirect of [true, false]) {
+        const fixture = await createFixtureArchive({
+          atlasVersion,
+          responseOverride: {
+            isRedirect,
+            statusCode: isRedirect ? 301 : 200,
+            bodyBlobRef: undefined,
+            encoding: undefined,
+          },
+        });
+        try {
+          const result = await validate(fixture.path, {
+            strict: true,
+            checkManifest: false,
+          });
+          expect(
+            result.issues.some((issue) => issue.code === "STRICT_BLOB_REF_MISSING"),
+            `atlasVersion ${atlasVersion}, isRedirect ${isRedirect}`,
+          ).toBe(!isRedirect);
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  });
 });
 
 describe("SDK validate() truncation", () => {

@@ -51,6 +51,13 @@ export type FixtureOptions = {
   corruptLines?: { dataset: string; lines: string[] };
   /** Override the response record's statusCode (default 200) — e.g. 404 to exercise checkBrokenLinks. */
   responseStatusCode?: number;
+  /**
+   * Fields merged onto the responses row. `undefined` values drop the key
+   * (JSON.stringify omits them), which is how a redirect row omits its body.
+   */
+  responseOverride?: Record<string, unknown>;
+  /** Override manifest.atlasVersion. Default is "1.0". */
+  atlasVersion?: string;
   /** Omit the required `social` field from page_metadata, to exercise schema-violation handling. */
   pageMissingSocial?: boolean;
   /**
@@ -234,6 +241,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     statusCode: options.responseStatusCode ?? 200,
     encoding: "utf-8",
     bodyBlobRef: options.nonCanonicalBlobRef ? `blobs/${blobRef}.zst` : blobRef,
+    ...options.responseOverride,
   };
 
   // With aliasFolders, the part files live under the short alias
@@ -354,7 +362,7 @@ export async function createFixtureArchive(options: FixtureOptions = {}): Promis
     : { formatVersion: options.formatVersionValue ?? "1.0.0" };
 
   const manifest = {
-    atlasVersion: "1.0",
+    atlasVersion: options.atlasVersion ?? "1.0",
     ...formatVersionEntry,
     generator: "atlas-sdk-test/1.0.0",
     atlas_semver: "1.0.0",

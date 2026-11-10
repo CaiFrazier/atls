@@ -1077,7 +1077,9 @@ function validateResponseSchema(
   let valid = true;
   if (strict) {
     validateStrictTopLevelNulls(response as Record<string, unknown>, "responses", addIssue);
-    if (!validateCanonicalBlobRef(response as Record<string, unknown>, "responses", "bodyBlobRef", addIssue, true)) {
+    // Redirect evidence rows have no body. Terminal rows still require one.
+    const bodyRequired = response.isRedirect !== true;
+    if (!validateCanonicalBlobRef(response as Record<string, unknown>, "responses", "bodyBlobRef", addIssue, bodyRequired)) {
       valid = false;
     }
   }
